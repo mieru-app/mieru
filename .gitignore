@@ -33,3 +33,7 @@ Desktop.ini
 # ログ
 *.log
 npm-debug.log*
+
+# アイコン選定ページの生成物（generate.mjs で作り直せる）
+assets/icon/preview.html
+assets/icon/preview.fragment.html

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contentHash } from "../hash.js";
 import { LocalFolderStore } from "../LocalFolderStore.js";
@@ -185,16 +185,33 @@ describe("保存の堅牢化", () => {
 });
 
 describe("外部変更の監視", () => {
-  /** 監視周期を詰めた store。実時間で待って確認する */
+  /**
+   * 監視は一定周期の見回りで成り立っている。
+   * 実時間で待つと、機械が混んでいるときに見回りが間に合わず稀に落ちる。
+   * 偽タイマーで周期を明示的に進め、実行のたびに同じ結果になるようにする。
+   */
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const INTERVAL = 5;
+
   function watchable(dir: FakeDirectory): LocalFolderStore {
     return new LocalFolderStore(dir, {
       quarantine: new FakeQuarantine(),
       sleep: noSleep,
-      watchIntervalMs: 5,
+      watchIntervalMs: INTERVAL,
     });
   }
 
-  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 60));
+  /** 見回りを1回分進め、その中の非同期処理が終わるまで待つ */
+  const tick = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(INTERVAL);
+  };
 
   it("外部で書き換えられたら通知する", async () => {
     const dir = new FakeDirectory();
@@ -202,11 +219,11 @@ describe("外部変更の監視", () => {
     const changed: string[] = [];
     const stop = watchable(dir).watch((id) => changed.push(id));
 
-    await settle();
+    await tick();
     expect(changed).toEqual([]); // 初回は現状を記憶するだけ
 
     dir.putRaw("a.md", `${MD}- 追記\n`);
-    await settle();
+    await tick();
     stop();
 
     expect(changed).toEqual(["a.md"]);
@@ -218,9 +235,9 @@ describe("外部変更の監視", () => {
     const changed: string[] = [];
     const stop = store.watch((id) => changed.push(id));
 
-    await settle();
+    await tick();
     await store.write("a.md", MD, null);
-    await settle();
+    await tick();
     stop();
 
     expect(changed).toEqual([]);
@@ -232,11 +249,11 @@ describe("外部変更の監視", () => {
     const changed: string[] = [];
     const stop = watchable(dir).watch((id) => changed.push(id));
 
-    await settle();
+    await tick();
     dir.putRaw("b.md", MD);
-    await settle();
+    await tick();
     dir.deleteRaw("a.md");
-    await settle();
+    await tick();
     stop();
 
     expect(changed).toEqual(["b.md", "a.md"]);
@@ -248,15 +265,14 @@ describe("外部変更の監視", () => {
     const changed: string[] = [];
     const stop = watchable(dir).watch((id) => changed.push(id));
 
-    await settle();
+    await tick();
     stop();
     dir.putRaw("a.md", "# 変更\n");
-    await settle();
+    await tick();
 
     expect(changed).toEqual([]);
   });
 });
-
 describe("contentHash", () => {
   it("同じ入力からは同じ値を返す", () => {
     expect(contentHash("# あ\n")).toBe(contentHash("# あ\n"));

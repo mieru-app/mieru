@@ -25,7 +25,7 @@ export function StartScreen({ folder, onChoose, onGrant }: Props): React.JSX.Ele
       <div className="startscreen">
         <h1>このブラウザでは使えません</h1>
         <p>
-          MindDeck はローカルフォルダの Markdown を直接読み書きします。 この仕組み（File System
+          Mieru はローカルフォルダの Markdown を直接読み書きします。 この仕組み（File System
           Access API）に対応しているのは、
           <strong>デスクトップ版の Microsoft Edge / Google Chrome</strong> です。
         </p>
@@ -56,7 +56,7 @@ export function StartScreen({ folder, onChoose, onGrant }: Props): React.JSX.Ele
 
   return (
     <div className="startscreen">
-      <h1>MindDeck</h1>
+      <h1>Mieru</h1>
       <p>考えを整理し、そのまま AI に渡せるマインドマップツール。</p>
       <ol className="startscreen-steps">
         <li>

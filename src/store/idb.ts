@@ -9,7 +9,7 @@
  * 4つだけで、依存を増やす理由が乏しいため（CLAUDE.md「依存の追加は最小限」）。
  */
 
-const DB_NAME = "minddeck";
+const DB_NAME = "mieru";
 const DB_VERSION = 1;
 
 /** フォルダハンドルの保管庫。キーは固定の1件のみ */

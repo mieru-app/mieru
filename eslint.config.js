@@ -89,10 +89,16 @@ export default tseslint.config(
     },
   },
 
-  // 設定ファイルは型情報付き解析の対象外にする。
+  // 設定ファイルと補助スクリプトは型情報付き解析の対象外にする。
+  // tsconfig の include に入っていないため、型情報を要求すると解析できない。
   {
-    files: ["*.config.js", "eslint.config.js"],
+    files: ["*.config.js", "eslint.config.js", "assets/**/*.mjs", "scripts/**/*.mjs"],
     extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      parserOptions: { projectService: false, project: false },
+      // Node で直接実行するスクリプト
+      globals: { console: "readonly", process: "readonly" },
+    },
   },
 
   prettier,

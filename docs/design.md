@@ -1,4 +1,4 @@
-# 基本設計書 — マインドマップツール（仮称: MindDeck）
+# 基本設計書 — マインドマップツール Mieru
 
 | 項目 | 内容 |
 |---|---|
@@ -119,7 +119,7 @@ UIコードは `MapStore` インターフェースのみを知る。ローカル
 │                                                          │
 │  Edge / Chrome（PWAとしてインストール）                   │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │  MindDeck (React SPA)                              │  │
+│  │  Mieru (React SPA)                              │  │
 │  │  ┌──────────────┐  ┌──────────────┐                │  │
 │  │  │ キャンバス表示 │  │ アウトライン  │  ← 同一モデルの2ビュー
 │  │  │ (mind-elixir) │  │ 表示          │                │  │
@@ -168,11 +168,11 @@ UIコードは `MapStore` インターフェースのみを知る。ローカル
         │  Cognito User Pool ── Identity Pool         │
         │        │ 一時credential発行                  │
         │        ▼                                    │
-        │  S3: minddeck-data （非公開バケット）        │
+        │  S3: mieru-data （非公開バケット）        │
         │     users/{cognito-sub}/maps/*.md           │
         │     ※ IAM条件で自分のプレフィックスのみ許可  │
         │                                             │
-        │  S3: minddeck-web ── CloudFront             │
+        │  S3: mieru-web ── CloudFront             │
         │     PWA本体の静的配信                        │
         └─────────────────────────────────────────────┘
 
@@ -427,7 +427,7 @@ YAML の数値・真偽値の文法を正規表現で判定してはならない
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ MindDeck   新規事業の論点整理        [キャンバス|アウトライン] ⚙│ ← ツールバー1本
+│ Mieru   新規事業の論点整理        [キャンバス|アウトライン] ⚙│ ← ツールバー1本
 ├────────────┬─────────────────────────────────┬───────────────┤
 │            │                                 │               │
 │ 🔍 検索    │                                 │  ノート        │
@@ -622,7 +622,7 @@ class ConflictError extends Error {
 
 ```
 S3キー設計:
-  s3://minddeck-data/users/{cognito-identity-id}/maps/{uuid}.md
+  s3://mieru-data/users/{cognito-identity-id}/maps/{uuid}.md
 
   ・ファイル名ではなくUUIDをキーにする（改名時にオブジェクトを移動せずに済む）
   ・表示名は frontmatter の title から取得する
@@ -660,14 +660,38 @@ S3キー設計:
 
 ---
 
+### 8.6 配信（Phase 2）
+
+PWA としてインストールするには HTTPS 配信が要る。Phase 2 では **GitHub Pages** を使い、Phase 3 で CloudFront へ移す。
+
+| 項目 | 内容 |
+|---|---|
+| 配信元 | GitHub Pages（GitHub Actions でビルドして公開） |
+| リポジトリ | 無料プランでは public が必要（private からの Pages は Pro 以上）。ソースに秘密情報は無いため問題にならない |
+| base パス | 環境変数で切り替える。サブパス配信（`/<リポジトリ名>/`）と独自ドメイン（`/`）の両方を、コード変更なしで扱えるようにする |
+
+**オリジンが変わると失われるもの。** PWA の同一性と IndexedDB はオリジン（スキーム + ホスト + ポート）に紐付く。本ツールは IndexedDB に作業フォルダのハンドルと退避データを置いているため、Phase 3 で配信元を変えると次が起きる。
+
+- インストール済みアプリの入れ直し
+- 作業フォルダの選び直し（権限が失効する）
+- 退避データの喪失
+
+**独自ドメインを用意すれば、この移行コストは消える。** Phase 2 で GitHub Pages にドメインを向け、Phase 3 で同じドメインを CloudFront へ向け替えれば、オリジンは変わらない。加えて `<ユーザー名>.github.io` は同一アカウントの他の GitHub Pages と**同一オリジンであり IndexedDB / localStorage を共有する**という問題も同時に解決する。
+
+> **未決:** 独自ドメインを取得するか。取らない場合は Phase 3 移行時に上記の入れ直しを一度受け入れる。`base` を環境変数にしておくことで、どちらに決めても実装は変わらない。
+
+---
+
 ## 9. AWS構成詳細（Phase 3）
 
 ### 9.1 リソース一覧
 
 | リソース | 用途 | 設定要点 |
 |---|---|---|
-| S3 `minddeck-data` | マップデータ保管 | パブリックアクセス全ブロック、バージョニング有効、CORS設定 |
-| S3 `minddeck-web` | PWA静的ファイル | CloudFront の OAC 経由でのみ参照可 |
+| S3 `mieru-data` | マップデータ保管 | パブリックアクセス全ブロック、バージョニング有効、CORS設定 |
+| S3 `mieru-web` | PWA静的ファイル | CloudFront の OAC 経由でのみ参照可 |
+
+> **バケット名は全世界で一意であり、作成後に改名できない。** `mieru-data` / `mieru-web` は既に他者が使用している可能性が高いため、Phase 3 の着手時に実際の取得可否を確認し、取れなければ接尾辞を付けた名前（例 `mieru-app-data-<任意の文字列>`）に決め直す。本書の記載は役割を示すもので、確定した名前ではない。
 | CloudFront | PWA配信 | SPA向けに 403/404 を `/index.html` にフォールバック |
 | Cognito User Pool | 利用者認証 | Googleフェデレーション、MFA任意 |
 | Cognito Identity Pool | 一時AWS認証情報の発行 | 認証済みロールのみ許可（ゲストアクセス無効） |
@@ -685,13 +709,13 @@ S3キー設計:
       "Sid": "OwnObjectsOnly",
       "Effect": "Allow",
       "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
-      "Resource": "arn:aws:s3:::minddeck-data/users/${cognito-identity.amazonaws.com:sub}/*"
+      "Resource": "arn:aws:s3:::mieru-data/users/${cognito-identity.amazonaws.com:sub}/*"
     },
     {
       "Sid": "ListOwnPrefixOnly",
       "Effect": "Allow",
       "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::minddeck-data",
+      "Resource": "arn:aws:s3:::mieru-data",
       "Condition": {
         "StringLike": {
           "s3:prefix": ["users/${cognito-identity.amazonaws.com:sub}/*"]
@@ -756,6 +780,18 @@ S3キー設計:
 ---
 
 ## 12. 技術選定の根拠
+
+### 12.5 名称: Mieru を採用（Phase 2 着手時に確定）
+
+| 候補 | 判断 |
+|---|---|
+| **Mieru** | **採用。**「見える」＝「考えが見えるようになる」で、名前と道具の価値が一致する。3音で呼びやすい。既存の同名ソフトはあるが全て別カテゴリ（プロキシ、OCR、通訳） |
+| MDMind | 不採用。既存衝突ゼロで識別性は最高だが、`MD` の第一想起が Medical Doctor であり、響きも弱い |
+| OpenMind.md | 不採用。**同じマインドマップ領域に既存の OpenMind が複数実在**する（Microsoft Store 等）。加えて `.md` はモルドバの ccTLD で高価、名前中のドットは S3 バケット名などで扱いづらい |
+
+**残る懸念:** ホワイトボードツール Miro と英字表記で1文字違いである。日本語では「ミエル」と「ミロ」で明確に異なるが、一般公開する場合は混同の可能性を考慮する。
+
+**商標:** 個人利用の範囲では商標権が及ばない（商標権は業としての使用に及ぶ）ため未調査で着手する。収益化または広く配布する場合は、着手前に J-PlatPat（日本）と USPTO（米国）で第9類・第42類を調査すること。
 
 ### 12.1 キャンバスライブラリ: mind-elixir を採用
 

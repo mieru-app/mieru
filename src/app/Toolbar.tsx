@@ -28,7 +28,7 @@ export function Toolbar({
 }: Props): React.JSX.Element {
   return (
     <header className="toolbar">
-      <span className="brand">MindDeck</span>
+      <span className="brand">Mieru</span>
       <span className="toolbar-title">{title}</span>
 
       <div className="toolbar-actions">

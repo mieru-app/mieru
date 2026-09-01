@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mieru">
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <path d="M 148 368 L 148 148 L 256 296 L 364 148 L 364 368" stroke="#0E1116" stroke-width="40" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="148" cy="148" r="30" fill="#2E8BFF"/>
+  <circle cx="364" cy="148" r="30" fill="#FF3B5C"/>
+  <circle cx="256" cy="296" r="26" fill="#FFB020"/>
+  <circle cx="148" cy="368" r="22" fill="#12D18E"/>
+  <circle cx="364" cy="368" r="22" fill="#A855F7"/>
+</svg>
