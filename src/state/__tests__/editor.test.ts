@@ -347,3 +347,60 @@ describe("表示の状態", () => {
     expect(useEditor.getState().map).toBeNull();
   });
 });
+
+describe("木ごとの差し替え（キャンバスからの取り込み）", () => {
+  it("差し替えた木になり、未保存として扱う", () => {
+    const replacement: MapNode = {
+      uid: "r",
+      path: "",
+      label: "取り込んだ根",
+      links: [],
+      children: [{ uid: "c", path: "0", label: "取り込んだ子", links: [], children: [] }],
+    };
+
+    useEditor.getState().replaceTree(replacement, new Set(["c"]));
+
+    expect(currentShape()).toEqual(["取り込んだ根", ["取り込んだ子"]]);
+    expect(useEditor.getState().status.kind).toBe("dirty");
+    expect(useEditor.getState().collapsedUids).toEqual(new Set(["c"]));
+  });
+
+  it("差し替えを取り消せる", () => {
+    const before = currentShape();
+    useEditor
+      .getState()
+      .replaceTree({ uid: "r", path: "", label: "別の木", links: [], children: [] }, new Set());
+    useEditor.getState().undo();
+    expect(currentShape()).toEqual(before);
+  });
+
+  it("選択していたノードが消えていたらルートを選び直す", () => {
+    useEditor.getState().select(uidOf("A"));
+    useEditor
+      .getState()
+      .replaceTree({ uid: "r", path: "", label: "別の木", links: [], children: [] }, new Set());
+    expect(useEditor.getState().selectedUid).toBe("r");
+  });
+
+  it("選択していたノードが残っていれば選択を保つ", () => {
+    const uid = uidOf("A");
+    const kept: MapNode = {
+      uid: useEditor.getState().root?.uid ?? "r",
+      path: "",
+      label: "根",
+      links: [],
+      children: [{ uid, path: "0", label: "A", links: [], children: [] }],
+    };
+    useEditor.getState().select(uid);
+    useEditor.getState().replaceTree(kept, new Set());
+    expect(useEditor.getState().selectedUid).toBe(uid);
+  });
+
+  it("マップを開いていなければ差し替えない", () => {
+    useEditor.getState().close();
+    useEditor
+      .getState()
+      .replaceTree({ uid: "r", path: "", label: "無視", links: [], children: [] }, new Set());
+    expect(useEditor.getState().root).toBeNull();
+  });
+});

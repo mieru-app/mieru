@@ -57,6 +57,12 @@ export interface EditorActions {
   reorder(delta: -1 | 1): void;
   reparent(uid: string, newParentUid: string): void;
   toggleCollapse(): void;
+  /**
+   * 木ごと差し替える。キャンバス（mind-elixir）側での編集を取り込むために使う。
+   * 個々の操作へ翻訳せず木ごと受け取るのは、描画ライブラリの操作が増えても
+   * 追随せずに済むようにするためである（docs/design.md 12.1）。
+   */
+  replaceTree(root: MapNode, collapsedUids: ReadonlySet<string>): void;
 
   undo(): void;
   redo(): void;
@@ -272,6 +278,26 @@ export const useEditor = create<EditorState>((set, get) => {
       if (next.size === state.collapsedUids.size) return;
       // 折り畳みは表示状態だが frontmatter に保存されるため、変更は未保存として扱う
       set({ collapsedUids: next, status: { kind: "dirty" } });
+    },
+
+    replaceTree(root, collapsedUids) {
+      const state = get();
+      if (state.root === null) return;
+      const taken = snapshot(state);
+      // 差し替え後に残っているノードを選び直す。消えていたらルートへ寄せる
+      const selected =
+        state.selectedUid !== null && locate(root, state.selectedUid) !== null
+          ? state.selectedUid
+          : root.uid;
+      set({
+        root,
+        collapsedUids,
+        selectedUid: selected,
+        past: taken === null ? state.past : pushHistory(state.past, taken),
+        future: [],
+        lastEdit: null,
+        status: { kind: "dirty" },
+      });
     },
 
     undo() {

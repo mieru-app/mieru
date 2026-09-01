@@ -2,6 +2,7 @@ import { parseFrontmatter, splitFrontmatter } from "../core/frontmatter.js";
 import type { MapMeta } from "../core/types.js";
 import type { DirectoryHandleLike, FileHandleLike } from "./fsa.js";
 import { isNotFoundError, isPermissionError } from "./fsa.js";
+import { isValidMapId } from "./file-name.js";
 import { contentHash } from "./hash.js";
 import type { QuarantineSink } from "./quarantine.js";
 import { indexedDbQuarantine } from "./quarantine.js";
@@ -44,24 +45,6 @@ export interface LocalFolderStoreOptions {
 
 function defaultSleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** ファイル名に使えない文字。パス区切りと Windows の予約文字 */
-const FORBIDDEN_NAME_CHARS = ["<", ">", ":", '"', "|", "?", "*", "/", "\\"];
-
-/**
- * id として妥当なファイル名か。
- * パス区切りを弾くのは、選んだフォルダの外へ書き出させないためである。
- */
-function isValidId(id: string): boolean {
-  if (!id.endsWith(".md") || id.length <= 3) return false;
-  if (id.startsWith(".")) return false;
-  for (const character of id) {
-    // 制御文字は正規表現に直接書くとソースへ生のバイトが入るため符号位置で判定する
-    if ((character.codePointAt(0) ?? 0) < 0x20) return false;
-    if (FORBIDDEN_NAME_CHARS.includes(character)) return false;
-  }
-  return true;
 }
 
 export class LocalFolderStore implements MapStore {
@@ -144,7 +127,7 @@ export class LocalFolderStore implements MapStore {
   }
 
   async read(id: string): Promise<{ md: string; version: string }> {
-    if (!isValidId(id)) throw new MapNotFoundError(id);
+    if (!isValidMapId(id)) throw new MapNotFoundError(id);
     const handle = await this.#getFileHandle(id, false);
     if (handle === null) throw new MapNotFoundError(id);
     const entry = await this.#readHandle(handle);
@@ -159,7 +142,7 @@ export class LocalFolderStore implements MapStore {
   }
 
   async write(id: string, md: string, baseVersion: string | null): Promise<string> {
-    if (!isValidId(id)) {
+    if (!isValidMapId(id)) {
       throw new SaveFailedError(id, `ファイル名として使えません: ${id}`, undefined);
     }
 
@@ -221,7 +204,7 @@ export class LocalFolderStore implements MapStore {
   }
 
   async remove(id: string): Promise<void> {
-    if (!isValidId(id)) throw new MapNotFoundError(id);
+    if (!isValidMapId(id)) throw new MapNotFoundError(id);
     if ((await this.#getFileHandle(id, false)) === null) throw new MapNotFoundError(id);
     try {
       await this.#dir.removeEntry(id);

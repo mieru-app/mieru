@@ -6,16 +6,20 @@
 
 ## 現在地
 
-**Phase 0（基盤・変換エンジン）完了。Phase 1（編集機能）着手前。**
-存在するのは `src/core/`（Markdown 変換）と `src/store/`（MapStore と MemoryStore）のみ。
+**Phase 1（編集機能）実装完了。ブラウザでの手動確認が未実施。**
 フェーズ定義と各フェーズの完了条件は `docs/project-plan.md` の3〜4章。
 
-Phase 1 は `1-1 LocalFolderStore` から始める。UI コードはこの時点から書いてよい。
+**IMPORTANT: Phase 1 のコードはまだ一度もブラウザで動かしていない。** 自動テストが通ることと、
+File System Access API・mind-elixir・React の実際の挙動が期待どおりであることは別である。
+特に `src/views/Canvas/` の mind-elixir との結線は、型定義から組んだだけで実動確認がない。
+次にやるべきは新機能ではなく `npm run dev` での実機確認と、そこで見つかる不具合の修正である。
 
 ## コマンド
 
 | 用途 | コマンド |
 |---|---|
+| 開発サーバ | `npm run dev` |
+| 本番ビルド | `npm run build`（型検査を伴う） |
 | 型検査 | `npm run typecheck` |
 | Lint | `npm run lint` / `npm run lint:fix` |
 | 整形 | `npm run format`（Markdown は対象外） |
@@ -23,8 +27,6 @@ Phase 1 は `1-1 LocalFolderStore` から始める。UI コードはこの時点
 | テスト（変換エンジンのみ） | `npm run test:core` |
 | カバレッジ | `npm run test:coverage`（90% 未満で失敗する） |
 | 監視実行 | `npm run test:watch` |
-
-`npm run dev` と `npm run build` は Phase 1 でアプリのエントリポイントを作る際に追加する。現時点では存在しない。
 
 一連の変更を終えたら `npm run typecheck` と `npm test` を実行し、**その出力を示してから完了を報告する**。
 
@@ -37,6 +39,19 @@ Phase 1 は `1-1 LocalFolderStore` から始める。UI コードはこの時点
 5. **ラウンドトリップの強保証を壊さない。** 正規化 Markdown → モデル → Markdown はバイト単位で一致する
 
 これらは `docs/design.md` 3章の設計原則1〜5に対応する。変更したくなった場合は、実装より先に `docs/design.md` を更新して合意を取ること。
+
+## 層の分け方
+
+| 場所 | 役割 | 自動テスト |
+|---|---|---|
+| `src/core/` | Markdown とモデルの相互変換 | あり（プロパティテスト含む） |
+| `src/store/` | `MapStore` と実装。永続化に触れるのはここまで | あり（FSA と IndexedDB の偽物を使う） |
+| `src/state/` | 編集ロジック・状態・自動保存。React にも mind-elixir にも依存しない | あり |
+| `src/app/` `src/views/` | React の描画と入力 | なし（手動試験） |
+
+**描画層に判断を書かない。** 「このキーで何が起きるか」「保存すべきか」といった判断は
+`src/state/` に置き、描画層はそれを呼ぶだけにする。UI を自動テストしない方針を採る以上、
+判断が描画層に漏れた分だけ検証できない領域が増える。
 
 ## スコープ
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { contentHash } from "../hash.js";
 import { LocalFolderStore } from "../LocalFolderStore.js";
@@ -272,5 +272,54 @@ describe("contentHash", () => {
 
   it("16桁の16進文字列を返す", () => {
     expect(contentHash("任意")).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe("ブラウザ由来の例外の扱い", () => {
+  it("「見つからない」以外の例外は握りつぶさず投げ直す", async () => {
+    const dir = new FakeDirectory();
+    dir.putRaw("a.md", MD);
+    const store = newStore(dir);
+    const failure = domError("InvalidStateError", "ハンドルが無効です");
+    vi.spyOn(dir, "getFileHandle").mockRejectedValue(failure);
+
+    await expect(store.read("a.md")).rejects.toBe(failure);
+  });
+
+  it("削除の直前に消えていたら MapNotFoundError にする", async () => {
+    const dir = new FakeDirectory();
+    dir.putRaw("a.md", MD);
+    const store = newStore(dir);
+    // 存在確認の後、removeEntry の直前に外部から消された状況
+    vi.spyOn(dir, "removeEntry").mockRejectedValue(domError("NotFoundError", "a.md"));
+
+    await expect(store.remove("a.md")).rejects.toBeInstanceOf(MapNotFoundError);
+  });
+
+  it("削除で「見つからない」以外の例外はそのまま投げる", async () => {
+    const dir = new FakeDirectory();
+    dir.putRaw("a.md", MD);
+    const store = newStore(dir);
+    const failure = domError("NoModificationAllowedError", "他のプロセスが掴んでいます");
+    vi.spyOn(dir, "removeEntry").mockRejectedValue(failure);
+
+    await expect(store.remove("a.md")).rejects.toBe(failure);
+  });
+
+  it("保存直後にファイルが消えていても、保存自体は成功として扱う", async () => {
+    const dir = new FakeDirectory();
+    const store = newStore(dir);
+    const original = dir.getFileHandle.bind(dir);
+    let writes = 0;
+    vi.spyOn(dir, "getFileHandle").mockImplementation((name, options) => {
+      // 書き込み用の取得の後、確認のための取得だけを失敗させる
+      if (options?.create === true) writes += 1;
+      if (writes > 0 && options?.create !== true) {
+        return Promise.reject(domError("NotFoundError", name));
+      }
+      return original(name, options);
+    });
+
+    await expect(store.write("a.md", MD, null)).resolves.toBe(contentHash(MD));
   });
 });
