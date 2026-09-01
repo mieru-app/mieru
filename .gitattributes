@@ -1,0 +1,12 @@
+# 改行コードは LF に統一する。
+# 設計書（docs/design.md 6.1）でマップファイルの改行を LF と規定しているため、
+# 環境の core.autocrlf 設定に関わらずリポジトリ全体で LF を強制する。
+* text=auto eol=lf
+
+# バイナリは変換しない
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

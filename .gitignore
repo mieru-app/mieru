@@ -1,0 +1,31 @@
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物
+dist/
+build/
+*.tsbuildinfo
+
+# テスト・カバレッジ
+coverage/
+
+# AWS CDK（Phase 3）
+infra/cdk.out/
+infra/.cdk.staging/
+
+# 環境変数
+.env
+.env.*
+!.env.example
+
+# エディタ・OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+Desktop.ini
+*.swp
+
+# ログ
+*.log
+npm-debug.log*
