@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mieru">
+  <rect width="512" height="512" fill="#1D4ED8"/>
+  <path d="M 256 256 L 256.0 -504.0 A 760 760 0 0 1 978.8 21.1 Z" fill="#1D4ED8"/>
+  <path d="M 256 256 L 978.8 21.1 A 760 760 0 0 1 702.7 870.9 Z" fill="#0F766E"/>
+  <path d="M 256 256 L 702.7 870.9 A 760 760 0 0 1 -190.7 870.9 Z" fill="#C2410C"/>
+  <path d="M 256 256 L -190.7 870.9 A 760 760 0 0 1 -466.8 21.1 Z" fill="#DB2777"/>
+  <path d="M 256 256 L -466.8 21.1 A 760 760 0 0 1 256.0 -504.0 Z" fill="#7C3AED"/>
+  <path d="M 146 372 L 146 146 L 256 296 L 366 146 L 366 372" stroke="#FFFFFF" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -101,14 +101,130 @@ function candidateC() {
 }
 
 /**
- * 白抜き用の深い配色。
+ * 白抜きの案で使う配色。
  *
- * 白い文字を載せる地には、明るい色を使えない。
- * PALETTE の amber(#FFB020) や green(#12D18E) の上に白を置くと、
- * 明度差が足りず 16px で字が消える。色相の鮮やかさは保ったまま
- * 明度だけを落とし、白との対比を 4.5:1 以上にしてある。
+ * 最初の案は「白い M を載せるため」に全色の明度を揃えた。その結果、
+ * 5色すべてが輝度 10.7〜17.8% に収まり、隣り合う扇形のコントラスト比は
+ * 1.06〜1.29:1 になった。ほぼ無差であり、色相が違っても境界が見えない。
+ * 等しい明るさの色は互いに見分けられない。これが「モヤっと」の正体である。
+ *
+ * 改訂では明るさの役割を分けた。
+ * - 地は徹底して暗くする（白との比 19:1。M は無条件に読める）
+ * - 色は地との比 4.2〜8.8:1 を確保した鮮やかな光条として、地の上に置く
+ * - 光条どうしは隣接させない。あいだに必ず地を挟むので境界は常に高コントラスト
  */
-const DEEP = {
+const GROUND = "#0A0F1F";
+const BEAM = {
+  blue: "#2F6BFF",
+  cyan: "#00C2D1",
+  orange: "#FF6A00",
+  pink: "#FF2D6F",
+  violet: "#9B5CFF",
+};
+
+/** 白抜きの M。暗い地の上にしか乗らないので縁取りは要らない */
+function knockoutM(width = 56) {
+  return `  <path d="M 146 372 L 146 146 L 256 296 L 366 146 L 366 372" stroke="${PAPER}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+}
+
+const toRad = (deg) => ((deg - 90) * Math.PI) / 180;
+const point = (r, deg) =>
+  `${(256 + r * Math.cos(toRad(deg))).toFixed(1)} ${(256 + r * Math.sin(toRad(deg))).toFixed(1)}`;
+
+/**
+ * 中心から放射する光条（内側を欠いた扇形）。
+ * 内半径は M の外接半径（約198）より大きく取り、文字に色が掛からないようにする。
+ */
+function beam(fromDeg, toDeg, inner = 215, outer = 760) {
+  const large = toDeg - fromDeg > 180 ? 1 : 0;
+  return [
+    `M ${point(inner, fromDeg)}`,
+    `L ${point(outer, fromDeg)}`,
+    `A ${outer} ${outer} 0 ${large} 1 ${point(outer, toDeg)}`,
+    `L ${point(inner, toDeg)}`,
+    `A ${inner} ${inner} 0 ${large} 0 ${point(inner, fromDeg)}`,
+    "Z",
+  ].join(" ");
+}
+
+function beams(list) {
+  return list.map(([from, to, color]) => `  <path d="${beam(from, to)}" fill="${color}"/>`);
+}
+
+/**
+ * 案D1「放射する光条」
+ * 暗い地の中心に白い M を置き、その外側から色の光条を放射させる。
+ * M は地の上にしか乗らないので白との比は 19:1 になり、無条件に読める。
+ * 光条の幅は不揃いにしてある。均等に割ると回る風車に見えて散漫になる。
+ */
+function candidateD1() {
+  return wrap(
+    [
+      ...beams([
+        [10, 64, BEAM.blue],
+        [78, 116, BEAM.cyan],
+        [132, 198, BEAM.orange],
+        [214, 256, BEAM.pink],
+        [274, 346, BEAM.violet],
+      ]),
+      knockoutM(),
+    ].join("\n"),
+    GROUND,
+  );
+}
+
+/**
+ * 案D2「二条の対立」
+ * 光条を2本に絞り、寒色と暖色を対置する。面積比はおよそ 64:36。
+ * 補色に近い関係の色を同量で使うと互いに打ち消し合うため、主従をはっきりさせる。
+ */
+function candidateD2() {
+  return wrap(
+    [
+      ...beams([
+        [24, 104, BEAM.blue],
+        [196, 240, BEAM.orange],
+      ]),
+      knockoutM(),
+    ].join("\n"),
+    GROUND,
+  );
+}
+
+/**
+ * 案D3「明暗の二分」
+ * 地そのものを斜めに2分し、白い M が境界をまたぐ。
+ * 面積の対立（約 62:38）と明度の対立（4.2:1）を直線1本で見せる。
+ */
+function candidateD3() {
+  return wrap(
+    [
+      `  <path d="M 512 0 L 512 512 L 96 512 Z" fill="${BEAM.blue}"/>`,
+      `  <path d="${beam(300, 340, 230, 760)}" fill="${BEAM.orange}"/>`,
+      knockoutM(),
+    ].join("\n"),
+    GROUND,
+  );
+}
+
+/** 元の案D。何が悪かったのかを残すために保持する */
+function candidateD0() {
+  const dull = ["#1D4ED8", "#0F766E", "#C2410C", "#DB2777", "#7C3AED"];
+  const step = 360 / dull.length;
+  const wedges = dull.map((hue, index) => {
+    const from = index * step;
+    const to = (index + 1) * step;
+    return `  <path d="M 256 256 L ${point(760, from)} A 760 760 0 0 1 ${point(760, to)} Z" fill="${hue}"/>`;
+  });
+  return wrap([...wedges, knockoutM()].join("\n"), dull[0]);
+}
+
+/**
+ * 改訂前の白抜き案で使っていた配色。
+ * 明度を揃えてしまった配色であり、E と F がまだこれを使っている。
+ * 比較のために残しているので、新しい案には使わないこと。
+ */
+const FLAT = {
   blue: "#1D4ED8",
   violet: "#7C3AED",
   pink: "#DB2777",
@@ -116,42 +232,12 @@ const DEEP = {
   orange: "#C2410C",
 };
 
-/** 白抜きの M。地の上に載せる前提なので、線は太めに取る */
-function knockoutM(width = 56) {
-  return `  <path d="M 146 372 L 146 146 L 256 296 L 366 146 L 366 372" stroke="${PAPER}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
-}
-
-/** 中心から放射する扇形。角度は度で指定する */
-function wedge(cx, cy, fromDeg, toDeg, radius = 760) {
-  const point = (deg) => {
-    const rad = ((deg - 90) * Math.PI) / 180;
-    return `${(cx + radius * Math.cos(rad)).toFixed(1)} ${(cy + radius * Math.sin(rad)).toFixed(1)}`;
-  };
-  const large = toDeg - fromDeg > 180 ? 1 : 0;
-  return `M ${cx} ${cy} L ${point(fromDeg)} A ${radius} ${radius} 0 ${large} 1 ${point(toDeg)} Z`;
-}
-
-/**
- * 案D「放射」
- * 中心から扇形に5色へ割った地に、白い M を抜く。
- * 色の割り方そのものがマインドマップの放射構造と一致する。
- */
-function candidateD() {
-  const hues = [DEEP.blue, DEEP.teal, DEEP.orange, DEEP.pink, DEEP.violet];
-  const wedges = hues.map((hue, index) => {
-    const step = 360 / hues.length;
-    return `  <path d="${wedge(256, 256, index * step, (index + 1) * step)}" fill="${hue}"/>`;
-  });
-  return wrap([...wedges, knockoutM()].join("\n"), DEEP.blue);
-}
-
 /**
  * 案E「斜め帯」
- * 45度のハードエッジな色帯の上に白い M を抜く。
- * 直線だけで構成され、どの大きさでも境界がぼけない。
+ * 45度の色帯の上に白い M を抜く。直線だけで構成され境界がぼけない。
  */
 function candidateE() {
-  const hues = [DEEP.violet, DEEP.blue, DEEP.teal, DEEP.orange, DEEP.pink];
+  const hues = [FLAT.violet, FLAT.blue, FLAT.teal, FLAT.orange, FLAT.pink];
   const band = 300;
   const bands = hues.map(
     (hue, index) =>
@@ -159,49 +245,55 @@ function candidateE() {
   );
   return wrap(
     ['  <g transform="rotate(45 256 256)">', ...bands, "  </g>", knockoutM()].join("\n"),
-    DEEP.blue,
+    FLAT.blue,
   );
 }
 
 /**
  * 案F「不揃いの四分割」
- * 面を4つに割るが、意図的に不均等にする。
- * 均等な2×2は Windows のロゴに寄るため避けている。
+ * 面を4つに割るが意図的に不均等にする。均等な2×2は Windows のロゴに寄る。
  */
 function candidateF() {
   return wrap(
     [
-      `  <path d="M 0 0 L 300 0 L 300 208 L 0 208 Z" fill="${DEEP.violet}"/>`,
-      `  <path d="M 300 0 L 512 0 L 512 336 L 300 336 Z" fill="${DEEP.pink}"/>`,
-      `  <path d="M 0 208 L 300 208 L 300 512 L 0 512 Z" fill="${DEEP.blue}"/>`,
-      `  <path d="M 300 336 L 512 336 L 512 512 L 300 512 Z" fill="${DEEP.teal}"/>`,
+      `  <path d="M 0 0 L 300 0 L 300 208 L 0 208 Z" fill="${FLAT.violet}"/>`,
+      `  <path d="M 300 0 L 512 0 L 512 336 L 300 336 Z" fill="${FLAT.pink}"/>`,
+      `  <path d="M 0 208 L 300 208 L 300 512 L 0 512 Z" fill="${FLAT.blue}"/>`,
+      `  <path d="M 300 336 L 512 336 L 512 512 L 300 512 Z" fill="${FLAT.teal}"/>`,
       knockoutM(),
     ].join("\n"),
-    DEEP.blue,
+    FLAT.blue,
   );
 }
 
 const CANDIDATES = [
   {
-    key: "d",
-    name: "放射・白抜き",
-    svg: candidateD(),
-    idea: "中心から扇形に5色へ割った地に、白い M を抜く。色の割り方そのものがマインドマップの放射構造と一致する。",
-    watch: "色数が最も多く、16px では扇の境目が混ざって見える可能性がある。",
+    key: "d1",
+    name: "放射する光条",
+    svg: candidateD1(),
+    idea: "暗い地の中心に白い M を置き、その外側から色の光条を放射させる。M は地の上にしか乗らないので白との比が 19:1 になり、無条件に読める。光条の幅は不揃いにしてある。",
+    watch: "色数は5つのままなので、16px では光条が細くなる。",
+  },
+  {
+    key: "d2",
+    name: "二条の対立",
+    svg: candidateD2(),
+    idea: "光条を2本に絞り、寒色と暖色を対置する。面積比はおよそ 64:36。補色に近い色を同量で使うと互いに打ち消し合うため、主従をはっきりさせている。",
+    watch: "色数が少ないぶん、カラフルさは3案でいちばん控えめ。",
+  },
+  {
+    key: "d3",
+    name: "明暗の二分",
+    svg: candidateD3(),
+    idea: "地そのものを斜めに2分し、白い M が境界をまたぐ。面積の対立（約 62:38）と明度の対立（4.2:1）を直線1本で見せる。差し色の橙を1本だけ足してある。",
+    watch: "放射の印象は薄れ、マインドマップらしさは他案より弱い。",
   },
   {
     key: "e",
     name: "斜め帯・白抜き",
     svg: candidateE(),
-    idea: "45度の色帯を並べた地に白い M を抜く。直線だけで構成され、どの大きさでも境界がぼけない。",
-    watch: "帯の向きが強いので、他の斜めストライプのアイコンと並ぶと個性が出にくい。",
-  },
-  {
-    key: "f",
-    name: "不揃いの四分割・白抜き",
-    svg: candidateF(),
-    idea: "面を4つに割るが意図的に不均等にする。均等な2×2は Windows のロゴに寄るため避けた。色が最も広い面で出る。",
-    watch: "分割線が M と無関係なので、記号としての意味は薄い。",
+    idea: "45度の色帯を並べた地に白い M を抜く。直線だけで構成され、境界がぼけない。",
+    watch: "帯どうしの明度が近く、改訂前の D と同じ問題を抱えている。",
   },
   {
     key: "c",
@@ -222,10 +314,24 @@ const CANDIDATES = [
 /** 見送った案。判断の理由を残すために出力からは消さない */
 const REJECTED = [
   {
+    key: "d0",
+    name: "放射（改訂前）",
+    svg: candidateD0(),
+    reason:
+      "白い M を載せるために5色すべての明度を揃えた結果、輝度が 10.7〜17.8% に収まり、隣り合う扇形のコントラスト比が 1.06〜1.29:1 になった。色相が違っても明るさが同じ色は互いに見分けられず、境界が消えて濁って見える。上のグレースケールで確認できる。",
+  },
+  {
     key: "b",
     name: "面で切った M",
     svg: candidateB(),
     reason: "Gmail のロゴに近い。多色の角ばった M という構成が同じで、並ぶと見分けにくい。",
+  },
+  {
+    key: "f",
+    name: "不揃いの四分割・白抜き",
+    svg: candidateF(),
+    reason:
+      "面どうしの明度が近く、改訂前の D と同じ理由で境界が沈む。分割線が M と無関係で意味も薄い。",
   },
 ];
 
@@ -449,6 +555,19 @@ section { display: flex; flex-direction: column; gap: 1.25rem; }
   background: #2b323d;
 }
 
+.gray-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  filter: grayscale(1);
+}
+
+.gray-item { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+
+.gray-item .chip { padding: 0.35rem; }
+
+.gray-item svg { border-radius: 18%; }
+
 .candidate.is-rejected { opacity: 0.72; }
 .candidate.is-rejected .hero svg { filter: saturate(0.7); }
 
@@ -589,6 +708,24 @@ const swatches = Object.entries(PALETTE)
   )
   .join("\n");
 
+/** 彩度を落とした一覧。境界が明度だけで成立しているかを見る */
+function grayscaleStrip() {
+  const cell = (candidate) =>
+    [
+      '    <div class="gray-item">',
+      `      <span class="chip on-dark">${sized(candidate.svg, 72)}</span>`,
+      `      <span class="crop-label">${candidate.name}</span>`,
+      "    </div>",
+    ].join("\n");
+
+  return [
+    '  <div class="gray-strip">',
+    ...CANDIDATES.map(cell),
+    ...REJECTED.map(cell),
+    "  </div>",
+  ].join("\n");
+}
+
 function rejectedSection(candidate) {
   return [
     '  <article class="candidate is-rejected">',
@@ -603,7 +740,7 @@ function rejectedSection(candidate) {
   ].join("\n");
 }
 
-const deepSwatches = Object.entries(DEEP)
+const deepSwatches = Object.entries({ ground: GROUND, ...BEAM })
   .map(
     ([name, hex]) =>
       `    <span class="swatch"><i style="background:${hex}"></i><b>${name}</b><code>${hex}</code></span>`,
@@ -625,6 +762,14 @@ const body = [
   "    </div>",
   scaleTable("light"),
   scaleTable("dark"),
+  "  </section>",
+  "",
+  "  <section>",
+  '    <div class="section-head">',
+  "      <h2>グレースケールで確かめる</h2>",
+  '      <p class="note">色を抜いて明るさだけにすると、境界が本当に見えているかが分かります。形が残る案は小さくしても崩れません。灰色の塊になる案は、色相が違っても人の目には見分けられていません。改訂前の D（右端）がその状態です。</p>',
+  "    </div>",
+  grayscaleStrip(),
   "  </section>",
   "",
   "  <section>",
@@ -651,7 +796,7 @@ const body = [
   '    <div class="swatches">',
   swatches,
   "    </div>",
-  '    <p class="note">白抜きの案では、同じ色相のまま明度だけを落とした深い色を地に使います。明るい色の上に白を置くと明度差が足りず、16px で字が消えるためです。</p>',
+  '    <p class="note">白抜きの改訂案は、暗い地（白との比 19:1）と、その上に置く鮮やかな光条（地との比 4.2〜8.8:1）に役割を分けています。地が徹底して暗いので白い M は無条件に読め、色は明度を落とさずに済みます。</p>',
   '    <div class="swatches">',
   deepSwatches,
   "    </div>",
