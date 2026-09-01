@@ -8,7 +8,7 @@
  * 大きく離し、地とのあいだに明度差を作る（「モヤっとさせずパキッと」）。
  *
  * 出力:
- *   candidate-{a,b,c}.svg  … 候補そのもの
+ *   candidate-*.svg        … 候補そのもの（b は却下だが判断の記録として残す）
  *   preview.html           … ブラウザで開いて比較するためのページ
  *   preview.fragment.html  … 同じ内容を Artifact 用に切り出したもの
  */
@@ -100,20 +100,108 @@ function candidateC() {
   );
 }
 
+/**
+ * 白抜き用の深い配色。
+ *
+ * 白い文字を載せる地には、明るい色を使えない。
+ * PALETTE の amber(#FFB020) や green(#12D18E) の上に白を置くと、
+ * 明度差が足りず 16px で字が消える。色相の鮮やかさは保ったまま
+ * 明度だけを落とし、白との対比を 4.5:1 以上にしてある。
+ */
+const DEEP = {
+  blue: "#1D4ED8",
+  violet: "#7C3AED",
+  pink: "#DB2777",
+  teal: "#0F766E",
+  orange: "#C2410C",
+};
+
+/** 白抜きの M。地の上に載せる前提なので、線は太めに取る */
+function knockoutM(width = 56) {
+  return `  <path d="M 146 372 L 146 146 L 256 296 L 366 146 L 366 372" stroke="${PAPER}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+}
+
+/** 中心から放射する扇形。角度は度で指定する */
+function wedge(cx, cy, fromDeg, toDeg, radius = 760) {
+  const point = (deg) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return `${(cx + radius * Math.cos(rad)).toFixed(1)} ${(cy + radius * Math.sin(rad)).toFixed(1)}`;
+  };
+  const large = toDeg - fromDeg > 180 ? 1 : 0;
+  return `M ${cx} ${cy} L ${point(fromDeg)} A ${radius} ${radius} 0 ${large} 1 ${point(toDeg)} Z`;
+}
+
+/**
+ * 案D「放射」
+ * 中心から扇形に5色へ割った地に、白い M を抜く。
+ * 色の割り方そのものがマインドマップの放射構造と一致する。
+ */
+function candidateD() {
+  const hues = [DEEP.blue, DEEP.teal, DEEP.orange, DEEP.pink, DEEP.violet];
+  const wedges = hues.map((hue, index) => {
+    const step = 360 / hues.length;
+    return `  <path d="${wedge(256, 256, index * step, (index + 1) * step)}" fill="${hue}"/>`;
+  });
+  return wrap([...wedges, knockoutM()].join("\n"), DEEP.blue);
+}
+
+/**
+ * 案E「斜め帯」
+ * 45度のハードエッジな色帯の上に白い M を抜く。
+ * 直線だけで構成され、どの大きさでも境界がぼけない。
+ */
+function candidateE() {
+  const hues = [DEEP.violet, DEEP.blue, DEEP.teal, DEEP.orange, DEEP.pink];
+  const band = 300;
+  const bands = hues.map(
+    (hue, index) =>
+      `    <rect x="${-560 + index * band}" y="-560" width="${band}" height="1632" fill="${hue}"/>`,
+  );
+  return wrap(
+    ['  <g transform="rotate(45 256 256)">', ...bands, "  </g>", knockoutM()].join("\n"),
+    DEEP.blue,
+  );
+}
+
+/**
+ * 案F「不揃いの四分割」
+ * 面を4つに割るが、意図的に不均等にする。
+ * 均等な2×2は Windows のロゴに寄るため避けている。
+ */
+function candidateF() {
+  return wrap(
+    [
+      `  <path d="M 0 0 L 300 0 L 300 208 L 0 208 Z" fill="${DEEP.violet}"/>`,
+      `  <path d="M 300 0 L 512 0 L 512 336 L 300 336 Z" fill="${DEEP.pink}"/>`,
+      `  <path d="M 0 208 L 300 208 L 300 512 L 0 512 Z" fill="${DEEP.blue}"/>`,
+      `  <path d="M 300 336 L 512 336 L 512 512 L 300 512 Z" fill="${DEEP.teal}"/>`,
+      knockoutM(),
+    ].join("\n"),
+    DEEP.blue,
+  );
+}
+
 const CANDIDATES = [
   {
-    key: "a",
-    name: "枝の M",
-    svg: candidateA(),
-    idea: "M の4本を1本ずつ別の色の枝として描き、折れ点に節を置く。マインドマップであることが最も伝わる。",
-    watch: "線が細いぶん、16px では色の並びが潰れて読みにくくなる可能性がある。",
+    key: "d",
+    name: "放射・白抜き",
+    svg: candidateD(),
+    idea: "中心から扇形に5色へ割った地に、白い M を抜く。色の割り方そのものがマインドマップの放射構造と一致する。",
+    watch: "色数が最も多く、16px では扇の境目が混ざって見える可能性がある。",
   },
   {
-    key: "b",
-    name: "面で切った M",
-    svg: candidateB(),
-    idea: "M を4枚の面に割って塗り分ける。線ではなく面なので小さくしても色が痩せない。",
-    watch: "枝のニュアンスは消え、記号として抽象度が上がる。",
+    key: "e",
+    name: "斜め帯・白抜き",
+    svg: candidateE(),
+    idea: "45度の色帯を並べた地に白い M を抜く。直線だけで構成され、どの大きさでも境界がぼけない。",
+    watch: "帯の向きが強いので、他の斜めストライプのアイコンと並ぶと個性が出にくい。",
+  },
+  {
+    key: "f",
+    name: "不揃いの四分割・白抜き",
+    svg: candidateF(),
+    idea: "面を4つに割るが意図的に不均等にする。均等な2×2は Windows のロゴに寄るため避けた。色が最も広い面で出る。",
+    watch: "分割線が M と無関係なので、記号としての意味は薄い。",
   },
   {
     key: "c",
@@ -121,6 +209,23 @@ const CANDIDATES = [
     svg: candidateC(),
     idea: "明るい地に濃い M。色は枝の先端の節だけに置く。字形がいちばん読みやすい。",
     watch: "白地なので、明るい壁紙のタスクバーでは輪郭が溶けやすい。",
+  },
+  {
+    key: "a",
+    name: "枝の M",
+    svg: candidateA(),
+    idea: "M の4本を1本ずつ別の色の枝として描き、折れ点に節を置く。マインドマップであることが最も伝わる。",
+    watch: "線が細いぶん、16px では色の並びが潰れて読みにくくなる可能性がある。",
+  },
+];
+
+/** 見送った案。判断の理由を残すために出力からは消さない */
+const REJECTED = [
+  {
+    key: "b",
+    name: "面で切った M",
+    svg: candidateB(),
+    reason: "Gmail のロゴに近い。多色の角ばった M という構成が同じで、並ぶと見分けにくい。",
   },
 ];
 
@@ -344,6 +449,11 @@ section { display: flex; flex-direction: column; gap: 1.25rem; }
   background: #2b323d;
 }
 
+.candidate.is-rejected { opacity: 0.72; }
+.candidate.is-rejected .hero svg { filter: saturate(0.7); }
+
+.key-out { color: var(--ink); border-style: dashed; }
+
 .watch { color: var(--muted); }
 .watch strong { color: var(--ink); font-weight: 700; }
 
@@ -479,12 +589,33 @@ const swatches = Object.entries(PALETTE)
   )
   .join("\n");
 
+function rejectedSection(candidate) {
+  return [
+    '  <article class="candidate is-rejected">',
+    `    <div class="hero">${sized(candidate.svg, 512)}</div>`,
+    '    <div class="candidate-body">',
+    '      <div class="candidate-title">',
+    `        <h3>${candidate.name}</h3><span class="key key-out">却下</span>`,
+    "      </div>",
+    `      <p class="watch">${candidate.reason}</p>`,
+    "    </div>",
+    "  </article>",
+  ].join("\n");
+}
+
+const deepSwatches = Object.entries(DEEP)
+  .map(
+    ([name, hex]) =>
+      `    <span class="swatch"><i style="background:${hex}"></i><b>${name}</b><code>${hex}</code></span>`,
+  )
+  .join("\n");
+
 const body = [
   '<div class="page">',
   '  <header class="head">',
   '    <span class="eyebrow">Mieru / icon</span>',
   "    <h1>アイコン候補</h1>",
-  '    <p class="lede">文字マーク「M」を枝に見立てた3案。グラデーションは使わず、高彩度の単色を面で塗り分けています。判断が分かれるのは大きく描いたときではなく、16px と切り抜き後です。そこから先に見てください。</p>',
+  '    <p class="lede">文字マーク「M」による5案。グラデーションは使わず、境界をはっきり切った単色で構成しています。上位3案は地をカラフルに割って M を白抜きにしたもの。判断が分かれるのは大きく描いたときではなく 16px と切り抜き後なので、そこから先に見てください。</p>',
   "  </header>",
   "",
   "  <section>",
@@ -506,11 +637,23 @@ const body = [
   "",
   "  <section>",
   '    <div class="section-head">',
+  "      <h2>見送った案</h2>",
+  '      <p class="note">判断の理由を残すために出力からは消していません。</p>',
+  "    </div>",
+  ...REJECTED.map(rejectedSection),
+  "  </section>",
+  "",
+  "  <section>",
+  '    <div class="section-head">',
   "      <h2>配色</h2>",
   '      <p class="note">アプリのブランチ自動配色（設計書 F-24）と同じ色を使います。アイコンと画面の色が揃っていると、道具としての一体感が出ます。彩度と明度を揃え、色相だけを離してあるので、隣り合っても濁りません。</p>',
   "    </div>",
   '    <div class="swatches">',
   swatches,
+  "    </div>",
+  '    <p class="note">白抜きの案では、同じ色相のまま明度だけを落とした深い色を地に使います。明るい色の上に白を置くと明度差が足りず、16px で字が消えるためです。</p>',
+  '    <div class="swatches">',
+  deepSwatches,
   "    </div>",
   "  </section>",
   "",
@@ -560,7 +703,7 @@ const standalone = [
 ].join("\n");
 fs.writeFileSync(path.join(here, "preview.html"), standalone, "utf8");
 
-for (const candidate of CANDIDATES) {
+for (const candidate of [...CANDIDATES, ...REJECTED]) {
   fs.writeFileSync(path.join(here, `candidate-${candidate.key}.svg`), `${candidate.svg}\n`, "utf8");
 }
 

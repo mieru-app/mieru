@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mieru">
+  <rect width="512" height="512" fill="#1D4ED8"/>
+  <g transform="rotate(45 256 256)">
+    <rect x="-560" y="-560" width="300" height="1632" fill="#7C3AED"/>
+    <rect x="-260" y="-560" width="300" height="1632" fill="#1D4ED8"/>
+    <rect x="40" y="-560" width="300" height="1632" fill="#0F766E"/>
+    <rect x="340" y="-560" width="300" height="1632" fill="#C2410C"/>
+    <rect x="640" y="-560" width="300" height="1632" fill="#DB2777"/>
+  </g>
+  <path d="M 146 372 L 146 146 L 256 296 L 366 146 L 366 372" stroke="#FFFFFF" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
