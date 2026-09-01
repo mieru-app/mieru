@@ -587,9 +587,11 @@ class ConflictError extends Error {
 | 実装 | Phase | version の実体 | 備考 |
 |---|---|---|---|
 | `MemoryStore` | 0 | 連番 | テスト用 |
-| `LocalFolderStore` | 1 | ファイル更新日時（ミリ秒） | File System Access API |
+| `LocalFolderStore` | 1 | 本文の内容ハッシュ | File System Access API |
 | `S3Store` | 3 | S3 の ETag | ブラウザから直接S3を操作 |
 | `SyncingStore` | 3 | S3 の ETag | 上2つを内包。IndexedDBをキャッシュとして使用 |
+
+> **`LocalFolderStore` の version に更新日時を使わない理由（Phase 1 で変更）:** FAT32 / exFAT は更新日時の分解能が2秒あり、その窓に収まった外部編集を検出できずに黙って上書きしてしまう。`list()` も `read()` も frontmatter の取得のために本文を読むため、内容そのものをハッシュしても追加コストはほぼ無い。副次的な利点として、外部から**同じ内容**で書き直された場合に競合として扱わずに済む。ハッシュは変更検出専用であり暗号学的用途には使わない（`src/store/hash.ts`）。
 
 ### 8.3 LocalFolderStore（Phase 1）
 
@@ -606,7 +608,8 @@ class ConflictError extends Error {
 |---|---|
 | 対象ファイル | フォルダ直下の `*.md`（サブフォルダは Phase 2 で対応） |
 | ID | ファイル名（拡張子含む） |
-| 保存方式 | 一時ファイルに書き出し後にリネーム（書き込み中断による破損を防ぐ） |
+| 保存方式 | `createWritable()` に委ねる。Chromium は一時ファイルへ書き `close()` で差し替えるため、中断しても元ファイルは無傷で残る |
+| 保存失敗時 | 指数バックオフで3回試行。権限失効は再試行せず即座に退避へ回す |
 | 外部変更検知 | 30秒ごと、およびウィンドウフォーカス復帰時に更新日時を確認 |
 | 権限失効時 | 編集内容をIndexedDBに退避し、再許可後に書き戻す |
 

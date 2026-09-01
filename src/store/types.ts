@@ -72,3 +72,21 @@ export class MapNotFoundError extends Error {
     super(`Map not found: ${id}`);
   }
 }
+
+/**
+ * 再試行しても保存できなかった。
+ *
+ * この例外が投げられた時点で、内容は退避済みである（`QuarantineSink`）。
+ * 利用者には「保存できていないが失われてもいない」ことを伝えなければならない。
+ */
+export class SaveFailedError extends Error {
+  override readonly name = "SaveFailedError";
+
+  constructor(
+    readonly id: string,
+    readonly reason: string,
+    override readonly cause: unknown,
+  ) {
+    super(`Failed to save ${id}: ${reason}`);
+  }
+}

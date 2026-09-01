@@ -19,7 +19,7 @@ paths:
 
 **IMPORTANT: 利用者の入力を失わせる実装を書いてはいけない。** 保存できない状況では、まず IndexedDB へ退避することを最優先とする。
 
-- 保存は「一時ファイルに書き出してからリネーム」で行う。書き込み中断によるファイル破損を防ぐため
+- 保存の原子性は `createWritable()` に委ねる。Chromium は一時ファイルへ書き `close()` で差し替えるため、自前で `.tmp` を作らない（利用者のフォルダにゴミを残さないため）
 - 保存失敗時は3回まで指数バックオフで再試行し、それでも失敗したら退避してエラーを表示する
 - 競合時は自動マージしない。サーバ版とローカル版の両方を残し、判断を利用者に委ねる
 - `write()` は `baseVersion` による楽観ロックを必ず行い、不一致なら `ConflictError` を投げる
@@ -29,9 +29,11 @@ paths:
 | 実装 | version |
 |---|---|
 | `MemoryStore` | 連番 |
-| `LocalFolderStore` | ファイル更新日時（ミリ秒） |
+| `LocalFolderStore` | 本文の内容ハッシュ（`src/store/hash.ts`） |
 | `S3Store` / `SyncingStore` | S3 の ETag |
 
 ## テスト
 
 `MapStore` の契約（楽観ロック、`ConflictError`、存在しない id の扱い）は `MemoryStore` を使って全メソッド網羅でテストする。実装を追加したら同じ契約テストを流用して通す。
+
+ブラウザ API に依存する実装も未検証にしない。`src/store/__tests__/fake-fs.ts`（File System Access API の偽物）と `fake-indexeddb` を使い、**権限失効・書き込み失敗・外部からの書き換え**を注入して検証する。とりわけ退避（`QuarantineSink`）はデータを失わないための最後の砦であり、必ず動作を確認する。
