@@ -18,6 +18,10 @@ infra/.cdk.staging/
 .env.*
 !.env.example
 
+# Claude Code の個人設定（CLAUDE.md と .claude/rules/ は共有するのでコミットする）
+CLAUDE.local.md
+.claude/settings.local.json
+
 # エディタ・OS
 .vscode/*
 !.vscode/extensions.json

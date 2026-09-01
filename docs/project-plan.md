@@ -231,7 +231,8 @@ Phase 3 ── AWS同期・スマートフォン ── ★どこでも使える
 | 基本設計書 | 完了 | `docs/design.md` |
 | プロジェクト計画書 | 完了 | `docs/project-plan.md` |
 | README（セットアップ手順） | Phase 0 | `README.md` |
-| CLAUDE.md（Claude Code 向けプロジェクト規約） | Phase 0 | `CLAUDE.md` |
+| CLAUDE.md（Claude Code 向けプロジェクト規約） | 完了 | `CLAUDE.md` |
+| パス限定ルール（変換エンジン / 永続化層 / UI層） | 完了 | `.claude/rules/*.md` |
 | Markdown書式仕様（利用者向け抜粋） | Phase 2 | `docs/format.md` |
 | 性能試験報告 | Phase 2 | `docs/perf-report.md` |
 | AWS構成メモ・運用手順 | Phase 3 | `docs/aws-ops.md` |
@@ -355,7 +356,7 @@ mindmap_app/
 直近の作業順序:
 
 1. `0-1` Vite + React + TypeScript プロジェクトの初期化、Vitest / ESLint / Prettier の設定
-2. `0-1` 併せて `README.md` と `CLAUDE.md`（PR-01・PR-02 対策の規約を含む）を作成
+2. `0-1` 完了時に `CLAUDE.md` のコマンド表を実際の `package.json` のスクリプトに合わせて更新（規約自体は着手前に整備済み）
 3. `0-2` 型定義の実装
 4. `0-3` / `0-4` パーサとシリアライザの実装
 5. `0-6` プロパティテストによる検証 → **ここで M0 到達可否が決まる**
