@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+infra/cdk.out/
+
+# 手書きのドキュメントは整形対象外にする。
+# Prettier の表整形が日本語の桁揃えを崩し、内容と無関係な差分を生むため。
+*.md
+docs/
+.claude/

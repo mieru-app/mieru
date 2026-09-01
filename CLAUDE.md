@@ -6,24 +6,25 @@
 
 ## 現在地
 
-Phase 0（基盤・変換エンジン）着手前。実装コードはまだ存在しない。
+**Phase 0（基盤・変換エンジン）完了。Phase 1（編集機能）着手前。**
+存在するのは `src/core/`（Markdown 変換）と `src/store/`（MapStore と MemoryStore）のみ。
 フェーズ定義と各フェーズの完了条件は `docs/project-plan.md` の3〜4章。
 
-**IMPORTANT: Phase 0 の完了条件を満たすまで UI コード（`src/views/`・`src/app/`・`src/features/`）を書かない。**
-先に画面を作ると、Markdown ラウンドトリップの欠陥が後から露見し、データモデルごと作り直しになる（リスク R-01 / PR-01）。
+Phase 1 は `1-1 LocalFolderStore` から始める。UI コードはこの時点から書いてよい。
 
 ## コマンド
 
-`package.json` は Phase 0 の 0-1 で作成する。**0-1 完了時にこの表を実際のスクリプトに合わせて更新すること。**
-
 | 用途 | コマンド |
 |---|---|
-| 開発サーバ | `npm run dev` |
 | 型検査 | `npm run typecheck` |
-| Lint | `npm run lint` |
+| Lint | `npm run lint` / `npm run lint:fix` |
+| 整形 | `npm run format`（Markdown は対象外） |
 | テスト（全体） | `npm test` |
 | テスト（変換エンジンのみ） | `npm run test:core` |
-| ビルド | `npm run build` |
+| カバレッジ | `npm run test:coverage`（90% 未満で失敗する） |
+| 監視実行 | `npm run test:watch` |
+
+`npm run dev` と `npm run build` は Phase 1 でアプリのエントリポイントを作る際に追加する。現時点では存在しない。
 
 一連の変更を終えたら `npm run typecheck` と `npm test` を実行し、**その出力を示してから完了を報告する**。
 
