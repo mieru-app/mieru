@@ -25,7 +25,8 @@ export type Command =
   | "redo"
   | "toggleMode"
   | "copyForAi"
-  | "saveNow";
+  | "saveNow"
+  | "toggleHelp";
 
 /** `KeyboardEvent` のうち割り当ての判定に使う部分 */
 export interface KeyStroke {
@@ -62,6 +63,9 @@ export function resolveShortcut(stroke: KeyStroke, editing: boolean): Command | 
     return null;
   }
 
+  // ヘルプは文字入力中でも開ける。操作が分からなくなるのは入力の途中が多い
+  if (stroke.key === "F1") return "toggleHelp";
+
   // ここから先は木そのものへの操作。文字入力中は割り当てない
   if (editing) return null;
 
@@ -73,6 +77,8 @@ export function resolveShortcut(stroke: KeyStroke, editing: boolean): Command | 
     case " ":
     case "F2":
       return "beginEdit";
+    case "?":
+      return "toggleHelp";
     case "Delete":
       return "remove";
     case "ArrowUp":

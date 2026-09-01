@@ -11,6 +11,8 @@ interface Props {
   onChangeMode: (mode: ViewMode) => void;
   onCopyForAi: () => void;
   onNewMap: () => void;
+  onToggleHelp: () => void;
+  helpOpen: boolean;
   canEdit: boolean;
 }
 
@@ -20,6 +22,8 @@ export function Toolbar({
   onChangeMode,
   onCopyForAi,
   onNewMap,
+  onToggleHelp,
+  helpOpen,
   canEdit,
 }: Props): React.JSX.Element {
   return (
@@ -52,6 +56,9 @@ export function Toolbar({
         </button>
         <button type="button" onClick={onNewMap}>
           新規作成
+        </button>
+        <button type="button" onClick={onToggleHelp} aria-pressed={helpOpen} title="?">
+          キー操作
         </button>
       </div>
     </header>

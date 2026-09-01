@@ -8,7 +8,9 @@ import { Canvas } from "../views/Canvas/Canvas.js";
 import { NotePanel } from "../views/NotePanel/NotePanel.js";
 import { Outline } from "../views/Outline/Outline.js";
 import { Banners } from "./Banners.js";
+import { FirstBranchGuide, NoMapGuide } from "./Guide.js";
 import { MapList } from "./MapList.js";
+import { ShortcutSheet } from "./ShortcutSheet.js";
 import { StartScreen } from "./StartScreen.js";
 import { StatusBar } from "./StatusBar.js";
 import { Toolbar } from "./Toolbar.js";
@@ -39,12 +41,17 @@ export function App(): React.JSX.Element {
   const selected = useEditor(selectedNode);
 
   const [toast, setToast] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const notify = useCallback((message: string) => {
     setToast(message);
   }, []);
 
-  useKeymap(notify);
+  const toggleHelp = useCallback(() => {
+    setShowHelp((open) => !open);
+  }, []);
+
+  useKeymap(notify, toggleHelp);
 
   useEffect(() => {
     void useWorkspace.getState().init();
@@ -75,6 +82,8 @@ export function App(): React.JSX.Element {
     );
   }
 
+  const rootHasChildren = root !== null && root.children.length > 0;
+
   const newMap = (): void => {
     const title = window.prompt("新しいマップの中心テーマ", "新しいマップ");
     if (title === null) return;
@@ -90,6 +99,8 @@ export function App(): React.JSX.Element {
         onChangeMode={(next) => useEditor.getState().setMode(next)}
         onCopyForAi={() => void runCommand("copyForAi", { copyText, notify })}
         onNewMap={newMap}
+        onToggleHelp={toggleHelp}
+        helpOpen={showHelp}
       />
 
       <Banners
@@ -112,15 +123,18 @@ export function App(): React.JSX.Element {
 
         <main className="main">
           {root === null ? (
-            <p className="main-empty">左の一覧からマップを開くか、新しく作成してください。</p>
-          ) : mode === "canvas" ? (
-            <Canvas />
+            <NoMapGuide hasMaps={maps.length > 0} onNewMap={newMap} />
           ) : (
-            <Outline />
+            <>
+              {mode === "canvas" ? <Canvas /> : <Outline />}
+              {!rootHasChildren && <FirstBranchGuide />}
+            </>
           )}
         </main>
 
-        {selected !== null && (
+        {showHelp && <ShortcutSheet onClose={toggleHelp} />}
+
+        {selected !== null && !showHelp && (
           <NotePanel node={selected} onChange={(note) => useEditor.getState().writeNote(note)} />
         )}
       </div>
@@ -129,6 +143,7 @@ export function App(): React.JSX.Element {
         status={status}
         nodeCount={root === null ? 0 : flatten(root).length}
         folderName={folder.folderName}
+        hint={root === null ? "newMap" : rootHasChildren ? "help" : "firstBranch"}
       />
 
       {toast !== null && (

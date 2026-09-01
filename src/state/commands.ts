@@ -16,6 +16,8 @@ export interface CommandDeps {
   copyText(text: string): Promise<void>;
   /** 結果の短い通知。UI 側でトーストなどに使う */
   notify?(message: string): void;
+  /** キー操作一覧の開閉。表示の都合なので UI 側から渡す */
+  toggleHelp?(): void;
 }
 
 /**
@@ -101,6 +103,10 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
       }
       return;
     }
+
+    case "toggleHelp":
+      deps.toggleHelp?.();
+      return;
 
     case "saveNow":
       await useWorkspace.getState().saveNow();

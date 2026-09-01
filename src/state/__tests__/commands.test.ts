@@ -161,3 +161,15 @@ describe("残りの操作", () => {
     await expect(runCommand("saveNow", noop)).resolves.toBeUndefined();
   });
 });
+
+describe("キー操作一覧の開閉", () => {
+  it("UI 側の開閉処理を呼ぶ", async () => {
+    const toggleHelp = vi.fn();
+    await runCommand("toggleHelp", { ...noop, toggleHelp });
+    expect(toggleHelp).toHaveBeenCalledTimes(1);
+  });
+
+  it("開閉処理が渡されていなくても落ちない", async () => {
+    await expect(runCommand("toggleHelp", noop)).resolves.toBeUndefined();
+  });
+});

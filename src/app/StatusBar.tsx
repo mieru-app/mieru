@@ -27,20 +27,30 @@ function describe(status: SaveStatus): { tone: string; text: string } {
   }
 }
 
+/** 状況に応じて出す案内。今この場で次に押すキーを示す */
+export type StatusHint = "newMap" | "firstBranch" | "help";
+
+const HINTS: Record<StatusHint, string> = {
+  newMap: "「新規作成」からマップを作れます",
+  firstBranch: "Tab で最初の枝を追加",
+  help: "? でキー操作の一覧",
+};
+
 interface Props {
   status: SaveStatus;
   nodeCount: number;
   folderName: string | null;
+  hint: StatusHint;
 }
 
-export function StatusBar({ status, nodeCount, folderName }: Props): React.JSX.Element {
+export function StatusBar({ status, nodeCount, folderName, hint }: Props): React.JSX.Element {
   const { tone, text } = describe(status);
   return (
     <footer className="statusbar">
       <span className={`status status-${tone}`}>{text}</span>
       {folderName !== null && <span className="statusbar-item">{folderName}</span>}
       {nodeCount > 0 && <span className="statusbar-item">{nodeCount} ノード</span>}
-      <span className="statusbar-hint">Ctrl+Shift+C で AI 用 Markdown をコピー</span>
+      <span className="statusbar-hint">{HINTS[hint]}</span>
     </footer>
   );
 }

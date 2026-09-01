@@ -58,13 +58,34 @@ export function StartScreen({ folder, onChoose, onGrant }: Props): React.JSX.Ele
     <div className="startscreen">
       <h1>MindDeck</h1>
       <p>考えを整理し、そのまま AI に渡せるマインドマップツール。</p>
-      <p>
-        マップは選んだフォルダに <code>.md</code> ファイルとして保存されます。 Obsidian や VS Code
-        でそのまま開けます。
-      </p>
+      <ol className="startscreen-steps">
+        <li>
+          <strong>フォルダを選ぶ</strong>
+          <span>
+            マップは選んだフォルダに <code>.md</code> として保存されます。
+            新しい空のフォルダで構いません。
+          </span>
+        </li>
+        <li>
+          <strong>「新規作成」でマップを作る</strong>
+          <span>中心テーマを1つ決めるところから始めます。</span>
+        </li>
+        <li>
+          <strong>キーボードで枝を伸ばす</strong>
+          <span>
+            <kbd>Tab</kbd> で子、<kbd>Enter</kbd> で兄弟。<kbd>?</kbd> でキー操作の一覧が出ます。
+          </span>
+        </li>
+      </ol>
+
       <button type="button" className="primary" onClick={onChoose}>
         フォルダを選ぶ
       </button>
+
+      <p className="startscreen-note">
+        作った .md は Obsidian や VS Code でもそのまま開けます。
+        保存ボタンはありません（入力が止まって 0.8 秒で自動保存）。
+      </p>
     </div>
   );
 }

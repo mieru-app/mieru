@@ -80,3 +80,18 @@ describe("文字入力中の扱い", () => {
     expect(resolveShortcut(stroke("c", { ctrlKey: true }), false)).toBeNull();
   });
 });
+
+describe("キー操作一覧の呼び出し", () => {
+  it("? と F1 で開く", () => {
+    expect(resolveShortcut(stroke("?", { shiftKey: true }), false)).toBe("toggleHelp");
+    expect(resolveShortcut(stroke("F1"), false)).toBe("toggleHelp");
+  });
+
+  it("F1 は文字入力中でも効く（操作に迷うのは入力の途中が多い）", () => {
+    expect(resolveShortcut(stroke("F1"), true)).toBe("toggleHelp");
+  });
+
+  it("? は文字入力中には奪わない（「?」を打てなくなるため）", () => {
+    expect(resolveShortcut(stroke("?", { shiftKey: true }), true)).toBeNull();
+  });
+});
