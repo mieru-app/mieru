@@ -19,11 +19,13 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "mind-elixir": "5.15.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "remark-parse": "11.0.0",
     "unified": "11.0.5",
-    "yaml": "2.9.0"
+    "yaml": "2.9.0",
+    "zustand": "5.0.15"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
