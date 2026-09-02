@@ -618,6 +618,15 @@ class ConflictError extends Error {
 
 **制約: File System Access API は Chromium系デスクトップブラウザ（Edge / Chrome / Opera）のみで動作する。** Firefox・Safari・全モバイルブラウザは非対応。Phase 1 の対応ブラウザがEdge/Chromeに限られるのはこのためであり、Phase 3 完了後にこの制約は解消される。
 
+**改名（F-03）はファイル名の変更を伴う。** `MapStore` に「改名」は無く、
+`write(新しい id)` と `remove(古い id)` の2手で行う（`src/state/workspace.ts` の `renameMap`）。
+**必ず書いてから消す。** 逆順にすると、消した後で書き込みに失敗したときにマップそのものが失われる。
+この順序であれば、失敗しても残るのは同じ内容の2ファイルであり、利用者が片方を消せば復旧できる。
+
+改名は内容を読み直して `title` と H1 を書き換え、正規化を通して書き戻す。
+アプリの外で書かれた Markdown は整形され直すが、これは保存のたびに起きることであり
+改名に固有の副作用ではない。
+
 ### 8.4 S3Store（Phase 3）
 
 ```

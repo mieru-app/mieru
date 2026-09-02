@@ -18,6 +18,10 @@ export interface CommandDeps {
   notify?(message: string): void;
   /** キー操作一覧の開閉。表示の都合なので UI 側から渡す */
   toggleHelp?(): void;
+  /** サイドバーの開閉 */
+  toggleSidebar?(): void;
+  /** 検索欄へ入力位置を移す */
+  focusSearch?(): void;
 }
 
 /**
@@ -106,6 +110,14 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
 
     case "toggleHelp":
       deps.toggleHelp?.();
+      return;
+
+    case "toggleSidebar":
+      deps.toggleSidebar?.();
+      return;
+
+    case "focusSearch":
+      deps.focusSearch?.();
       return;
 
     case "saveNow":

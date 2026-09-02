@@ -12,7 +12,9 @@ interface Props {
   onCopyForAi: () => void;
   onNewMap: () => void;
   onToggleHelp: () => void;
+  onToggleSidebar: () => void;
   helpOpen: boolean;
+  sidebarOpen: boolean;
   canEdit: boolean;
 }
 
@@ -23,11 +25,23 @@ export function Toolbar({
   onCopyForAi,
   onNewMap,
   onToggleHelp,
+  onToggleSidebar,
   helpOpen,
+  sidebarOpen,
   canEdit,
 }: Props): React.JSX.Element {
   return (
     <header className="toolbar">
+      <button
+        type="button"
+        className="toolbar-icon"
+        aria-pressed={sidebarOpen}
+        aria-label="サイドバーの開閉"
+        title="Ctrl+B"
+        onClick={onToggleSidebar}
+      >
+        ☰
+      </button>
       <span className="brand">Mieru</span>
       <span className="toolbar-title">{title}</span>
 

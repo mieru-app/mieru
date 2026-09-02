@@ -70,6 +70,17 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    title: "マップを探す",
+    entries: [
+      { keys: ["Ctrl + B"], commands: ["toggleSidebar"], description: "サイドバーを開閉する" },
+      {
+        keys: ["Ctrl + F"],
+        commands: ["focusSearch"],
+        description: "全マップを横断して検索する",
+      },
+    ],
+  },
+  {
     title: "AI へ渡す・保存",
     entries: [
       {

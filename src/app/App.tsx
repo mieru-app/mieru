@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
+import { collectTags, queryIndex } from "../state/search.js";
 import { flatten } from "../state/tree.js";
 import { useWorkspace } from "../state/workspace.js";
 import { Canvas } from "../views/Canvas/Canvas.js";
 import { NotePanel } from "../views/NotePanel/NotePanel.js";
 import { Outline } from "../views/Outline/Outline.js";
+import { Sidebar } from "../views/Sidebar/Sidebar.js";
 import { Banners } from "./Banners.js";
 import { FirstBranchGuide, NoMapGuide } from "./Guide.js";
-import { MapList } from "./MapList.js";
 import { ShortcutSheet } from "./ShortcutSheet.js";
 import { StartScreen } from "./StartScreen.js";
 import { StatusBar } from "./StatusBar.js";
@@ -30,6 +31,7 @@ async function copyText(text: string): Promise<void> {
 export function App(): React.JSX.Element {
   const folder = useWorkspace((state) => state.folder);
   const maps = useWorkspace((state) => state.maps);
+  const indexes = useWorkspace((state) => state.indexes);
   const workspaceError = useWorkspace((state) => state.error);
   const externallyChanged = useWorkspace((state) => state.externallyChanged);
   const quarantined = useWorkspace((state) => state.quarantined);
@@ -42,6 +44,11 @@ export function App(): React.JSX.Element {
 
   const [toast, setToast] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [query, setQuery] = useState("");
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -51,7 +58,17 @@ export function App(): React.JSX.Element {
     setShowHelp((open) => !open);
   }, []);
 
-  useKeymap(notify, toggleHelp);
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((open) => !open);
+  }, []);
+
+  // 検索は畳んだサイドバーの中にある。開かずに入力位置だけ移しても何も見えない
+  const focusSearch = useCallback(() => {
+    setSidebarOpen(true);
+    requestAnimationFrame(() => searchRef.current?.select());
+  }, []);
+
+  useKeymap({ notify, toggleHelp, toggleSidebar, focusSearch });
 
   useEffect(() => {
     void useWorkspace.getState().init();
@@ -72,6 +89,17 @@ export function App(): React.JSX.Element {
     return () => window.removeEventListener("pagehide", onHide);
   }, []);
 
+  const hits = useMemo(
+    () => queryIndex(indexes, { query, tags: activeTags }),
+    [indexes, query, activeTags],
+  );
+  const tags = useMemo(() => collectTags(indexes), [indexes]);
+
+  const startCreating = useCallback(() => {
+    setSidebarOpen(true);
+    setCreating(true);
+  }, []);
+
   if (folder.kind !== "ready") {
     return (
       <StartScreen
@@ -84,21 +112,24 @@ export function App(): React.JSX.Element {
 
   const rootHasChildren = root !== null && root.children.length > 0;
 
-  const newMap = (): void => {
-    const title = window.prompt("新しいマップの中心テーマ", "新しいマップ");
-    if (title === null) return;
-    void useWorkspace.getState().createMap(title.trim() === "" ? "新しいマップ" : title.trim());
+  // 削除だけはモーダルで確認する（設計書 7.2 の唯一の例外）。
+  // 消したファイルは Undo で戻せないため、ここは省かない
+  const confirmDelete = (id: string, title: string): void => {
+    if (!window.confirm(`「${title}」を削除します。元に戻せません。`)) return;
+    void useWorkspace.getState().deleteMap(id);
   };
 
   return (
-    <div className="app">
+    <div className={`app${sidebarOpen ? "" : " is-sidebar-closed"}`}>
       <Toolbar
         title={map?.meta.title ?? "マップを開いてください"}
         mode={mode}
         canEdit={root !== null}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={toggleSidebar}
         onChangeMode={(next) => useEditor.getState().setMode(next)}
         onCopyForAi={() => void runCommand("copyForAi", { copyText, notify })}
-        onNewMap={newMap}
+        onNewMap={startCreating}
         onToggleHelp={toggleHelp}
         helpOpen={showHelp}
       />
@@ -115,15 +146,36 @@ export function App(): React.JSX.Element {
       />
 
       <div className="workarea">
-        <MapList
-          maps={maps}
-          openId={map?.id ?? null}
-          onOpen={(id) => void useWorkspace.getState().openMap(id)}
-        />
+        {sidebarOpen && (
+          <Sidebar
+            hits={hits}
+            tags={tags}
+            activeTags={activeTags}
+            query={query}
+            searching={query.trim() !== ""}
+            openId={map?.id ?? null}
+            empty={maps.length === 0}
+            creating={creating}
+            searchRef={searchRef}
+            onCreatingChange={setCreating}
+            onQueryChange={setQuery}
+            onToggleTag={(tag) =>
+              setActiveTags((current) =>
+                current.includes(tag)
+                  ? current.filter((other) => other !== tag)
+                  : [...current, tag],
+              )
+            }
+            onOpen={(id) => void useWorkspace.getState().openMap(id)}
+            onCreate={(title) => void useWorkspace.getState().createMap(title)}
+            onRename={(id, title) => void useWorkspace.getState().renameMap(id, title)}
+            onDelete={confirmDelete}
+          />
+        )}
 
         <main className="main">
           {root === null ? (
-            <NoMapGuide hasMaps={maps.length > 0} onNewMap={newMap} />
+            <NoMapGuide hasMaps={maps.length > 0} onNewMap={startCreating} />
           ) : (
             <>
               {mode === "canvas" ? <Canvas /> : <Outline />}

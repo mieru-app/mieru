@@ -64,6 +64,7 @@ function reset(): FakeDirectory {
     error: null,
     externallyChanged: false,
     quarantined: [],
+    indexes: [],
   });
   return dir;
 }
@@ -163,6 +164,19 @@ describe("マップの作成と読み書き", () => {
     expect(dir.entries.get("新規事業の論点整理.md")?.content).toContain("# 新規事業の論点整理");
   });
 
+  it("下敷きの Markdown から作れる。表題は利用者が入れたものに揃う", async () => {
+    const dir = reset();
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().createMap("今週の振返り", "# ひな形\n\n- 良かったこと\n- 課題\n");
+
+    const content = dir.entries.get("今週の振返り.md")?.content ?? "";
+    expect(content).toContain("title: 今週の振返り");
+    expect(content).toContain("# 今週の振返り");
+    expect(content).toContain("- 良かったこと");
+    expect(content).not.toContain("ひな形");
+  });
+
   it("同じ表題でも上書きせず別ファイルにする", async () => {
     const dir = reset();
     await useWorkspace.getState().chooseFolder();
@@ -205,6 +219,164 @@ describe("マップの作成と読み書き", () => {
     await useWorkspace.getState().chooseFolder();
     await useWorkspace.getState().openMap("無い.md");
     expect(useWorkspace.getState().error).toContain("開けませんでした");
+  });
+});
+
+describe("マップの改名（F-03）", () => {
+  it("表題・H1・ファイル名を同時に変える", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().renameMap("既存のマップ.md", "改名した名前");
+
+    expect([...dir.entries.keys()]).toEqual(["改名した名前.md"]);
+    const content = dir.entries.get("改名した名前.md")?.content ?? "";
+    expect(content).toContain("title: 改名した名前");
+    expect(content).toContain("# 改名した名前");
+    // 中身は失われていない
+    expect(content).toContain("- 枝");
+  });
+
+  it("開いているマップを改名すると、新しいファイルを開いたままになる", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().openMap("既存のマップ.md");
+
+    await useWorkspace.getState().renameMap("既存のマップ.md", "改名した名前");
+
+    expect(useEditor.getState().map?.id).toBe("改名した名前.md");
+    expect(useEditor.getState().root?.label).toBe("改名した名前");
+  });
+
+  it("書きかけを確定させてから改名する", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().openMap("既存のマップ.md");
+
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("改名前に入れた枝");
+    await useWorkspace.getState().renameMap("既存のマップ.md", "改名した名前");
+
+    expect(dir.entries.get("改名した名前.md")?.content).toContain("- 改名前に入れた枝");
+  });
+
+  it("既にある名前とは重ならない", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    dir.putRaw("読書メモ.md", MD.replace(/既存のマップ/g, "読書メモ"));
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().renameMap("既存のマップ.md", "読書メモ");
+
+    expect([...dir.entries.keys()].sort()).toEqual(["読書メモ 2.md", "読書メモ.md"]);
+  });
+
+  it("ファイル名が変わらない改名でも中身は更新される", async () => {
+    const dir = reset();
+    // ファイル名に使えない文字は同じ字へ畳まれるため、基底部分が変わらない
+    dir.putRaw("問いの整理.md", MD.replace(/既存のマップ/g, "問いの整理"));
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().renameMap("問いの整理.md", "問いの整理");
+
+    expect([...dir.entries.keys()]).toEqual(["問いの整理.md"]);
+    expect(dir.entries.get("問いの整理.md")?.content).toContain("# 問いの整理");
+  });
+
+  it("空の表題は受け付けない", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().renameMap("既存のマップ.md", "   ");
+
+    expect([...dir.entries.keys()]).toEqual(["既存のマップ.md"]);
+  });
+
+  it("失敗したら理由を残し、元のファイルは残す", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+    dir.failWrites(3);
+
+    await useWorkspace.getState().renameMap("既存のマップ.md", "改名した名前");
+
+    expect(useWorkspace.getState().error).toContain("名前を変えられませんでした");
+    expect([...dir.entries.keys()]).toEqual(["既存のマップ.md"]);
+  });
+});
+
+describe("マップの削除（F-02）", () => {
+  it("ファイルごと消え、一覧から外れる", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().deleteMap("既存のマップ.md");
+
+    expect([...dir.entries.keys()]).toEqual([]);
+    expect(useWorkspace.getState().maps).toEqual([]);
+  });
+
+  it("開いているマップを消したら閉じる。書き戻さない", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().openMap("既存のマップ.md");
+
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("消す直前の入力");
+    await useWorkspace.getState().deleteMap("既存のマップ.md");
+
+    expect([...dir.entries.keys()]).toEqual([]);
+    expect(useEditor.getState().map).toBeNull();
+    expect(useEditor.getState().status.kind).toBe("empty");
+  });
+
+  it("別のマップを消しても、開いているマップはそのまま", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    dir.putRaw("消す方.md", MD.replace(/既存のマップ/g, "消す方"));
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().openMap("既存のマップ.md");
+
+    await useWorkspace.getState().deleteMap("消す方.md");
+
+    expect(useEditor.getState().map?.id).toBe("既存のマップ.md");
+    expect([...dir.entries.keys()]).toEqual(["既存のマップ.md"]);
+  });
+
+  it("無いマップを消そうとしたら理由を残す", async () => {
+    reset();
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().deleteMap("無い.md");
+
+    expect(useWorkspace.getState().error).toContain("削除できませんでした");
+  });
+});
+
+describe("検索の索引", () => {
+  it("一覧を読むたびに索引が付いてくる", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+
+    const [index] = useWorkspace.getState().indexes;
+    expect(index?.id).toBe("既存のマップ.md");
+    expect(index?.entries.some((entry) => entry.text === "枝")).toBe(true);
+  });
+
+  it("削除したマップは索引からも消える", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().deleteMap("既存のマップ.md");
+
+    expect(useWorkspace.getState().indexes).toEqual([]);
   });
 });
 
@@ -315,6 +487,12 @@ describe("フォルダ未選択のときは何もしない", () => {
     await expect(useWorkspace.getState().openMap("a.md")).resolves.toBeUndefined();
     await expect(useWorkspace.getState().reloadOpen()).resolves.toBeUndefined();
     await expect(useWorkspace.getState().saveNow()).resolves.toBeUndefined();
+  });
+
+  it("改名・削除も例外にならない", async () => {
+    reset();
+    await expect(useWorkspace.getState().renameMap("a.md", "別名")).resolves.toBeUndefined();
+    await expect(useWorkspace.getState().deleteMap("a.md")).resolves.toBeUndefined();
   });
 });
 

@@ -95,6 +95,16 @@ button.primary {
   border-bottom: 1px solid var(--border);
 }
 
+.toolbar-icon {
+  border: none;
+  padding: 0.15rem 0.4rem;
+  color: var(--fg-muted);
+}
+
+.toolbar-icon[aria-pressed="true"] {
+  color: var(--fg);
+}
+
 .brand {
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -148,37 +158,160 @@ button.primary {
   grid-template-columns: 15rem 1fr 20rem;
 }
 
-.maplist {
+/* サイドバーを畳んだときは要素ごと消えるため、列の定義も減らす */
+.is-sidebar-closed .workarea {
+  grid-template-columns: 1fr;
+}
+
+.is-sidebar-closed .workarea:has(.notepanel),
+.is-sidebar-closed .workarea:has(.sheet) {
+  grid-template-columns: 1fr 20rem;
+}
+
+/* ── サイドバー ─────────────────────────────────────────── */
+
+.sidebar {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  min-height: 0;
   border-right: 1px solid var(--border);
+}
+
+.sidebar-search {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-input {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+}
+
+.sidebar-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.sidebar-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  font-size: 0.85em;
+}
+
+.sidebar-tag[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.sidebar-tag-count {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+.sidebar-tag[aria-pressed="true"] .sidebar-tag-count {
+  color: inherit;
+}
+
+.sidebar-list {
   overflow-y: auto;
   padding: 0.5rem;
 }
 
-.maplist-empty {
+.sidebar-empty {
   color: var(--fg-muted);
   padding: 0.5rem;
   margin: 0;
 }
 
-.maplist-item {
+.sidebar-row {
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.sidebar-row.is-open {
+  background: var(--bg-sunken);
+}
+
+.sidebar-open {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   border: none;
-  border-radius: 6px;
+  background: transparent;
   text-align: left;
   padding: 0.4rem 0.5rem;
 }
 
-.maplist-item.is-open {
-  background: var(--bg-sunken);
+.sidebar-row.is-open .sidebar-title {
   font-weight: 600;
 }
 
-.maplist-date {
+.sidebar-title,
+.sidebar-excerpt {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-date,
+.sidebar-excerpt {
   color: var(--fg-muted);
   font-size: 0.8em;
+}
+
+.sidebar-kind {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 0.25rem;
+  margin-right: 0.35rem;
+}
+
+/*
+ * 改名と削除は、その行を指しているときだけ出す。
+ * 常に出しておくと一覧が記号で埋まり、表題が読みにくくなる。
+ */
+.sidebar-actions {
+  display: flex;
+  gap: 0.15rem;
+  padding-right: 0.25rem;
+  visibility: hidden;
+}
+
+.sidebar-row:hover .sidebar-actions,
+.sidebar-row:focus-within .sidebar-actions {
+  visibility: visible;
+}
+
+.sidebar-actions button {
+  border: none;
+  padding: 0.1rem 0.35rem;
+  color: var(--fg-muted);
+}
+
+.sidebar-new {
+  margin: 0.5rem;
+  border-style: dashed;
 }
 
 .main {

@@ -26,7 +26,9 @@ export type Command =
   | "toggleMode"
   | "copyForAi"
   | "saveNow"
-  | "toggleHelp";
+  | "toggleHelp"
+  | "toggleSidebar"
+  | "focusSearch";
 
 /** `KeyboardEvent` のうち割り当ての判定に使う部分 */
 export interface KeyStroke {
@@ -56,6 +58,9 @@ export function resolveShortcut(stroke: KeyStroke, editing: boolean): Command | 
     if (key === "y") return "redo";
     if (key === "s") return "saveNow";
     if (key === "e") return "toggleMode";
+    // サイドバーと検索は入力中でも効かせる。探し物は入力の途中で始まる
+    if (key === "b") return "toggleSidebar";
+    if (key === "f") return "focusSearch";
     if (key === "c" && stroke.shiftKey) return "copyForAi";
     if (key === "/") return "toggleCollapse";
     if (key === "arrowup") return "reorderUp";

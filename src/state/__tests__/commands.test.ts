@@ -173,3 +173,21 @@ describe("キー操作一覧の開閉", () => {
     await expect(runCommand("toggleHelp", noop)).resolves.toBeUndefined();
   });
 });
+
+describe("サイドバーと検索", () => {
+  it("開閉と入力位置の移動を UI 側へ委ねる", async () => {
+    const toggleSidebar = vi.fn();
+    const focusSearch = vi.fn();
+
+    await runCommand("toggleSidebar", { ...noop, toggleSidebar });
+    await runCommand("focusSearch", { ...noop, focusSearch });
+
+    expect(toggleSidebar).toHaveBeenCalledTimes(1);
+    expect(focusSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("渡されていなくても落ちない", async () => {
+    await expect(runCommand("toggleSidebar", noop)).resolves.toBeUndefined();
+    await expect(runCommand("focusSearch", noop)).resolves.toBeUndefined();
+  });
+});
