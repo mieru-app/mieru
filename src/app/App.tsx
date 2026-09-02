@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { runCommand } from "../state/commands.js";
+import type { ExportMode } from "../core/export.js";
+import { exportAs } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
 import { collectTags, queryIndex } from "../state/search.js";
 import { flatten } from "../state/tree.js";
 import { useWorkspace } from "../state/workspace.js";
 import { Canvas } from "../views/Canvas/Canvas.js";
+import { ExportPanel } from "../views/Export/ExportPanel.js";
 import { NotePanel } from "../views/NotePanel/NotePanel.js";
 import { Outline } from "../views/Outline/Outline.js";
 import { Sidebar } from "../views/Sidebar/Sidebar.js";
 import { Banners } from "./Banners.js";
+import { downloadText } from "./download.js";
 import { FirstBranchGuide, NoMapGuide } from "./Guide.js";
 import { ShortcutSheet } from "./ShortcutSheet.js";
 import { StartScreen } from "./StartScreen.js";
@@ -42,8 +45,12 @@ export function App(): React.JSX.Element {
   const status = useEditor((state) => state.status);
   const selected = useEditor(selectedNode);
 
+  const selectedUid = useEditor((state) => state.selectedUid);
+
   const [toast, setToast] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exportMode, setExportMode] = useState<ExportMode>("expanded");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -54,8 +61,15 @@ export function App(): React.JSX.Element {
     setToast(message);
   }, []);
 
+  // 右の欄は1つだけ出す。並べると主表示領域が狭くなる（設計書 7.2）
   const toggleHelp = useCallback(() => {
+    setShowExport(false);
     setShowHelp((open) => !open);
+  }, []);
+
+  const toggleExport = useCallback(() => {
+    setShowHelp(false);
+    setShowExport((open) => !open);
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -68,7 +82,7 @@ export function App(): React.JSX.Element {
     requestAnimationFrame(() => searchRef.current?.select());
   }, []);
 
-  useKeymap({ notify, toggleHelp, toggleSidebar, focusSearch });
+  useKeymap({ notify, toggleHelp, toggleSidebar, focusSearch, toggleExport });
 
   useEffect(() => {
     void useWorkspace.getState().init();
@@ -94,6 +108,22 @@ export function App(): React.JSX.Element {
     [indexes, query, activeTags],
   );
   const tags = useMemo(() => collectTags(indexes), [indexes]);
+
+  // 木や選択が動けば出力も変わる。開いている間だけ作り直す。
+  // exportAs はストアから直に読むため、root と selectedUid は再計算の契機として渡している
+  const exported = useMemo(
+    () => (showExport ? exportAs(exportMode) : null),
+    [showExport, exportMode, root, selectedUid],
+  );
+
+  // 横断リンクの宛先候補。自分自身と無題のノードは除く（F-17）
+  const linkCandidates = useMemo(() => {
+    if (root === null) return [];
+    const labels = flatten(root)
+      .map((node) => node.label)
+      .filter((label) => label !== "" && label !== selected?.label);
+    return [...new Set(labels)].sort((a, b) => a.localeCompare(b));
+  }, [root, selected]);
 
   const startCreating = useCallback(() => {
     setSidebarOpen(true);
@@ -128,7 +158,8 @@ export function App(): React.JSX.Element {
         sidebarOpen={sidebarOpen}
         onToggleSidebar={toggleSidebar}
         onChangeMode={(next) => useEditor.getState().setMode(next)}
-        onCopyForAi={() => void runCommand("copyForAi", { copyText, notify })}
+        onToggleExport={toggleExport}
+        exportOpen={showExport}
         onNewMap={startCreating}
         onToggleHelp={toggleHelp}
         helpOpen={showHelp}
@@ -184,10 +215,36 @@ export function App(): React.JSX.Element {
           )}
         </main>
 
+        {showExport && (
+          <ExportPanel
+            mode={exportMode}
+            result={exported}
+            onChangeMode={setExportMode}
+            onClose={toggleExport}
+            onCopy={() => {
+              if (exported === null) return;
+              void copyText(exported.md).then(
+                () => notify("Markdown をコピーしました"),
+                () => notify("クリップボードへコピーできませんでした"),
+              );
+            }}
+            onDownload={() => {
+              if (exported === null) return;
+              downloadText(exported.fileName, exported.md);
+            }}
+          />
+        )}
+
         {showHelp && <ShortcutSheet onClose={toggleHelp} />}
 
-        {selected !== null && !showHelp && (
-          <NotePanel node={selected} onChange={(note) => useEditor.getState().writeNote(note)} />
+        {selected !== null && !showHelp && !showExport && (
+          <NotePanel
+            node={selected}
+            linkCandidates={linkCandidates}
+            onChange={(note) => useEditor.getState().writeNote(note)}
+            onChangeEmoji={(emoji) => useEditor.getState().setEmoji(emoji)}
+            onAddLink={(label) => useEditor.getState().addLink(label)}
+          />
         )}
       </div>
 

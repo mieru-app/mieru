@@ -28,7 +28,9 @@ export type Command =
   | "saveNow"
   | "toggleHelp"
   | "toggleSidebar"
-  | "focusSearch";
+  | "focusSearch"
+  /** キー割り当てを持たない。ツールバーとコマンドパレットから呼ぶ */
+  | "toggleExport";
 
 /** `KeyboardEvent` のうち割り当ての判定に使う部分 */
 export interface KeyStroke {

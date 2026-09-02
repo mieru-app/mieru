@@ -56,7 +56,7 @@ function splitEmoji(label: string): { label: string; emoji?: string } {
 }
 
 /** ラベルから横断リンクを収集する。ラベル文字列からは除去しない（可逆性のため） */
-function collectLinks(label: string): string[] {
+export function collectLinks(label: string): string[] {
   const links: string[] = [];
   for (const match of label.matchAll(CROSS_LINK)) {
     const target = match[1]?.trim();

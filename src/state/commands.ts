@@ -1,5 +1,7 @@
+import type { ExportMode } from "../core/export.js";
 import { exportMarkdown } from "../core/export.js";
 import type { Command } from "../app/keymap.js";
+import { toFileNameBase } from "../store/file-name.js";
 import { useEditor } from "./editor.js";
 import { locate } from "./tree.js";
 import { useWorkspace } from "./workspace.js";
@@ -22,26 +24,65 @@ export interface CommandDeps {
   toggleSidebar?(): void;
   /** 検索欄へ入力位置を移す */
   focusSearch?(): void;
+  /** AI 出力パネルの開閉 */
+  toggleExport?(): void;
+}
+
+/** 出力の結果。何を出したのかが利用者に分かる形で返す */
+export interface ExportResult {
+  md: string;
+  /** 「全体」または起点ノードのラベル。通知とファイル名に使う */
+  scope: string;
+  /** `.md` として保存するときの既定のファイル名 */
+  fileName: string;
 }
 
 /**
- * AI へ渡す Markdown を作る。
+ * 指定したモードで Markdown を作る（設計書 7.3）。
  *
- * 中心テーマを選んでいるときは全体、それ以外のノードを選んでいるときは
- * その部分木のみを出力する（設計書 7.3 の操作表）。
+ * `subtree` の起点は選択中のノード。中心テーマを選んでいるときは全体と同じになる。
  */
-export function exportForAi(): { md: string; scope: "全体" | "部分" } | null {
+export function exportAs(mode: ExportMode): ExportResult | null {
   const state = useEditor.getState();
   const doc = state.buildDoc();
   if (doc === null) return null;
 
+  const title = doc.meta.title === "" ? "無題" : doc.meta.title;
   const selected =
     state.selectedUid === null ? null : (locate(doc.root, state.selectedUid)?.node ?? null);
 
-  if (selected === null || selected.path === "") {
-    return { md: exportMarkdown(doc, "expanded"), scope: "全体" };
+  // 部分出力でも、中心テーマを選んでいるなら全体を出す。
+  // 「部分のつもりで全体が出た」より「全体が出た」と分かる方がよい
+  if (mode !== "subtree" || selected === null || selected.path === "") {
+    return {
+      md: exportMarkdown(doc, mode),
+      scope: "全体",
+      fileName: `${toFileNameBase(title)}.md`,
+    };
   }
-  return { md: exportMarkdown(doc, "subtree", { fromPath: selected.path }), scope: "部分" };
+
+  const label = selected.label === "" ? "無題の枝" : selected.label;
+  return {
+    md: exportMarkdown(doc, "subtree", { fromPath: selected.path }),
+    scope: label,
+    fileName: `${toFileNameBase(`${title} - ${label}`)}.md`,
+  };
+}
+
+/**
+ * `Ctrl+Shift+C` の出力。
+ *
+ * 中心テーマを選んでいるときは全体、それ以外のノードを選んでいるときは
+ * その部分木のみを出力する（設計書 7.3 の操作表）。
+ */
+export function exportForAi(): ExportResult | null {
+  const state = useEditor.getState();
+  const selected =
+    state.root === null || state.selectedUid === null
+      ? null
+      : (locate(state.root, state.selectedUid)?.node ?? null);
+
+  return exportAs(selected === null || selected.path === "" ? "expanded" : "subtree");
 }
 
 /** 操作を実行する。割り当ての無い状態では何もしない */
@@ -100,7 +141,8 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
       if (result === null) return;
       try {
         await deps.copyText(result.md);
-        deps.notify?.(`${result.scope}を Markdown でコピーしました`);
+        const what = result.scope === "全体" ? "全体" : `「${result.scope}」`;
+        deps.notify?.(`${what}を Markdown でコピーしました`);
       } catch {
         // クリップボードは権限やフォーカスの都合で失敗しうる。黙って失わせない
         deps.notify?.("クリップボードへコピーできませんでした");
@@ -118,6 +160,10 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
 
     case "focusSearch":
       deps.focusSearch?.();
+      return;
+
+    case "toggleExport":
+      deps.toggleExport?.();
       return;
 
     case "saveNow":

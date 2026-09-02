@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import { parseMarkdown } from "../../../core/parse.js";
 import { serializeMarkdown } from "../../../core/serialize.js";
 import type { MapNode } from "../../../core/types.js";
+import { DEFAULT_PALETTE } from "../../../state/palette.js";
 import { flatten } from "../../../state/tree.js";
 import type { MindElixirData } from "../adapter.js";
-import { fromMindElixir, toMindElixir } from "../adapter.js";
+import { fromMindElixir, toArrows, toMindElixir } from "../adapter.js";
 
 /**
  * mind-elixir との相互変換の検証。
@@ -65,6 +66,53 @@ describe("モデル → mind-elixir", () => {
   it("空ラベルでも topic を空にしない（mind-elixir が扱えないため）", () => {
     const root: MapNode = { uid: "r", path: "", label: "", links: [], children: [] };
     expect(toMindElixir(root, new Set()).nodeData.topic).not.toBe("");
+  });
+});
+
+describe("ブランチ自動配色（F-24）", () => {
+  it("第1階層ごとに色を分け、その下は親の色を継ぐ", () => {
+    const root = load();
+    const [market, rule] = toMindElixir(root, new Set()).nodeData.children ?? [];
+
+    expect(market?.branchColor).toBe(DEFAULT_PALETTE[0]);
+    expect(rule?.branchColor).toBe(DEFAULT_PALETTE[1]);
+    expect(market?.children?.[0]?.branchColor).toBe(DEFAULT_PALETTE[0]);
+  });
+
+  it("中心テーマには色を付けない", () => {
+    expect(toMindElixir(load(), new Set()).nodeData.branchColor).toBeUndefined();
+  });
+
+  it("frontmatter に色があればそれを使う", () => {
+    const data = toMindElixir(load(), new Set(), ["#111111", "#222222"]);
+    expect(data.nodeData.children?.[0]?.branchColor).toBe("#111111");
+    expect(data.nodeData.children?.[1]?.branchColor).toBe("#222222");
+  });
+});
+
+describe("横断リンクの矢印（F-17）", () => {
+  it("同じラベルのノードへ矢印を引く", () => {
+    const root = load();
+    const arrows = toArrows(root);
+
+    expect(arrows).toHaveLength(1);
+    expect(arrows[0]?.from).toBe(uidOf(root, "規制動向 → [[市場]]"));
+    expect(arrows[0]?.to).toBe(uidOf(root, "市場"));
+  });
+
+  it("宛先が無いリンクには矢印を作らない", () => {
+    const { doc } = parseMarkdown("# 根\n\n- 参照 [[存在しない]]\n");
+    expect(toArrows(doc.root)).toEqual([]);
+  });
+
+  it("自分自身へのリンクは描かない", () => {
+    const { doc } = parseMarkdown("# 根\n\n- [[自分]]\n");
+    // ラベルが `[[自分]]` そのものなので、宛先ラベル「自分」は存在しない
+    expect(toArrows(doc.root)).toEqual([]);
+  });
+
+  it("変換結果に矢印が含まれる", () => {
+    expect(toMindElixir(load(), new Set()).arrows).toHaveLength(1);
   });
 });
 

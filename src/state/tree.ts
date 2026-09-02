@@ -1,4 +1,4 @@
-import { assignPaths } from "../core/parse.js";
+import { assignPaths, collectLinks } from "../core/parse.js";
 import type { MapNode } from "../core/types.js";
 
 /**
@@ -120,10 +120,25 @@ export function removeNode(root: MapNode, uid: string): EditResult {
   });
 }
 
-/** ラベルを差し替える */
+/**
+ * ラベルを差し替える。
+ *
+ * 横断リンクはラベルの中の `[[ ]]` から集めるため、ここで取り直す。
+ * 取り直さないと、読み込み時に集めた links がラベルと食い違ったまま残る。
+ */
 export function setLabel(root: MapNode, uid: string, label: string): EditResult {
   return edit(root, uid, ({ node }) => {
     node.label = label;
+    node.links = collectLinks(label);
+    return node.uid;
+  });
+}
+
+/** 絵文字を差し替える。空文字列は「絵文字無し」として扱う（F-15） */
+export function setEmoji(root: MapNode, uid: string, emoji: string): EditResult {
+  return edit(root, uid, ({ node }) => {
+    if (emoji === "") delete node.emoji;
+    else node.emoji = emoji;
     return node.uid;
   });
 }

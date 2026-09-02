@@ -9,11 +9,12 @@ interface Props {
   title: string;
   mode: ViewMode;
   onChangeMode: (mode: ViewMode) => void;
-  onCopyForAi: () => void;
+  onToggleExport: () => void;
   onNewMap: () => void;
   onToggleHelp: () => void;
   onToggleSidebar: () => void;
   helpOpen: boolean;
+  exportOpen: boolean;
   sidebarOpen: boolean;
   canEdit: boolean;
 }
@@ -22,11 +23,12 @@ export function Toolbar({
   title,
   mode,
   onChangeMode,
-  onCopyForAi,
+  onToggleExport,
   onNewMap,
   onToggleHelp,
   onToggleSidebar,
   helpOpen,
+  exportOpen,
   sidebarOpen,
   canEdit,
 }: Props): React.JSX.Element {
@@ -65,8 +67,14 @@ export function Toolbar({
           </button>
         </div>
 
-        <button type="button" onClick={onCopyForAi} disabled={!canEdit} title="Ctrl+Shift+C">
-          AI 用にコピー
+        <button
+          type="button"
+          onClick={onToggleExport}
+          aria-pressed={exportOpen}
+          disabled={!canEdit}
+          title="Ctrl+Shift+C ですぐコピーもできます"
+        >
+          AI 用に出力
         </button>
         <button type="button" onClick={onNewMap}>
           新規作成

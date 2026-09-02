@@ -405,8 +405,16 @@ button.primary {
   font-size: 0.8em;
 }
 
+.notepanel-emoji {
+  border: none;
+  padding: 0.1rem 0.4rem;
+  font-size: 1.05em;
+  line-height: 1.2;
+}
+
 .notepanel-input {
   flex: 1;
+  min-height: 6rem;
   resize: none;
   border: none;
   outline: none;
@@ -414,6 +422,67 @@ button.primary {
   color: inherit;
   font: inherit;
   padding: 0.75rem;
+}
+
+/* ── 絵文字と横断リンク ─────────────────────────────────── */
+
+.emoji-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.emoji-group-title {
+  color: var(--fg-muted);
+  font-size: 0.8em;
+}
+
+.emoji-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.emoji-row button {
+  border: none;
+  padding: 0.15rem 0.35rem;
+  font-size: 1.1em;
+  line-height: 1.2;
+}
+
+.emoji-row button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.emoji-clear {
+  align-self: flex-start;
+  font-size: 0.85em;
+}
+
+.notepanel-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.link-list .is-unresolved {
+  color: var(--warn-fg);
+}
+
+.link-note {
+  margin-left: 0.4rem;
+  font-size: 0.9em;
 }
 
 .banners {
@@ -605,6 +674,8 @@ kbd {
 }
 
 .sheet-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 0.75rem;
 }
@@ -651,4 +722,66 @@ kbd {
   margin: 1rem 0 0;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border);
+}
+
+.sheet-foot {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ── AI 用の出力 ────────────────────────────────────────── */
+
+.export-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.export-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.export-mode[aria-checked="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.export-mode-label {
+  font-weight: 600;
+}
+
+.export-mode-desc {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+.export-scope {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+  margin: 0.75rem 0 0.35rem;
+}
+
+/*
+ * 出力結果はそのまま貼り付ける物なので、折り返さず等幅で出す。
+ * 見た目を整えるために改行位置を変えると、渡る中身と食い違う。
+ */
+.export-preview {
+  margin: 0;
+  padding: 0.6rem;
+  max-height: 24rem;
+  overflow: auto;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.85em;
+  line-height: 1.5;
+  white-space: pre;
 }

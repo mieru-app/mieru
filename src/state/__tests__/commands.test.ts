@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseMarkdown } from "../../core/parse.js";
-import { exportForAi, runCommand } from "../commands.js";
+import { exportAs, exportForAi, runCommand } from "../commands.js";
 import { useEditor } from "../editor.js";
 import { flatten } from "../tree.js";
 
@@ -92,6 +92,50 @@ describe("AI 用の出力", () => {
   });
 });
 
+describe("出力モードの選択（F-33 / F-35）", () => {
+  it("そのままは箇条書きのまま、見出し展開は見出しにする", () => {
+    expect(exportAs("raw")?.md).toContain("- 市場");
+    expect(exportAs("raw")?.md).not.toContain("## 市場");
+    expect(exportAs("expanded")?.md).toContain("## 市場");
+  });
+
+  it("いずれのモードでも frontmatter を渡さない（設計原則2）", () => {
+    for (const mode of ["raw", "expanded", "subtree"] as const) {
+      expect(exportAs(mode)?.md).not.toContain("title:");
+    }
+  });
+
+  it("部分は選択中の枝から下だけを出し、対象を名前で示す", () => {
+    useEditor.getState().select(uidOf("市場"));
+    const result = exportAs("subtree");
+
+    expect(result?.scope).toBe("市場");
+    expect(result?.md).toContain("# 市場");
+    expect(result?.md).not.toContain("強み");
+    expect(result?.fileName).toBe("論点整理 - 市場.md");
+  });
+
+  it("中心テーマを選んでいるときの部分出力は全体になる", () => {
+    const result = exportAs("subtree");
+    expect(result?.scope).toBe("全体");
+    expect(result?.fileName).toBe("論点整理.md");
+  });
+
+  it("ファイル名に使えない文字は畳む", () => {
+    const { doc } = parseMarkdown("---\ntitle: A/B の比較\n---\n\n# A/B の比較\n\n- 枝\n");
+    useEditor
+      .getState()
+      .open({ id: "x.md", meta: doc.meta, colors: doc.view.colors, version: "v1" }, doc);
+
+    expect(exportAs("expanded")?.fileName).toBe("A-B の比較.md");
+  });
+
+  it("マップを開いていなければ null", () => {
+    useEditor.getState().close();
+    expect(exportAs("expanded")).toBeNull();
+  });
+});
+
 describe("木の操作", () => {
   it("兄弟と子を追加する", async () => {
     useEditor.getState().select(uidOf("市場"));
@@ -179,15 +223,20 @@ describe("サイドバーと検索", () => {
     const toggleSidebar = vi.fn();
     const focusSearch = vi.fn();
 
+    const toggleExport = vi.fn();
+
     await runCommand("toggleSidebar", { ...noop, toggleSidebar });
     await runCommand("focusSearch", { ...noop, focusSearch });
+    await runCommand("toggleExport", { ...noop, toggleExport });
 
     expect(toggleSidebar).toHaveBeenCalledTimes(1);
     expect(focusSearch).toHaveBeenCalledTimes(1);
+    expect(toggleExport).toHaveBeenCalledTimes(1);
   });
 
   it("渡されていなくても落ちない", async () => {
     await expect(runCommand("toggleSidebar", noop)).resolves.toBeUndefined();
     await expect(runCommand("focusSearch", noop)).resolves.toBeUndefined();
+    await expect(runCommand("toggleExport", noop)).resolves.toBeUndefined();
   });
 });

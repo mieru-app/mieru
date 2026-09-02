@@ -16,6 +16,7 @@ import {
   navigate,
   outdent,
   removeNode,
+  setEmoji,
   setLabel,
   setNote,
   toggleCollapsed,
@@ -211,6 +212,31 @@ describe("ラベルとノート", () => {
 
     const cleared = setNote(withNote, uidOf(withNote, "A"), "   ").root;
     expect(cleared.children[0]?.note).toBeUndefined();
+  });
+
+  it("ラベルを書き換えたら横断リンクも取り直す", () => {
+    const { root } = load();
+    const linked = setLabel(root, uidOf(root, "A"), "A → [[B]]").root;
+    expect(linked.children[0]?.links).toEqual(["B"]);
+
+    // 消したら links からも消える。ラベルが正で links はそこからの派生である
+    const unlinked = setLabel(linked, uidOf(linked, "A → [[B]]"), "A").root;
+    expect(unlinked.children[0]?.links).toEqual([]);
+  });
+
+  it("絵文字を設定・削除できる", () => {
+    const { root } = load();
+    const withEmoji = setEmoji(root, uidOf(root, "A"), "⭐").root;
+    expect(withEmoji.children[0]?.emoji).toBe("⭐");
+
+    const cleared = setEmoji(withEmoji, uidOf(withEmoji, "A"), "").root;
+    expect(cleared.children[0]?.emoji).toBeUndefined();
+  });
+
+  it("絵文字はラベルの末尾として Markdown に出る", () => {
+    const doc = load();
+    const root = setEmoji(doc.root, uidOf(doc.root, "A"), "⭐").root;
+    expect(serializeMarkdown({ ...doc, root })).toContain("- A ⭐\n");
   });
 
   it("編集した結果が Markdown に出る", () => {

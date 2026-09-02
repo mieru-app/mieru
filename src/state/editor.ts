@@ -14,6 +14,7 @@ import {
   navigate,
   outdent,
   removeNode,
+  setEmoji,
   setLabel,
   setNote,
   toggleCollapsed,
@@ -52,6 +53,10 @@ export interface EditorActions {
   remove(): void;
   rename(label: string): void;
   writeNote(note: string): void;
+  /** 絵文字を付ける。空文字列で外す（F-15） */
+  setEmoji(emoji: string): void;
+  /** 選択中のノードのラベル末尾へ `[[対象]]` を足す（F-17） */
+  addLink(target: string): void;
   outdent(): void;
   indent(): void;
   reorder(delta: -1 | 1): void;
@@ -254,6 +259,19 @@ export const useEditor = create<EditorState>((set, get) => {
 
     writeNote(note) {
       change((root, uid) => setNote(root, uid, note), `note:${get().selectedUid ?? ""}`);
+    },
+
+    setEmoji(emoji) {
+      // 1回の選択で1つの操作。まとめると「付けた」「外した」が1度に戻る
+      change((root, uid) => setEmoji(root, uid, emoji));
+    },
+
+    addLink(target) {
+      const node = selectedNode(get());
+      if (node === null || target === "" || node.links.includes(target)) return;
+      // リンクはラベルの中に書く。ラベルが正で links はそこから集めた派生である
+      const label = node.label === "" ? `[[${target}]]` : `${node.label} [[${target}]]`;
+      change((root, uid) => setLabel(root, uid, label));
     },
 
     outdent() {

@@ -88,6 +88,53 @@ describe("マップを開く", () => {
   });
 });
 
+describe("絵文字と横断リンク", () => {
+  it("絵文字を付け外しでき、それぞれ Undo で戻せる", () => {
+    useEditor.getState().select(uidOf("A"));
+    useEditor.getState().setEmoji("⭐");
+    expect(selectedNode(useEditor.getState())?.emoji).toBe("⭐");
+
+    useEditor.getState().setEmoji("");
+    expect(selectedNode(useEditor.getState())?.emoji).toBeUndefined();
+
+    // まとめずに1操作ずつ積む。付けたのと外したのが1度に戻ると混乱する
+    useEditor.getState().undo();
+    expect(selectedNode(useEditor.getState())?.emoji).toBe("⭐");
+  });
+
+  it("横断リンクはラベルの中に書き込まれる", () => {
+    useEditor.getState().select(uidOf("A"));
+    useEditor.getState().addLink("B");
+
+    const node = selectedNode(useEditor.getState());
+    expect(node?.label).toBe("A [[B]]");
+    expect(node?.links).toEqual(["B"]);
+  });
+
+  it("同じ宛先を重ねて張らない", () => {
+    useEditor.getState().select(uidOf("A"));
+    useEditor.getState().addLink("B");
+    useEditor.getState().addLink("B");
+
+    expect(selectedNode(useEditor.getState())?.label).toBe("A [[B]]");
+  });
+
+  it("ラベルが空なら括弧だけを置く", () => {
+    useEditor.getState().select(uidOf("A"));
+    useEditor.getState().rename("");
+    useEditor.getState().addLink("B");
+
+    expect(selectedNode(useEditor.getState())?.label).toBe("[[B]]");
+  });
+
+  it("マップを開いていなければ何もしない", () => {
+    useEditor.getState().close();
+    useEditor.getState().setEmoji("⭐");
+    useEditor.getState().addLink("B");
+    expect(useEditor.getState().root).toBeNull();
+  });
+});
+
 describe("編集すると未保存になる", () => {
   it("ノード追加で dirty になる", () => {
     useEditor.getState().addChild();

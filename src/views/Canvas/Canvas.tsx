@@ -33,6 +33,7 @@ export function Canvas(): React.JSX.Element {
   const absorbed = useRef<MapNode | null>(null);
 
   const root = useEditor((state) => state.root);
+  const colors = useEditor((state) => state.map?.colors ?? "auto");
   const collapsedUids = useEditor((state) => state.collapsedUids);
   const selectedUid = useEditor((state) => state.selectedUid);
   const editingUid = useEditor((state) => state.editingUid);
@@ -56,7 +57,7 @@ export function Canvas(): React.JSX.Element {
 
     const current = useEditor.getState();
     if (current.root !== null) {
-      mind.init(toMindElixir(current.root, current.collapsedUids));
+      mind.init(toMindElixir(current.root, current.collapsedUids, current.map?.colors ?? "auto"));
     }
 
     /** mind-elixir 側の変更を本ツールのモデルへ取り込む */
@@ -92,11 +93,11 @@ export function Canvas(): React.JSX.Element {
     if (root === absorbed.current) return;
     applying.current = true;
     try {
-      mind.refresh(toMindElixir(root, collapsedUids));
+      mind.refresh(toMindElixir(root, collapsedUids, colors));
     } finally {
       applying.current = false;
     }
-  }, [root, collapsedUids]);
+  }, [root, collapsedUids, colors]);
 
   // 選択を描画側へ伝える。アウトラインから切り替えても選択が保たれる（F-22）
   useEffect(() => {
