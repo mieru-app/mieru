@@ -309,6 +309,33 @@ describe("マップの改名（F-03）", () => {
   });
 });
 
+describe("ホームへ戻る（F-38）", () => {
+  it("閉じる前に書き終える。待ち時間中の編集を捨てない", async () => {
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().openMap("既存のマップ.md");
+
+    // 自動保存の 800ms を待たずに閉じる、という最短の操作を再現する
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("閉じる直前の入力");
+    await useWorkspace.getState().closeMap();
+
+    expect(dir.entries.get("既存のマップ.md")?.content).toContain("- 閉じる直前の入力");
+    expect(useEditor.getState().map).toBeNull();
+    expect(useEditor.getState().status.kind).toBe("empty");
+  });
+
+  it("開いていなければ何もしない", async () => {
+    reset();
+    await useWorkspace.getState().chooseFolder();
+
+    await useWorkspace.getState().closeMap();
+
+    expect(useEditor.getState().map).toBeNull();
+  });
+});
+
 describe("マップの削除（F-02）", () => {
   it("ファイルごと消え、一覧から外れる", async () => {
     const dir = reset();

@@ -64,6 +64,8 @@ export interface WorkspaceState {
   renameMap(id: string, title: string): Promise<void>;
   /** マップを削除する。確認は呼び出し側で取る */
   deleteMap(id: string): Promise<void>;
+  /** 開いているマップを閉じ、ホーム（マップ未選択）の状態へ戻す */
+  closeMap(): Promise<void>;
   /** 外部の変更を取り込む（未保存の変更は破棄される） */
   reloadOpen(): Promise<void>;
   /** 競合を「こちらの内容で上書き」で解決する */
@@ -287,6 +289,16 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       } catch (error) {
         set({ error: `マップの名前を変えられませんでした: ${messageOf(error)}` });
       }
+    },
+
+    async closeMap() {
+      if (useEditor.getState().map === null) return;
+
+      // 自動保存は入力が止まってから 800ms 待つ。その待ち時間中に閉じると
+      // 最後の編集が消えるため、先に書き終える
+      await get().saveNow();
+      useEditor.getState().close();
+      set({ externallyChanged: false });
     },
 
     async deleteMap(id) {

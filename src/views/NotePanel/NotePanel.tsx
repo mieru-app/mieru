@@ -90,10 +90,19 @@ export function NotePanel({
         </div>
       )}
 
+      {/*
+       * 名前は見出しとして常に出す。プレースホルダは書き始めると消えるため、
+       * 何を書く欄なのかが入力後に分からなくなる。
+       * 「AI へ渡すときに本文段落として展開されます」という説明は外した。
+       * 動きの説明であって、書く前に読んで役立つものではなかった
+       */}
+      <label className="notepanel-hint notepanel-note-label" htmlFor="node-note">
+        ノード説明
+      </label>
       <textarea
+        id="node-note"
         className="notepanel-input"
         value={draft}
-        placeholder="このノードの説明。AI へ渡すときに本文段落として展開されます。"
         onChange={(event) => {
           setDraft(event.target.value);
           onChange(event.target.value);

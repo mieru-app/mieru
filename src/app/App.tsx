@@ -4,6 +4,7 @@ import type { ExportFormat } from "../core/export.js";
 import type { ExportScope } from "../state/commands.js";
 import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
+import { IMPORT_PROMPT } from "../state/import-prompt.js";
 import { collectTags, queryIndex } from "../state/search.js";
 import { TEMPLATES, templateMarkdown } from "../state/templates.js";
 import type { Theme } from "../state/theme.js";
@@ -19,7 +20,8 @@ import { Banners } from "./Banners.js";
 import type { PaletteItem } from "./command-palette.js";
 import { CommandPalette } from "./CommandPalette.js";
 import { downloadText } from "./download.js";
-import { FirstBranchGuide, NoMapGuide } from "./Guide.js";
+import { FirstBranchGuide } from "./Guide.js";
+import { HomeScreen } from "./HomeScreen.js";
 import { SettingsSheet } from "./SettingsSheet.js";
 import { ShortcutSheet } from "./ShortcutSheet.js";
 import { StartScreen } from "./StartScreen.js";
@@ -172,16 +174,30 @@ export function App(): React.JSX.Element {
   }, [root, selected]);
 
   /**
-   * 新規作成の入力を始める。
+   * 新規作成の入力を始める。作成画面は主表示領域に出るので、
+   * サイドバーは開かない（設計書 7.2）。
    *
    * 引数を省略した呼び出しは `() => startCreating()` と書くこと。
    * `onClick={startCreating}` と渡すとクリックイベントが下敷き id として入る
    */
   const startCreating = useCallback((template: string) => {
     setTemplateId(template);
-    setSidebarOpen(true);
     setCreating(true);
   }, []);
+
+  /** ホームへ戻る。作成中なら作成をやめる（F-38） */
+  const goHome = useCallback(() => {
+    setCreating(false);
+    void useWorkspace.getState().closeMap();
+  }, []);
+
+  /** 取り込み指示をクリップボードへ入れる（F-36） */
+  const copyImportPrompt = useCallback(() => {
+    void copyText(IMPORT_PROMPT).then(
+      () => notify("取り込み指示をコピーしました"),
+      () => notify("クリップボードへコピーできませんでした"),
+    );
+  }, [notify]);
 
   /** パレットで選ばれた項目を実行する。何を選んでもパレットは閉じる */
   const pick = useCallback(
@@ -217,6 +233,7 @@ export function App(): React.JSX.Element {
     <div className={`app${sidebarOpen ? "" : " is-sidebar-closed"}`}>
       <Toolbar
         title={map?.meta.title ?? "マップを開いてください"}
+        onHome={goHome}
         mode={mode}
         canEdit={root !== null}
         sidebarOpen={sidebarOpen}
@@ -252,12 +269,8 @@ export function App(): React.JSX.Element {
             searching={query.trim() !== ""}
             openId={map?.id ?? null}
             empty={maps.length === 0}
-            creating={creating}
-            templates={TEMPLATES}
-            templateId={templateId}
             searchRef={searchRef}
-            onCreatingChange={setCreating}
-            onTemplateChange={setTemplateId}
+            onNewMap={() => startCreating("blank")}
             onQueryChange={setQuery}
             onToggleTag={(tag) =>
               setActiveTags((current) =>
@@ -267,17 +280,31 @@ export function App(): React.JSX.Element {
               )
             }
             onOpen={(id) => void useWorkspace.getState().openMap(id)}
-            onCreate={(title) =>
-              void useWorkspace.getState().createMap(title, templateMarkdown(templateId))
-            }
             onRename={(id, title) => void useWorkspace.getState().renameMap(id, title)}
             onDelete={confirmDelete}
           />
         )}
 
         <main className="main">
-          {root === null ? (
-            <NoMapGuide hasMaps={maps.length > 0} onNewMap={() => startCreating("blank")} />
+          {/*
+           * 作成中はマップを開いていても作成画面に譲る。
+           * 入力する場所が毎回同じであるほうが迷わない（設計書 7.2）
+           */}
+          {root === null || creating ? (
+            <HomeScreen
+              creating={creating}
+              hasMaps={maps.length > 0}
+              templates={TEMPLATES}
+              templateId={templateId}
+              onTemplateChange={setTemplateId}
+              onStartCreating={() => startCreating("blank")}
+              onCancelCreating={() => setCreating(false)}
+              onCreate={(title) => {
+                setCreating(false);
+                void useWorkspace.getState().createMap(title, templateMarkdown(templateId));
+              }}
+              onCopyImportPrompt={copyImportPrompt}
+            />
           ) : (
             <>
               {mode === "canvas" ? <Canvas /> : <Outline />}

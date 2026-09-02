@@ -1,4 +1,5 @@
 import type { ViewMode } from "../state/types.js";
+import { Wordmark } from "./Wordmark.js";
 
 /**
  * ツールバー1本。モードは2つだけに限る（原則4・設計書 7.2）。
@@ -7,6 +8,8 @@ import type { ViewMode } from "../state/types.js";
 
 interface Props {
   title: string;
+  /** ロゴを押したときの行き先。開いているマップを閉じてホームへ戻す */
+  onHome: () => void;
   mode: ViewMode;
   onChangeMode: (mode: ViewMode) => void;
   onToggleExport: () => void;
@@ -23,6 +26,7 @@ interface Props {
 
 export function Toolbar({
   title,
+  onHome,
   mode,
   onChangeMode,
   onToggleExport,
@@ -48,7 +52,16 @@ export function Toolbar({
       >
         ☰
       </button>
-      <span className="brand">Mieru</span>
+      {/* ロゴがホームへの帰り道を兼ねる。置き場所を増やさずに導線を作る */}
+      <button
+        type="button"
+        className="toolbar-home"
+        aria-label="ホームへ戻る"
+        title="ホームへ戻る"
+        onClick={onHome}
+      >
+        <Wordmark label="" />
+      </button>
       <span className="toolbar-title">{title}</span>
 
       <div className="toolbar-actions">

@@ -3,29 +3,9 @@
  *
  * キーボードで完結する道具は、操作を知らないと1手も進めない。
  * 「使い方が分からない」は利用者の問題ではなく作りの問題として扱う（原則4）。
+ *
+ * マップを開いていないときの案内は HomeScreen へ移した（設計書 7.2）。
  */
-
-interface NoMapProps {
-  hasMaps: boolean;
-  onNewMap: () => void;
-}
-
-/** フォルダは選んだが、まだマップを開いていないとき */
-export function NoMapGuide({ hasMaps, onNewMap }: NoMapProps): React.JSX.Element {
-  return (
-    <div className="guide">
-      <h2>{hasMaps ? "マップを開いてください" : "最初のマップを作りましょう"}</h2>
-      <p>
-        {hasMaps
-          ? "左の一覧から選ぶか、新しく作成します。"
-          : "選んだフォルダに .md ファイルとして保存されます。Obsidian や VS Code でもそのまま開けます。"}
-      </p>
-      <button type="button" className="primary" onClick={onNewMap}>
-        新規作成
-      </button>
-    </div>
-  );
-}
 
 /** マップは開いたが、まだ枝が1本も無いとき */
 export function FirstBranchGuide(): React.JSX.Element {

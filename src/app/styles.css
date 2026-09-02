@@ -136,9 +136,31 @@ button.primary {
   color: var(--fg);
 }
 
-.brand {
-  font-weight: 700;
-  letter-spacing: 0.02em;
+/* ロゴはホームへの帰り道。ボタンの装飾は消し、focus の輪郭だけ残す */
+.toolbar-home {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+}
+
+/*
+ * 文字ロゴ。高さで指定し、幅は字面の縦横比に従わせる。
+ * 色は currentColor なので、地の明暗が変わっても追従する
+ */
+.wordmark {
+  display: block;
+  height: 1.05rem;
+  width: auto;
+  flex: none;
+  color: var(--fg);
+}
+
+.home-title .wordmark {
+  height: 2rem;
 }
 
 .toolbar-title {
@@ -441,6 +463,11 @@ button.primary {
   font-size: 0.8em;
 }
 
+/* 説明欄の名前。入力欄の字下げに揃える */
+.notepanel-note-label {
+  padding: 0.5rem 0.75rem 0;
+}
+
 .notepanel-emoji {
   border: none;
   padding: 0.1rem 0.4rem;
@@ -627,6 +654,165 @@ kbd {
 
 .startscreen-steps li span {
   color: var(--fg-muted);
+}
+
+/* ── ホーム・新規作成（主表示領域）───────────────────────── */
+
+/*
+ * マップを開いていないときの主表示領域。
+ * 縦に伸びるので、ここだけは主表示領域のスクロールを許す
+ */
+.home {
+  height: 100%;
+  overflow: auto;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.home-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.home-title {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+
+.home-lead {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  max-width: 34rem;
+}
+
+.home-section h2 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.home-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.home-steps dt {
+  font-weight: 600;
+}
+
+.home-steps dd {
+  margin: 0.1rem 0 0;
+  color: var(--fg-muted);
+}
+
+.home-note {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
+
+/* 作成画面の傍らに置く補足。主たる操作（作成）と区切る */
+.home-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.home-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.home-create {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  max-width: 34rem;
+  width: 100%;
+}
+
+.home-create h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.home-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.home-field-label {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+.home-input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  font-size: 1.05em;
+  color: inherit;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.home-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* 下敷きは並べて見比べる。名前だけでは何が入るか分からない */
+.home-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.home-template {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.home-template[aria-checked="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.home-template-name {
+  font-weight: 600;
+}
+
+.home-template-desc {
+  color: var(--fg-muted);
+  font-size: 0.85em;
 }
 
 .guide {
@@ -925,10 +1111,6 @@ kbd {
 
 .palette-item.is-active .palette-hint {
   color: inherit;
-}
-
-.sidebar-template {
-  margin-bottom: 0.35rem;
 }
 
 /* ── 設定 ───────────────────────────────────────────────── */

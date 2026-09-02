@@ -8,8 +8,11 @@ import type { SearchHit } from "../../state/search.js";
  * 絞り込みと並べ替えの判断は `src/state/search.ts` にあり、
  * ここは渡された結果を描くだけにしてある。
  *
- * 改名と新規作成はその場で入力させる。`window.prompt` を使わないのは、
+ * 改名はその場で入力させる。`window.prompt` を使わないのは、
  * モーダルダイアログを削除確認以外に使わないという制約（設計書 7.2）のためである。
+ *
+ * **新規作成はここに置かない。** 一覧に入力欄を差し込むと既存のマップと見分けが付かず、
+ * 狭い欄に下敷きと表題を詰め込むことになっていた。作成は主表示領域で行う（同 7.2）。
  */
 
 /** 一致した場所の種類。なぜ引っ掛かったのかを一言で示す */
@@ -22,23 +25,12 @@ const KIND_LABEL: Record<SearchHit["kind"], string> = {
 interface RowInputProps {
   initial: string;
   placeholder: string;
-  /**
-   * 他所を押したときに取り消すか。
-   * 新規作成では下敷きの選択欄へ移るだけで取り消されては困るので false にする
-   */
-  cancelOnBlur?: boolean;
   onCommit: (value: string) => void;
   onCancel: () => void;
 }
 
 /** その場で名前を入れる欄。Enter で確定、Escape で取り消す */
-function RowInput({
-  initial,
-  placeholder,
-  cancelOnBlur = true,
-  onCommit,
-  onCancel,
-}: RowInputProps): React.JSX.Element {
+function RowInput({ initial, placeholder, onCommit, onCancel }: RowInputProps): React.JSX.Element {
   const [value, setValue] = useState(initial);
   const ref = useRef<HTMLInputElement>(null);
 
@@ -59,7 +51,7 @@ function RowInput({
         if (event.key === "Escape") onCancel();
       }}
       // 別の場所を押したら取り消す。書きかけを黙って確定させない
-      onBlur={cancelOnBlur ? onCancel : undefined}
+      onBlur={onCancel}
     />
   );
 }
@@ -75,21 +67,12 @@ interface Props {
   openId: string | null;
   /** 索引がまだ1件も無い（＝マップが1つも無い）か */
   empty: boolean;
-  /**
-   * 新規作成の入力欄を出しているか。
-   * サイドバーの外（ツールバー・案内）からも作成を始められるよう、状態は外に置く
-   */
-  creating: boolean;
-  /** 新規作成の下敷き（2-10） */
-  templates: { id: string; name: string; description: string }[];
-  templateId: string;
   searchRef: React.RefObject<HTMLInputElement | null>;
-  onCreatingChange: (creating: boolean) => void;
-  onTemplateChange: (id: string) => void;
+  /** 作成画面を主表示領域に出す */
+  onNewMap: () => void;
   onQueryChange: (query: string) => void;
   onToggleTag: (tag: string) => void;
   onOpen: (id: string) => void;
-  onCreate: (title: string) => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string, title: string) => void;
 }
@@ -102,16 +85,11 @@ export function Sidebar({
   searching,
   openId,
   empty,
-  creating,
-  templates,
-  templateId,
   searchRef,
-  onCreatingChange,
-  onTemplateChange,
+  onNewMap,
   onQueryChange,
   onToggleTag,
   onOpen,
-  onCreate,
   onRename,
   onDelete,
 }: Props): React.JSX.Element {
@@ -150,34 +128,6 @@ export function Sidebar({
       )}
 
       <div className="sidebar-list">
-        {creating && (
-          <select
-            className="sidebar-input sidebar-template"
-            value={templateId}
-            aria-label="下敷き"
-            onChange={(event) => onTemplateChange(event.target.value)}
-          >
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}（{template.description}）
-              </option>
-            ))}
-          </select>
-        )}
-
-        {creating && (
-          <RowInput
-            initial="新しいマップ"
-            placeholder="新しいマップの中心テーマ"
-            cancelOnBlur={false}
-            onCommit={(value) => {
-              onCreatingChange(false);
-              onCreate(value.trim() === "" ? "新しいマップ" : value.trim());
-            }}
-            onCancel={() => onCreatingChange(false)}
-          />
-        )}
-
         {hits.length === 0 && (
           <p className="sidebar-empty">
             {empty ? "まだマップがありません。" : "条件に合うマップはありません。"}
@@ -236,7 +186,7 @@ export function Sidebar({
         )}
       </div>
 
-      <button type="button" className="sidebar-new" onClick={() => onCreatingChange(true)}>
+      <button type="button" className="sidebar-new" onClick={onNewMap}>
         ＋ 新規作成
       </button>
     </nav>
