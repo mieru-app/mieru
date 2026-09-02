@@ -97,7 +97,7 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: { projectService: false, project: false },
       // Node で直接実行するスクリプト
-      globals: { console: "readonly", process: "readonly" },
+      globals: { console: "readonly", process: "readonly", Buffer: "readonly" },
     },
   },
 

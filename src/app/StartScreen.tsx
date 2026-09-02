@@ -25,8 +25,8 @@ export function StartScreen({ folder, onChoose, onGrant }: Props): React.JSX.Ele
       <div className="startscreen">
         <h1>このブラウザでは使えません</h1>
         <p>
-          Mieru はローカルフォルダの Markdown を直接読み書きします。 この仕組み（File System
-          Access API）に対応しているのは、
+          Mieru はローカルフォルダの Markdown を直接読み書きします。 この仕組み（File System Access
+          API）に対応しているのは、
           <strong>デスクトップ版の Microsoft Edge / Google Chrome</strong> です。
         </p>
         <p className="startscreen-note">

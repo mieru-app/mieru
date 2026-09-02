@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mieru">
-  <rect width="512" height="512" fill="#0E1116"/>
-  <path d="M 132 372 L 132 140 L 196 140 L 196 372 Z" fill="#2E8BFF"/>
-  <path d="M 132 140 L 196 140 L 288 268 L 256 316 Z" fill="#12D18E"/>
-  <path d="M 380 140 L 316 140 L 224 268 L 256 316 Z" fill="#FFB020"/>
-  <path d="M 380 372 L 380 140 L 316 140 L 316 372 Z" fill="#FF3B5C"/>
-</svg>

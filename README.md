@@ -14,48 +14,48 @@
 
 ## 現在の状態
 
-**Phase 0（基盤・変換エンジン）完了。**
+**Phase 1（編集機能）完了。Phase 2 の準備まで済み、本体は未着手。**
 
 ```
 Phase 0  基盤・変換エンジン        ✅ 完了
-Phase 1  編集機能                  ← 次はここ  ★実用開始
-Phase 2  管理・出力・PWA           ★日常ツールとして完成
+Phase 1  編集機能                  ✅ 完了（DoD の実利用2週間は未達）
+Phase 2  管理・出力・PWA           ← 次はここ  ★日常ツールとして完成
 Phase 3  AWS同期・スマートフォン    ★どこでも使える
 ```
 
-Phase 0 では Markdown とモデルの可逆変換を実装し、ラウンドトリップの強保証
-（正規化 Markdown → モデル → Markdown がバイト単位で一致）をプロパティテスト1万件で検証した。
+ローカルフォルダを選ぶと、その直下の `.md` をマップとして読み書きする。
+キャンバスとアウトラインの2つの表示、キーボードのみでの編集、800ms デバウンスの自動保存、
+外部変更の検知、`Ctrl+Shift+C` での AI 用 Markdown 出力までが動く。
 
 ## 構成
 
 ```
 src/
-├─ core/     Markdown 変換エンジン
-│  ├─ types.ts        データモデル
-│  ├─ parse.ts        Markdown → モデル
-│  ├─ serialize.ts    モデル → Markdown（正規化規則を厳守）
-│  ├─ frontmatter.ts  frontmatter の入出力（mm: の隔離）
-│  ├─ escape.ts       エスケープ／アンエスケープ（対でなければ冪等性が崩れる）
-│  ├─ normalize.ts    ノートの正規化（パーサとシリアライザで共有）
-│  ├─ yaml-emit.ts    YAML 出力
-│  └─ export.ts       AI 入力用の出力（raw / expanded / subtree）
-└─ store/    永続化層
-   ├─ types.ts        MapStore インターフェースとエラー型
-   └─ MemoryStore.ts  テスト用実装（契約の基準実装）
+├─ core/     Markdown 変換エンジン（parse / serialize / frontmatter / escape / export）
+├─ store/    永続化層（MapStore と LocalFolderStore、IndexedDB、ファイル名規則）
+├─ state/    編集ロジック・状態・自動保存（React にも mind-elixir にも依存しない）
+├─ app/      画面の骨格（ツールバー、ステータスバー、キー割り当て）
+└─ views/    描画（Canvas は mind-elixir、Outline、NotePanel）
+
+assets/icon/ アイコンの生成（generate.mjs → dist/ に SVG と PNG）
 ```
+
+**判断は `src/state/` に集める。** 描画層は自動テストを持たないため、
+そこに判断を書いた分だけ検証できない領域が増える。詳細は `CLAUDE.md`。
 
 ## 開発
 
 ```bash
 npm install
+npm run dev           # 開発サーバ
+npm run build         # 型検査つき本番ビルド
 npm test              # 全テスト
-npm run test:core     # 変換エンジンのみ
 npm run test:coverage # カバレッジ（90%未満で失敗）
 npm run typecheck
 npm run lint
-```
 
-`npm run dev` と `npm run build` は Phase 1 でアプリのエントリポイントを作る際に追加する。
+node assets/icon/generate.mjs   # アイコンの SVG / PNG を生成
+```
 
 - Node.js v20.20.0 / npm 10.8.2
 - 対応ブラウザ（Phase 1・2）: Edge / Chrome（File System Access API を使用するため）
