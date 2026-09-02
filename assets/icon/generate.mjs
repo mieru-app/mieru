@@ -3,8 +3,9 @@
  *
  *   node assets/icon/generate.mjs
  *
- * 採用案「二条の対立」。文字マーク M を白抜きにし、暗い地の上に
- * 寒色と暖色の光条を 64:36 の面積で対置する。
+ * 採用案「放射する光条」。文字マーク M を白抜きにし、暗い地の中心に置く。
+ * その外側から5色の光条を放射させる。光条の幅は不揃いにしてある
+ * （均等に割ると回る風車に見えて散漫になる）。
  * 配色の根拠とこの形に至った経緯は docs/design.md 12.6 にある。
  *
  * 出力先は assets/icon/dist/（生成物なので Git 管理外）。
@@ -21,9 +22,26 @@ const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "dist");
 
 /** 地。白との比 19:1 を確保し、白抜きの M を無条件に読めるようにする */
 const GROUND = "#0A0F1F";
-/** 光条。地との比 4.2:1 以上。明度を落とさずに済むので鮮やかなまま使える */
-const BEAM_COOL = "#2F6BFF";
-const BEAM_WARM = "#FF6A00";
+/**
+ * 光条。地との比 4.2〜8.8:1。M が地の上にしか乗らないため、
+ * 白抜きの可読性を気にせず明度を落とさずに済む。
+ */
+const BEAM = {
+  blue: "#2F6BFF",
+  cyan: "#00C2D1",
+  orange: "#FF6A00",
+  pink: "#FF2D6F",
+  violet: "#9B5CFF",
+};
+
+/** 光条の配置。[開始角, 終了角, 色]。角度は真上を 0 として時計回り */
+const BEAMS = [
+  [10, 64, BEAM.blue],
+  [78, 116, BEAM.cyan],
+  [132, 198, BEAM.orange],
+  [214, 256, BEAM.pink],
+  [274, 346, BEAM.violet],
+];
 const PAPER = "#FFFFFF";
 
 const SIZE = 512;
@@ -65,8 +83,7 @@ function icon(scale = 1) {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" role="img" aria-label="Mieru">`,
     `  <rect width="${SIZE}" height="${SIZE}" fill="${GROUND}"/>`,
     `  <g${transform}>`,
-    `    <path d="${beam(24, 104)}" fill="${BEAM_COOL}"/>`,
-    `    <path d="${beam(196, 240)}" fill="${BEAM_WARM}"/>`,
+    ...BEAMS.map(([from, to, color]) => `    <path d="${beam(from, to)}" fill="${color}"/>`),
     `    <path d="M 146 372 L 146 146 L 256 296 L 366 146 L 366 372" stroke="${PAPER}" stroke-width="56" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
     "  </g>",
     "</svg>",
