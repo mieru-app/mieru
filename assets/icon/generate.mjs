@@ -8,8 +8,9 @@
  * （均等に割ると回る風車に見えて散漫になる）。
  * 配色の根拠とこの形に至った経緯は docs/design.md 12.6 にある。
  *
- * 出力先は assets/icon/dist/（生成物なので Git 管理外）。
- * PWA の manifest とファビコンはここを参照する。
+ * 出力先は public/icons/（生成物なので Git 管理外）。
+ * Vite が public/ を素通しで配るため、manifest とファビコンはここを参照する。
+ * `npm run build` と `npm run dev` は事前にこのスクリプトを実行する。
  */
 
 import fs from "node:fs";
@@ -18,7 +19,8 @@ import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
-const outDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "dist");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const outDir = path.join(root, "public", "icons");
 
 /** 地。白との比 19:1 を確保し、白抜きの M を無条件に読めるようにする */
 const GROUND = "#0A0F1F";

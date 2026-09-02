@@ -1,3 +1,4 @@
+import { normalizeForSearch, splitTerms } from "../state/search.js";
 import type { Command } from "./keymap.js";
 
 /**
@@ -78,6 +79,11 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
         commands: ["focusSearch"],
         description: "全マップを横断して検索する",
       },
+      {
+        keys: ["Ctrl + K"],
+        commands: ["openPalette"],
+        description: "コマンドパレット（操作とマップを名前で呼ぶ）",
+      },
     ],
   },
   {
@@ -101,3 +107,67 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
 ];
+
+/**
+ * コマンドパレット（`Ctrl+K`）に並べる操作。
+ *
+ * 方向キーによる移動は載せない。あれは押して動かすものであり、
+ * 名前で呼び出す対象ではない。載せると一覧が長くなり、探す速度が落ちる。
+ */
+export interface CommandItem {
+  command: Command;
+  title: string;
+  /** 表示するキー。割り当てが無ければ空文字列 */
+  keys: string;
+}
+
+const PALETTE_COMMANDS: { command: Command; title: string }[] = [
+  { command: "addChild", title: "子を追加する" },
+  { command: "addSibling", title: "兄弟を追加する" },
+  { command: "outdent", title: "階層を1つ上げる" },
+  { command: "beginEdit", title: "選択中のノードを書き換える" },
+  { command: "remove", title: "部分木ごと削除する" },
+  { command: "toggleCollapse", title: "折り畳む・展開する" },
+  { command: "undo", title: "元に戻す" },
+  { command: "redo", title: "やり直す" },
+  { command: "toggleMode", title: "キャンバス ⇄ アウトライン" },
+  { command: "copyForAi", title: "AI 用 Markdown をコピーする" },
+  { command: "toggleExport", title: "AI 用に出力する（モードを選ぶ）" },
+  { command: "saveNow", title: "すぐ保存する" },
+  { command: "toggleSidebar", title: "サイドバーを開閉する" },
+  { command: "focusSearch", title: "全マップを検索する" },
+  { command: "toggleHelp", title: "キー操作の一覧を開く" },
+];
+
+/** その操作に割り当てられたキーの表示。一覧と食い違わないよう同じ表から引く */
+export function keysFor(command: Command): string {
+  for (const group of SHORTCUT_GROUPS) {
+    for (const entry of group.entries) {
+      const at = entry.commands.indexOf(command);
+      if (at !== -1) return entry.keys[at] ?? "";
+    }
+  }
+  return "";
+}
+
+export const COMMAND_ITEMS: CommandItem[] = PALETTE_COMMANDS.map(({ command, title }) => ({
+  command,
+  title,
+  keys: keysFor(command),
+}));
+
+/**
+ * 入力で操作を絞り込む。
+ *
+ * 正規化と語の分け方は全マップ検索と同じ関数を使う。2か所で当たり方が違うと、
+ * 利用者が使い分けを覚える羽目になる。
+ */
+export function filterCommands(query: string): CommandItem[] {
+  const terms = splitTerms(query);
+  if (terms.length === 0) return COMMAND_ITEMS;
+
+  return COMMAND_ITEMS.filter((item) => {
+    const haystack = normalizeForSearch(`${item.title} ${item.keys} ${item.command}`);
+    return terms.every((term) => haystack.includes(term));
+  });
+}

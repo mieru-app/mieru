@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ExportMode } from "../core/export.js";
-import { exportAs } from "../state/commands.js";
+import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
 import { collectTags, queryIndex } from "../state/search.js";
+import { TEMPLATES, templateMarkdown } from "../state/templates.js";
+import type { Theme } from "../state/theme.js";
+import { readTheme, THEME_KEY } from "../state/theme.js";
 import { flatten } from "../state/tree.js";
 import { useWorkspace } from "../state/workspace.js";
 import { Canvas } from "../views/Canvas/Canvas.js";
@@ -12,8 +15,11 @@ import { NotePanel } from "../views/NotePanel/NotePanel.js";
 import { Outline } from "../views/Outline/Outline.js";
 import { Sidebar } from "../views/Sidebar/Sidebar.js";
 import { Banners } from "./Banners.js";
+import type { PaletteItem } from "./command-palette.js";
+import { CommandPalette } from "./CommandPalette.js";
 import { downloadText } from "./download.js";
 import { FirstBranchGuide, NoMapGuide } from "./Guide.js";
+import { SettingsSheet } from "./SettingsSheet.js";
 import { ShortcutSheet } from "./ShortcutSheet.js";
 import { StartScreen } from "./StartScreen.js";
 import { StatusBar } from "./StatusBar.js";
@@ -55,7 +61,28 @@ export function App(): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  /** 新規作成に使う下敷き（2-10） */
+  const [templateId, setTemplateId] = useState("blank");
+  const [showPalette, setShowPalette] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [theme, setTheme] = useState<Theme>("system");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // 保存済みの配色を読む。壊れた値でも既定へ倒れる（`readTheme`）
+  useEffect(() => {
+    setTheme(readTheme(localStorage.getItem(THEME_KEY)));
+  }, []);
+
+  useEffect(() => {
+    // system のときは属性を外し、OS の設定（prefers-color-scheme）に委ねる
+    if (theme === "system") delete document.documentElement.dataset["theme"];
+    else document.documentElement.dataset["theme"] = theme;
+  }, [theme]);
+
+  const changeTheme = useCallback((next: Theme) => {
+    setTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+  }, []);
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -64,12 +91,20 @@ export function App(): React.JSX.Element {
   // 右の欄は1つだけ出す。並べると主表示領域が狭くなる（設計書 7.2）
   const toggleHelp = useCallback(() => {
     setShowExport(false);
+    setShowSettings(false);
     setShowHelp((open) => !open);
   }, []);
 
   const toggleExport = useCallback(() => {
     setShowHelp(false);
+    setShowSettings(false);
     setShowExport((open) => !open);
+  }, []);
+
+  const toggleSettings = useCallback(() => {
+    setShowHelp(false);
+    setShowExport(false);
+    setShowSettings((open) => !open);
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -82,7 +117,16 @@ export function App(): React.JSX.Element {
     requestAnimationFrame(() => searchRef.current?.select());
   }, []);
 
-  useKeymap({ notify, toggleHelp, toggleSidebar, focusSearch, toggleExport });
+  const openPalette = useCallback(() => {
+    setShowPalette((open) => !open);
+  }, []);
+
+  const deps = useMemo(
+    () => ({ notify, toggleHelp, toggleSidebar, focusSearch, toggleExport, openPalette }),
+    [notify, toggleHelp, toggleSidebar, focusSearch, toggleExport, openPalette],
+  );
+
+  useKeymap(deps);
 
   useEffect(() => {
     void useWorkspace.getState().init();
@@ -125,10 +169,28 @@ export function App(): React.JSX.Element {
     return [...new Set(labels)].sort((a, b) => a.localeCompare(b));
   }, [root, selected]);
 
-  const startCreating = useCallback(() => {
+  /**
+   * 新規作成の入力を始める。
+   *
+   * 引数を省略した呼び出しは `() => startCreating()` と書くこと。
+   * `onClick={startCreating}` と渡すとクリックイベントが下敷き id として入る
+   */
+  const startCreating = useCallback((template: string) => {
+    setTemplateId(template);
     setSidebarOpen(true);
     setCreating(true);
   }, []);
+
+  /** パレットで選ばれた項目を実行する。何を選んでもパレットは閉じる */
+  const pick = useCallback(
+    (item: PaletteItem) => {
+      setShowPalette(false);
+      if (item.kind === "command") void runCommand(item.command, { copyText, ...deps });
+      if (item.kind === "map") void useWorkspace.getState().openMap(item.id);
+      if (item.kind === "template") startCreating(item.id);
+    },
+    [deps, startCreating],
+  );
 
   if (folder.kind !== "ready") {
     return (
@@ -160,9 +222,11 @@ export function App(): React.JSX.Element {
         onChangeMode={(next) => useEditor.getState().setMode(next)}
         onToggleExport={toggleExport}
         exportOpen={showExport}
-        onNewMap={startCreating}
+        onNewMap={() => startCreating("blank")}
         onToggleHelp={toggleHelp}
         helpOpen={showHelp}
+        onToggleSettings={toggleSettings}
+        settingsOpen={showSettings}
       />
 
       <Banners
@@ -187,8 +251,11 @@ export function App(): React.JSX.Element {
             openId={map?.id ?? null}
             empty={maps.length === 0}
             creating={creating}
+            templates={TEMPLATES}
+            templateId={templateId}
             searchRef={searchRef}
             onCreatingChange={setCreating}
+            onTemplateChange={setTemplateId}
             onQueryChange={setQuery}
             onToggleTag={(tag) =>
               setActiveTags((current) =>
@@ -198,7 +265,9 @@ export function App(): React.JSX.Element {
               )
             }
             onOpen={(id) => void useWorkspace.getState().openMap(id)}
-            onCreate={(title) => void useWorkspace.getState().createMap(title)}
+            onCreate={(title) =>
+              void useWorkspace.getState().createMap(title, templateMarkdown(templateId))
+            }
             onRename={(id, title) => void useWorkspace.getState().renameMap(id, title)}
             onDelete={confirmDelete}
           />
@@ -206,7 +275,7 @@ export function App(): React.JSX.Element {
 
         <main className="main">
           {root === null ? (
-            <NoMapGuide hasMaps={maps.length > 0} onNewMap={startCreating} />
+            <NoMapGuide hasMaps={maps.length > 0} onNewMap={() => startCreating("blank")} />
           ) : (
             <>
               {mode === "canvas" ? <Canvas /> : <Outline />}
@@ -235,9 +304,20 @@ export function App(): React.JSX.Element {
           />
         )}
 
+        {showSettings && (
+          <SettingsSheet
+            folderName={folder.folderName}
+            theme={theme}
+            onChangeTheme={changeTheme}
+            onChooseFolder={() => void useWorkspace.getState().chooseFolder()}
+            onShowShortcuts={toggleHelp}
+            onClose={toggleSettings}
+          />
+        )}
+
         {showHelp && <ShortcutSheet onClose={toggleHelp} />}
 
-        {selected !== null && !showHelp && !showExport && (
+        {selected !== null && !showHelp && !showExport && !showSettings && (
           <NotePanel
             node={selected}
             linkCandidates={linkCandidates}
@@ -254,6 +334,10 @@ export function App(): React.JSX.Element {
         folderName={folder.folderName}
         hint={root === null ? "newMap" : rootHasChildren ? "help" : "firstBranch"}
       />
+
+      {showPalette && (
+        <CommandPalette indexes={indexes} onClose={() => setShowPalette(false)} onPick={pick} />
+      )}
 
       {toast !== null && (
         <div className="toast" role="status">

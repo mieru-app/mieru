@@ -224,19 +224,23 @@ describe("サイドバーと検索", () => {
     const focusSearch = vi.fn();
 
     const toggleExport = vi.fn();
+    const openPalette = vi.fn();
 
     await runCommand("toggleSidebar", { ...noop, toggleSidebar });
     await runCommand("focusSearch", { ...noop, focusSearch });
     await runCommand("toggleExport", { ...noop, toggleExport });
+    await runCommand("openPalette", { ...noop, openPalette });
 
     expect(toggleSidebar).toHaveBeenCalledTimes(1);
     expect(focusSearch).toHaveBeenCalledTimes(1);
     expect(toggleExport).toHaveBeenCalledTimes(1);
+    expect(openPalette).toHaveBeenCalledTimes(1);
   });
 
   it("渡されていなくても落ちない", async () => {
     await expect(runCommand("toggleSidebar", noop)).resolves.toBeUndefined();
     await expect(runCommand("focusSearch", noop)).resolves.toBeUndefined();
     await expect(runCommand("toggleExport", noop)).resolves.toBeUndefined();
+    await expect(runCommand("openPalette", noop)).resolves.toBeUndefined();
   });
 });

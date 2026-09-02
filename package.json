@@ -8,7 +8,9 @@
     "node": ">=20.19.0"
   },
   "scripts": {
+    "predev": "node assets/icon/generate.mjs",
     "dev": "vite",
+    "prebuild": "node assets/icon/generate.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -19,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:core": "vitest run src/core",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "perf": "vitest run --config vitest.perf.config.ts"
   },
   "dependencies": {
     "mind-elixir": "5.15.1",

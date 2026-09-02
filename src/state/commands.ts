@@ -26,6 +26,8 @@ export interface CommandDeps {
   focusSearch?(): void;
   /** AI 出力パネルの開閉 */
   toggleExport?(): void;
+  /** コマンドパレットを開く */
+  openPalette?(): void;
 }
 
 /** 出力の結果。何を出したのかが利用者に分かる形で返す */
@@ -164,6 +166,10 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
 
     case "toggleExport":
       deps.toggleExport?.();
+      return;
+
+    case "openPalette":
+      deps.openPalette?.();
       return;
 
     case "saveNow":

@@ -6,13 +6,17 @@
 
 ## 現在地
 
-**Phase 1（編集機能）完了。Phase 2 の準備まで済み、Phase 2 本体は未着手。**
-フェーズ定義と完了条件は `docs/project-plan.md` の3〜4章。
+**Phase 2（管理・出力・PWA）の実装が一巡した。実機確認と配信が残っている。**
+フェーズ定義と完了条件は `docs/project-plan.md` の3〜4章、進捗は同 Phase 2 の「実装状況」。
 
-**IMPORTANT: Phase 1 の DoD「実データで2週間使用し、ファイル破損・内容変質が0件」は未達である。**
-計画（第5章）はマイルストーン間に必ず実利用期間を挟むと定めており、
-リスク PR-04 は「Phase 1 完成後に満足し、実利用の検証をせず Phase 2 へ進む」ことである。
-**利用者の指示なく Phase 2 のタスクに着手しないこと。**
+**IMPORTANT: Phase 1・2 の DoD はいずれも未達である。** 残っているのは机上で埋められない項目に偏っている。
+
+- Phase 1: 実データで2週間使用し、ファイル破損・内容変質が0件
+- Phase 2: PWA インストール、オフライン動作、性能要件（`docs/perf-report.md` の3章）
+- 2-14 配信: リポジトリ側の設定（Settings → Pages → Source を GitHub Actions）と push が要る
+
+計画（第5章）はマイルストーン間に必ず実利用期間を挟むと定めている。
+**利用者の指示なく Phase 3 のタスクに着手しないこと。**
 
 決定済み: 名称 **Mieru**（設計書 12.5）／アイコン **「放射する光条」**（同 12.6、`assets/icon/generate.mjs` で生成）／
 配信 **GitHub Pages**・独自ドメインなし（同 8.6）。
@@ -30,8 +34,9 @@
 | テスト（全体） | `npm test` |
 | テスト（変換エンジンのみ） | `npm run test:core` |
 | カバレッジ | `npm run test:coverage`（90% 未満で失敗する） |
+| 性能実測 | `npm run perf`（`npm test` には含めない。結果は `docs/perf-report.md`） |
 | 監視実行 | `npm run test:watch` |
-| アイコン生成 | `node assets/icon/generate.mjs` |
+| アイコン生成 | `node assets/icon/generate.mjs`（`public/icons/` へ書き出す。dev / build が自動実行） |
 
 一連の変更を終えたら `npm run typecheck` と `npm test` を実行し、**その出力を示してから完了を報告する**。
 
@@ -53,6 +58,10 @@
 | `src/store/` | `MapStore` と実装。永続化に触れるのはここまで | あり（FSA と IndexedDB の偽物を使う） |
 | `src/state/` | 編集ロジック・状態・自動保存。React にも mind-elixir にも依存しない | あり |
 | `src/app/` `src/views/` | React の描画と入力 | なし（手動試験） |
+
+例外として `src/app/keymap.ts`・`shortcuts.ts`・`command-palette.ts` は自動テストを持つ。
+キー割り当てとその表示は「一覧が嘘をつくと復帰手段が無くなる」種類の情報であり、
+描画ではなく判断だからである。
 
 **描画層に判断を書かない。** 「このキーで何が起きるか」「保存すべきか」といった判断は
 `src/state/` に置き、描画層はそれを呼ぶだけにする。UI を自動テストしない方針を採る以上、

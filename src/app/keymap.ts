@@ -29,6 +29,7 @@ export type Command =
   | "toggleHelp"
   | "toggleSidebar"
   | "focusSearch"
+  | "openPalette"
   /** キー割り当てを持たない。ツールバーとコマンドパレットから呼ぶ */
   | "toggleExport";
 
@@ -63,6 +64,7 @@ export function resolveShortcut(stroke: KeyStroke, editing: boolean): Command | 
     // サイドバーと検索は入力中でも効かせる。探し物は入力の途中で始まる
     if (key === "b") return "toggleSidebar";
     if (key === "f") return "focusSearch";
+    if (key === "k") return "openPalette";
     if (key === "c" && stroke.shiftKey) return "copyForAi";
     if (key === "/") return "toggleCollapse";
     if (key === "arrowup") return "reorderUp";

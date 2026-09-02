@@ -35,4 +35,4 @@ Desktop.ini
 npm-debug.log*
 
 # アイコンの生成物（generate.mjs で作り直せる）
-assets/icon/dist/
+public/icons/

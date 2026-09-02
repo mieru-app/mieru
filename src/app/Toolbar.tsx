@@ -13,8 +13,10 @@ interface Props {
   onNewMap: () => void;
   onToggleHelp: () => void;
   onToggleSidebar: () => void;
+  onToggleSettings: () => void;
   helpOpen: boolean;
   exportOpen: boolean;
+  settingsOpen: boolean;
   sidebarOpen: boolean;
   canEdit: boolean;
 }
@@ -27,8 +29,10 @@ export function Toolbar({
   onNewMap,
   onToggleHelp,
   onToggleSidebar,
+  onToggleSettings,
   helpOpen,
   exportOpen,
+  settingsOpen,
   sidebarOpen,
   canEdit,
 }: Props): React.JSX.Element {
@@ -81,6 +85,16 @@ export function Toolbar({
         </button>
         <button type="button" onClick={onToggleHelp} aria-pressed={helpOpen} title="?">
           キー操作
+        </button>
+        <button
+          type="button"
+          className="toolbar-icon"
+          onClick={onToggleSettings}
+          aria-pressed={settingsOpen}
+          aria-label="設定"
+          title="設定"
+        >
+          ⚙
         </button>
       </div>
     </header>

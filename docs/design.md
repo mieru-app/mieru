@@ -710,6 +710,27 @@ PWA としてインストールするには HTTPS 配信が要る。Phase 2 で�
 - 同一オリジンに自分の他の GitHub Pages が同居する。IndexedDB のデータベース名は `mieru` で固定し、他プロジェクトと衝突させない
 - **Phase 3 の着手時に、移行手順（PWA の入れ直しとフォルダの再選択）を利用者向けに用意すること。** 黙って権限が切れると「壊れた」ように見える
 
+#### 実装（Phase 2 で追加）
+
+| 項目 | 内容 |
+|---|---|
+| `base` | `BASE_PATH` 環境変数。既定は `/`。GitHub Actions が `/<リポジトリ名>/` を渡す |
+| manifest | ビルド時に生成する（`vite.config.ts` の `webManifest`）。`start_url` と `scope` を `base` に合わせる必要があるため静的ファイルにできない |
+| アイコン | `node assets/icon/generate.mjs` が `public/icons/` へ書き出す。`npm run dev` / `npm run build` が事前に実行する |
+| Service Worker | `public/sw.js`。登録は本番ビルドのみ（`src/main.tsx`）。開発中に古い版を掴むと調査が空回りするため |
+| 配信 | `.github/workflows/deploy.yml`。main への push で lint・テストを通してからビルドして公開する |
+
+**Service Worker の方針は2つだけである。**
+
+| 対象 | 方針 | 理由 |
+|---|---|---|
+| 画面遷移（HTML） | ネットワーク優先、失敗したらキャッシュ | 新しい版を配ったら次の起動で反映される |
+| 同一オリジンの静的ファイル | キャッシュ優先、無ければ取得して蓄える | ファイル名にハッシュが入るので古い内容が混ざらない |
+
+ライブラリを使わず手で書いてあるのは、方針がこの2つしかなく、
+設定の面を増やす割に得るものが少ないためである。増やしたくなったら `vite-plugin-pwa` を検討する。
+`rel="manifest"` の href は Vite の URL 書き換えの対象外なので、`%BASE_URL%` で自分で入れている。
+
 ---
 
 ## 9. AWS構成詳細（Phase 3）

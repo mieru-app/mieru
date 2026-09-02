@@ -35,7 +35,9 @@ const restrictedGlobals = [
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "coverage/**", "node_modules/**", "infra/cdk.out/**"],
+    // public/ は Vite が素通しで配る素の JavaScript（Service Worker）であり、
+    // tsconfig の対象外。型情報付きの解析ができないため除外する
+    ignores: ["dist/**", "coverage/**", "node_modules/**", "infra/cdk.out/**", "public/**"],
   },
 
   js.configs.recommended,

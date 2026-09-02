@@ -1,0 +1,64 @@
+# GitHub Pages への配信（2-14 / 設計書 8.6）
+#
+# PWA としてインストールするには HTTPS 配信が要るため、
+# main への push を契機にビルドして公開する。
+#
+# **リポジトリ側で1度だけ必要な設定:**
+#   Settings → Pages → Build and deployment → Source を「GitHub Actions」にする。
+#   無料プランでは public リポジトリであることも要る（設計書 8.6）。
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  # 手で流せるようにしておく。設定を直した直後に確認したいことがある
+  workflow_dispatch:
+
+# 同時に走らせない。後から始めた方を待たせ、途中で打ち切らない
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # 配信前に品質の門を通す。壊れた版を公開しない
+      - run: npm run lint
+      - run: npm test
+
+      - name: ビルド
+        env:
+          # サブパス配信（https://<ユーザー名>.github.io/<リポジトリ名>/）に合わせる。
+          # 独自ドメインへ移すときはここだけを "/" にすればよい（設計書 8.6）
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -22,12 +22,23 @@ const KIND_LABEL: Record<SearchHit["kind"], string> = {
 interface RowInputProps {
   initial: string;
   placeholder: string;
+  /**
+   * 他所を押したときに取り消すか。
+   * 新規作成では下敷きの選択欄へ移るだけで取り消されては困るので false にする
+   */
+  cancelOnBlur?: boolean;
   onCommit: (value: string) => void;
   onCancel: () => void;
 }
 
 /** その場で名前を入れる欄。Enter で確定、Escape で取り消す */
-function RowInput({ initial, placeholder, onCommit, onCancel }: RowInputProps): React.JSX.Element {
+function RowInput({
+  initial,
+  placeholder,
+  cancelOnBlur = true,
+  onCommit,
+  onCancel,
+}: RowInputProps): React.JSX.Element {
   const [value, setValue] = useState(initial);
   const ref = useRef<HTMLInputElement>(null);
 
@@ -48,7 +59,7 @@ function RowInput({ initial, placeholder, onCommit, onCancel }: RowInputProps): 
         if (event.key === "Escape") onCancel();
       }}
       // 別の場所を押したら取り消す。書きかけを黙って確定させない
-      onBlur={onCancel}
+      onBlur={cancelOnBlur ? onCancel : undefined}
     />
   );
 }
@@ -69,8 +80,12 @@ interface Props {
    * サイドバーの外（ツールバー・案内）からも作成を始められるよう、状態は外に置く
    */
   creating: boolean;
+  /** 新規作成の下敷き（2-10） */
+  templates: { id: string; name: string; description: string }[];
+  templateId: string;
   searchRef: React.RefObject<HTMLInputElement | null>;
   onCreatingChange: (creating: boolean) => void;
+  onTemplateChange: (id: string) => void;
   onQueryChange: (query: string) => void;
   onToggleTag: (tag: string) => void;
   onOpen: (id: string) => void;
@@ -88,8 +103,11 @@ export function Sidebar({
   openId,
   empty,
   creating,
+  templates,
+  templateId,
   searchRef,
   onCreatingChange,
+  onTemplateChange,
   onQueryChange,
   onToggleTag,
   onOpen,
@@ -133,9 +151,25 @@ export function Sidebar({
 
       <div className="sidebar-list">
         {creating && (
+          <select
+            className="sidebar-input sidebar-template"
+            value={templateId}
+            aria-label="下敷き"
+            onChange={(event) => onTemplateChange(event.target.value)}
+          >
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}（{template.description}）
+              </option>
+            ))}
+          </select>
+        )}
+
+        {creating && (
           <RowInput
             initial="新しいマップ"
             placeholder="新しいマップの中心テーマ"
+            cancelOnBlur={false}
             onCommit={(value) => {
               onCreatingChange(false);
               onCreate(value.trim() === "" ? "新しいマップ" : value.trim());
