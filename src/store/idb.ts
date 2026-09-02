@@ -1,21 +1,25 @@
 /**
  * IndexedDB の最小ラッパー。
  *
- * 用途は2つに限る。
+ * 用途は3つに限る。
  * 1. 選択したフォルダのハンドルを次回起動へ引き継ぐ（設計書 8.3）
  * 2. 保存できなかった編集内容の退避（設計書 11章・原則「データを失わない」）
+ * 3. GitHub 保存先の資格情報（設計書 8.7。Phase 2.6 で追加）
  *
  * `idb` などのライブラリを入れないのは、必要な操作が get/put/delete/getAll の
  * 4つだけで、依存を増やす理由が乏しいため（CLAUDE.md「依存の追加は最小限」）。
  */
 
 const DB_NAME = "mieru";
-const DB_VERSION = 1;
+/** 2: `settings` を追加（Phase 2.6）。既存の保管庫には触れないので移行処理は要らない */
+const DB_VERSION = 2;
 
 /** フォルダハンドルの保管庫。キーは固定の1件のみ */
 export const STORE_HANDLES = "handles";
 /** 保存に失敗した内容の退避先。キーは自動採番 */
 export const STORE_QUARANTINE = "quarantine";
+/** 設定の保管庫。現在は GitHub の資格情報1件のみ（`github-auth.ts`） */
+export const STORE_SETTINGS = "settings";
 
 /** IndexedDB が使えない環境（プライベートウィンドウ等）では null を返す */
 function openDatabase(): Promise<IDBDatabase | null> {
@@ -36,6 +40,7 @@ function openDatabase(): Promise<IDBDatabase | null> {
       if (!db.objectStoreNames.contains(STORE_QUARANTINE)) {
         db.createObjectStore(STORE_QUARANTINE, { keyPath: "key", autoIncrement: true });
       }
+      if (!db.objectStoreNames.contains(STORE_SETTINGS)) db.createObjectStore(STORE_SETTINGS);
     };
     request.onsuccess = () => {
       resolve(request.result);

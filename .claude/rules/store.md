@@ -30,7 +30,19 @@ paths:
 |---|---|
 | `MemoryStore` | 連番 |
 | `LocalFolderStore` | 本文の内容ハッシュ（`src/store/hash.ts`） |
+| `GitHubStore` | Blob SHA。git の blob ハッシュそのもので、内容だけで決まる |
 | `S3Store` / `SyncingStore` | S3 の ETag |
+
+## 資格情報
+
+**トークン文字列を持つのは `src/store/github-auth.ts` だけにする。**
+画面やログに出す必要が生じたら `describeCredential()` を使う。
+資格情報オブジェクトをそのまま `console.log` へ渡すとトークンが漏れる。
+
+保管先は IndexedDB で、**平文である**。暗号化しないのは、合言葉を毎回入力させない限り
+復号鍵も同じブラウザに置くことになり、守っているように見えて守っていない実装になるため。
+代わりに権限（1リポジトリ・Contents のみ）と期間を絞って被害の上限を抑える。
+根拠と承知している危険は設計書 8.7.2。
 
 ## テスト
 
