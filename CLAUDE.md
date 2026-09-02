@@ -13,13 +13,12 @@
 
 - Phase 1: 実データで2週間使用し、ファイル破損・内容変質が0件
 - Phase 2: PWA インストール、オフライン動作、性能要件（`docs/perf-report.md` の3章）
-- 2-14 配信: リポジトリ側の設定（Settings → Pages → Source を GitHub Actions）と push が要る
 
 計画（第5章）はマイルストーン間に必ず実利用期間を挟むと定めている。
 **利用者の指示なく Phase 3 のタスクに着手しないこと。**
 
 決定済み: 名称 **Mieru**（設計書 12.5）／アイコン **「放射する光条」**（同 12.6、`assets/icon/generate.mjs` で生成）／
-配信 **GitHub Pages**・独自ドメインなし（同 8.6）。
+配信 **GitHub Pages**・独自ドメインなし（同 8.6）。公開先は https://kyritk.github.io/mieru/ 。
 未決: テンプレート（2-10）の中身と全文検索（2-3）の想定規模。どちらも実利用の実感が要る。
 
 ## コマンド

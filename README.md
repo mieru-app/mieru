@@ -74,11 +74,11 @@ node assets/icon/generate.mjs   # アイコンの SVG / PNG を public/icons/ �
 
 ### 配信（GitHub Pages）
 
-`main` への push で `.github/workflows/deploy.yml` がビルドして公開する。
-**リポジトリ側で1度だけ Settings → Pages → Source を「GitHub Actions」にする必要がある。**
+公開先は **https://kyritk.github.io/mieru/** 。
+`main` への push で `.github/workflows/deploy.yml` が lint とテストを通してからビルドし、公開する。
 サブパス配信のため、`BASE_PATH` 環境変数で `base` を切り替える（設計書 8.6）。
 
 ```bash
-BASE_PATH=/mindmap_app/ npm run build   # 配信と同じ条件でビルドする
-npm run preview                          # Service Worker は本番ビルドでのみ登録される
+BASE_PATH=/mieru/ npm run build   # 配信と同じ条件でビルドする
+npm run preview                   # Service Worker は本番ビルドでのみ登録される
 ```
