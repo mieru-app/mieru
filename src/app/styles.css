@@ -771,13 +771,29 @@ kbd {
 
 /* ── AI 用の出力 ────────────────────────────────────────── */
 
-.export-modes {
+/* 形式と範囲。2つの軸をそれぞれ横並びの2択にする（設計書 7.3） */
+.export-axis {
   display: flex;
   flex-direction: column;
+  gap: 0.3rem;
+}
+
+.export-axis + .export-axis {
+  margin-top: 0.75rem;
+}
+
+.export-axis-label {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+.export-modes {
+  display: flex;
   gap: 0.35rem;
 }
 
 .export-mode {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;

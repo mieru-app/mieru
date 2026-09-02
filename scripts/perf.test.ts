@@ -83,10 +83,10 @@ describe("1000ノードでの変換と編集", () => {
     );
   });
 
-  it("AI 出力（見出し展開）", () => {
+  it("テキスト出力（見出し）", () => {
     report(
       "exportMarkdown",
-      measure(20, () => void exportMarkdown(doc, "expanded")),
+      measure(20, () => void exportMarkdown(doc, "heading")),
       50,
     );
   });

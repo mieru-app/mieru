@@ -70,31 +70,42 @@ function emitNode(out: string[], node: MapNode, depth: number): void {
 }
 
 /**
- * モデルを Markdown 文字列へ変換する。
- * 戻り値は必ず改行1つで終端する。
+ * 本文（frontmatter を除く部分）を組み立てる。
+ * 渡したノードを `#` の見出しとし、子孫を箇条書きにする。末尾に改行は付けない。
+ *
+ * 保存だけでなく、テキスト出力の「箇条書き」形式もここを通す（設計書 7.3）。
+ * 出力用に書き直すと正規化規則が片方だけ古くなり、
+ * 「保存した `.md` と出力した `.md` が違う」という気づきにくい食い違いが起きる。
  */
-export function serializeMarkdown(doc: MapDoc): string {
+export function serializeBody(root: MapNode): string {
   const out: string[] = [];
 
-  const rootLabel = guardHeadingClose(labelLine(doc.root));
+  const rootLabel = guardHeadingClose(labelLine(root));
   out.push(rootLabel === "" ? "#" : `# ${rootLabel}`);
 
   // ルートのノートは見出し直下の地の文として出力する。
   // 箇条書きの中ではないため、ラベルへの繰り上げは不要
-  const rootNote = doc.root.note === undefined ? undefined : normalizeNoteText(doc.root.note);
+  const rootNote = root.note === undefined ? undefined : normalizeNoteText(root.note);
   if (rootNote !== undefined) {
     out.push("");
     pushNoteLines(out, rootNote, "");
   }
 
-  if (doc.root.children.length > 0) {
+  if (root.children.length > 0) {
     out.push("");
-    for (const child of doc.root.children) {
+    for (const child of root.children) {
       emitNode(out, child, 0);
     }
   }
 
+  return out.join("\n").replace(/[ \t]+$/gm, "");
+}
+
+/**
+ * モデルを Markdown 文字列へ変換する。
+ * 戻り値は必ず改行1つで終端する。
+ */
+export function serializeMarkdown(doc: MapDoc): string {
   const frontmatter = serializeFrontmatter(doc.meta, doc.view);
-  const body = out.join("\n").replace(/[ \t]+$/gm, "");
-  return `${frontmatter}\n${body}\n`;
+  return `${frontmatter}\n${serializeBody(doc.root)}\n`;
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ExportMode } from "../core/export.js";
+import type { ExportFormat } from "../core/export.js";
+import type { ExportScope } from "../state/commands.js";
 import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
 import { collectTags, queryIndex } from "../state/search.js";
@@ -56,7 +57,8 @@ export function App(): React.JSX.Element {
   const [toast, setToast] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [exportMode, setExportMode] = useState<ExportMode>("expanded");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("heading");
+  const [exportScope, setExportScope] = useState<ExportScope>("whole");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -156,8 +158,8 @@ export function App(): React.JSX.Element {
   // 木や選択が動けば出力も変わる。開いている間だけ作り直す。
   // exportAs はストアから直に読むため、root と selectedUid は再計算の契機として渡している
   const exported = useMemo(
-    () => (showExport ? exportAs(exportMode) : null),
-    [showExport, exportMode, root, selectedUid],
+    () => (showExport ? exportAs(exportFormat, exportScope) : null),
+    [showExport, exportFormat, exportScope, root, selectedUid],
   );
 
   // 横断リンクの宛先候補。自分自身と無題のノードは除く（F-17）
@@ -286,9 +288,11 @@ export function App(): React.JSX.Element {
 
         {showExport && (
           <ExportPanel
-            mode={exportMode}
+            format={exportFormat}
+            scope={exportScope}
             result={exported}
-            onChangeMode={setExportMode}
+            onChangeFormat={setExportFormat}
+            onChangeScope={setExportScope}
             onClose={toggleExport}
             onCopy={() => {
               if (exported === null) return;

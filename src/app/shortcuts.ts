@@ -92,7 +92,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       {
         keys: ["Ctrl + Shift + C"],
         commands: ["copyForAi"],
-        description: "AI 用 Markdown をコピー（枝を選ぶとその部分だけ）",
+        description: "テキストをコピー（枝を選ぶとその部分だけ）",
       },
       {
         keys: ["Ctrl + S"],
@@ -131,8 +131,8 @@ const PALETTE_COMMANDS: { command: Command; title: string }[] = [
   { command: "undo", title: "元に戻す" },
   { command: "redo", title: "やり直す" },
   { command: "toggleMode", title: "キャンバス ⇄ アウトライン" },
-  { command: "copyForAi", title: "AI 用 Markdown をコピーする" },
-  { command: "toggleExport", title: "AI 用に出力する（モードを選ぶ）" },
+  { command: "copyForAi", title: "テキストをコピーする（見出し形式）" },
+  { command: "toggleExport", title: "テキスト出力を開く（形式と範囲を選ぶ）" },
   { command: "saveNow", title: "すぐ保存する" },
   { command: "toggleSidebar", title: "サイドバーを開閉する" },
   { command: "focusSearch", title: "全マップを検索する" },

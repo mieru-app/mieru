@@ -78,7 +78,7 @@ export function Toolbar({
           disabled={!canEdit}
           title="Ctrl+Shift+C ですぐコピーもできます"
         >
-          AI 用に出力
+          テキスト出力
         </button>
         <button type="button" onClick={onNewMap}>
           新規作成

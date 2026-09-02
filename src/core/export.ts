@@ -1,25 +1,26 @@
 import { escapeInlineText, guardHeadingClose } from "./escape.js";
 import { normalizeNoteText } from "./normalize.js";
-import { serializeMarkdown } from "./serialize.js";
-import { splitFrontmatter } from "./frontmatter.js";
+import { serializeBody } from "./serialize.js";
 import type { MapDoc, MapNode } from "./types.js";
 
 /**
- * AI 入力用の Markdown 出力。
+ * テキスト出力（AI へ渡す Markdown の生成）。
  *
- * いずれのモードでも frontmatter は出力しない。
+ * どの形式でも frontmatter は出力しない。
  * 表示状態（折り畳み・配色）を AI に渡さないため（設計原則2）。
+ *
+ * **範囲（全体／選択部分）はここに持ち込まない。** 受け取るのは
+ * 「どのノードから出すか」という構造パスだけである。「いま選択中かどうか」は
+ * 編集状態であって変換の入力ではないため、`src/state/` が解決する。
  *
  * 仕様の正本: docs/design.md 7.3
  */
 
-export type ExportMode =
-  /** モード1: 本文をそのまま。構造をコンパクトに伝えたいとき */
-  | "raw"
-  /** モード2（既定）: 第1〜3階層を見出しへ昇格。LLM が最も解釈しやすい形 */
-  | "expanded"
-  /** モード3: 選択ノードを起点とする部分木のみ。形式は expanded に準ずる */
-  | "subtree";
+export type ExportFormat =
+  /** 既定。第1〜3階層を見出しへ昇格させる。LLM が最も文書として解釈しやすい形 */
+  | "heading"
+  /** 保存形式の本文そのまま。構造を短く伝えたいとき */
+  | "bullet";
 
 /** 見出しへ昇格させる最大の階層。これより深いものは箇条書きで出力する */
 const MAX_HEADING_DEPTH = 3;
@@ -53,10 +54,10 @@ function pushNote(out: string[], node: MapNode, indent: string): void {
 }
 
 /**
- * expanded 形式で1ノードを出力する。
+ * 見出し形式で1ノードを出力する。
  * @param depth 起点ノードからの深さ。0 が起点（`#`）
  */
-function emitExpanded(out: string[], node: MapNode, depth: number): void {
+function emitHeading(out: string[], node: MapNode, depth: number): void {
   if (depth <= MAX_HEADING_DEPTH) {
     // 見出しの末尾の `#` は閉じシーケンスとして失われるため保護する
     const label = guardHeadingClose(labelOf(node));
@@ -75,13 +76,13 @@ function emitExpanded(out: string[], node: MapNode, depth: number): void {
   }
 
   for (const child of node.children) {
-    emitExpanded(out, child, depth + 1);
+    emitHeading(out, child, depth + 1);
   }
 }
 
-function exportExpanded(root: MapNode): string {
+function exportHeading(root: MapNode): string {
   const out: string[] = [];
-  emitExpanded(out, root, 0);
+  emitHeading(out, root, 0);
   // 先頭の空行を落とし、連続する空行を1つにまとめる
   const body = out
     .join("\n")
@@ -90,39 +91,30 @@ function exportExpanded(root: MapNode): string {
   return `${body.replace(/[ \t]+$/gm, "").trimEnd()}\n`;
 }
 
-/** 保存形式の本文をそのまま返す（frontmatter のみ除去） */
-function exportRaw(doc: MapDoc): string {
-  const { body } = splitFrontmatter(serializeMarkdown(doc));
-  return `${body.trimStart().trimEnd()}\n`;
+/** 保存形式の本文をそのまま返す。保存と同じ関数を通すことで両者が食い違わない */
+function exportBullet(root: MapNode): string {
+  return `${serializeBody(root).trimEnd()}\n`;
 }
 
 export interface ExportOptions {
-  /** subtree のときの起点ノードの構造パス。省略時はルート */
+  /** 起点ノードの構造パス。省略時はルート（＝全体） */
   fromPath?: string;
 }
 
 /**
  * AI へ渡す Markdown を生成する。
  *
- * @param mode 既定は expanded。LLM が最も文書として解釈しやすいため
- * @throws subtree で fromPath のノードが見つからない場合
+ * @param format 既定は heading。LLM が最も文書として解釈しやすいため
+ * @throws fromPath のノードが見つからない場合
  */
 export function exportMarkdown(
   doc: MapDoc,
-  mode: ExportMode = "expanded",
+  format: ExportFormat = "heading",
   options: ExportOptions = {},
 ): string {
-  switch (mode) {
-    case "raw":
-      return exportRaw(doc);
-    case "expanded":
-      return exportExpanded(doc.root);
-    case "subtree": {
-      const from = findNodeByPath(doc.root, options.fromPath ?? "");
-      if (from === undefined) {
-        throw new Error(`部分出力の起点が見つかりません: ${options.fromPath ?? ""}`);
-      }
-      return exportExpanded(from);
-    }
+  const from = findNodeByPath(doc.root, options.fromPath ?? "");
+  if (from === undefined) {
+    throw new Error(`部分出力の起点が見つかりません: ${options.fromPath ?? ""}`);
   }
+  return format === "heading" ? exportHeading(from) : exportBullet(from);
 }

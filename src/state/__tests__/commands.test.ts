@@ -43,7 +43,7 @@ beforeEach(() => {
   openSource();
 });
 
-describe("AI 用の出力", () => {
+describe("テキスト出力（Ctrl+Shift+C）", () => {
   it("中心テーマを選んでいれば全体を出す", async () => {
     const copyText = vi.fn((_text: string) => Promise.resolve());
     const notify = vi.fn();
@@ -92,22 +92,24 @@ describe("AI 用の出力", () => {
   });
 });
 
-describe("出力モードの選択（F-33 / F-35）", () => {
-  it("そのままは箇条書きのまま、見出し展開は見出しにする", () => {
-    expect(exportAs("raw")?.md).toContain("- 市場");
-    expect(exportAs("raw")?.md).not.toContain("## 市場");
-    expect(exportAs("expanded")?.md).toContain("## 市場");
+describe("形式と範囲の選択（F-33 / F-35）", () => {
+  it("箇条書きは箇条書きのまま、見出しは見出しにする", () => {
+    expect(exportAs("bullet")?.md).toContain("- 市場");
+    expect(exportAs("bullet")?.md).not.toContain("## 市場");
+    expect(exportAs("heading")?.md).toContain("## 市場");
   });
 
-  it("いずれのモードでも frontmatter を渡さない（設計原則2）", () => {
-    for (const mode of ["raw", "expanded", "subtree"] as const) {
-      expect(exportAs(mode)?.md).not.toContain("title:");
+  it("どの組み合わせでも frontmatter を渡さない（設計原則2）", () => {
+    for (const format of ["heading", "bullet"] as const) {
+      for (const scope of ["whole", "selection"] as const) {
+        expect(exportAs(format, scope)?.md).not.toContain("title:");
+      }
     }
   });
 
-  it("部分は選択中の枝から下だけを出し、対象を名前で示す", () => {
+  it("選択部分は選んだ枝から下だけを出し、対象を名前で示す", () => {
     useEditor.getState().select(uidOf("市場"));
-    const result = exportAs("subtree");
+    const result = exportAs("heading", "selection");
 
     expect(result?.scope).toBe("市場");
     expect(result?.md).toContain("# 市場");
@@ -115,8 +117,8 @@ describe("出力モードの選択（F-33 / F-35）", () => {
     expect(result?.fileName).toBe("論点整理 - 市場.md");
   });
 
-  it("中心テーマを選んでいるときの部分出力は全体になる", () => {
-    const result = exportAs("subtree");
+  it("中心テーマを選んでいるときの選択部分は全体になる", () => {
+    const result = exportAs("heading", "selection");
     expect(result?.scope).toBe("全体");
     expect(result?.fileName).toBe("論点整理.md");
   });
@@ -127,12 +129,28 @@ describe("出力モードの選択（F-33 / F-35）", () => {
       .getState()
       .open({ id: "x.md", meta: doc.meta, colors: doc.view.colors, version: "v1" }, doc);
 
-    expect(exportAs("expanded")?.fileName).toBe("A-B の比較.md");
+    expect(exportAs("heading")?.fileName).toBe("A-B の比較.md");
   });
 
   it("マップを開いていなければ null", () => {
     useEditor.getState().close();
-    expect(exportAs("expanded")).toBeNull();
+    expect(exportAs("heading")).toBeNull();
+  });
+
+  it("箇条書き × 選択部分も選べる（2軸に分けた副産物）", () => {
+    useEditor.getState().select(uidOf("市場"));
+    const result = exportAs("bullet", "selection");
+
+    expect(result?.scope).toBe("市場");
+    expect(result?.md).toContain("# 市場");
+    expect(result?.md).toContain("- TAM試算");
+    expect(result?.md).not.toContain("## TAM試算");
+  });
+
+  it("既定の範囲は全体。枝を選んでいても全体が出る", () => {
+    useEditor.getState().select(uidOf("市場"));
+    expect(exportAs("heading")?.scope).toBe("全体");
+    expect(exportAs("heading")?.md).toContain("強み");
   });
 });
 

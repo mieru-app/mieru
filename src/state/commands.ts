@@ -1,4 +1,4 @@
-import type { ExportMode } from "../core/export.js";
+import type { ExportFormat } from "../core/export.js";
 import { exportMarkdown } from "../core/export.js";
 import type { Command } from "../app/keymap.js";
 import { toFileNameBase } from "../store/file-name.js";
@@ -30,6 +30,14 @@ export interface CommandDeps {
   openPalette?(): void;
 }
 
+/**
+ * 出力の範囲（設計書 7.3）。
+ *
+ * `src/core/` に渡すのは構造パスだけであり、「いま何を選んでいるか」を解決するのは
+ * この層の仕事である。選択は編集状態であって変換の入力ではない。
+ */
+export type ExportScope = "whole" | "selection";
+
 /** 出力の結果。何を出したのかが利用者に分かる形で返す */
 export interface ExportResult {
   md: string;
@@ -40,11 +48,11 @@ export interface ExportResult {
 }
 
 /**
- * 指定したモードで Markdown を作る（設計書 7.3）。
+ * 指定した形式と範囲で Markdown を作る（設計書 7.3）。
  *
- * `subtree` の起点は選択中のノード。中心テーマを選んでいるときは全体と同じになる。
+ * 選択部分の起点は選択中のノード。中心テーマを選んでいるときは全体と同じになる。
  */
-export function exportAs(mode: ExportMode): ExportResult | null {
+export function exportAs(format: ExportFormat, scope: ExportScope = "whole"): ExportResult | null {
   const state = useEditor.getState();
   const doc = state.buildDoc();
   if (doc === null) return null;
@@ -53,11 +61,11 @@ export function exportAs(mode: ExportMode): ExportResult | null {
   const selected =
     state.selectedUid === null ? null : (locate(doc.root, state.selectedUid)?.node ?? null);
 
-  // 部分出力でも、中心テーマを選んでいるなら全体を出す。
+  // 選択部分でも、中心テーマを選んでいるなら全体を出す。
   // 「部分のつもりで全体が出た」より「全体が出た」と分かる方がよい
-  if (mode !== "subtree" || selected === null || selected.path === "") {
+  if (scope !== "selection" || selected === null || selected.path === "") {
     return {
-      md: exportMarkdown(doc, mode),
+      md: exportMarkdown(doc, format),
       scope: "全体",
       fileName: `${toFileNameBase(title)}.md`,
     };
@@ -65,7 +73,7 @@ export function exportAs(mode: ExportMode): ExportResult | null {
 
   const label = selected.label === "" ? "無題の枝" : selected.label;
   return {
-    md: exportMarkdown(doc, "subtree", { fromPath: selected.path }),
+    md: exportMarkdown(doc, format, { fromPath: selected.path }),
     scope: label,
     fileName: `${toFileNameBase(`${title} - ${label}`)}.md`,
   };
@@ -76,15 +84,10 @@ export function exportAs(mode: ExportMode): ExportResult | null {
  *
  * 中心テーマを選んでいるときは全体、それ以外のノードを選んでいるときは
  * その部分木のみを出力する（設計書 7.3 の操作表）。
+ * 中心テーマかどうかの判定は `exportAs` が持っているため、ここでは範囲を指定するだけでよい。
  */
 export function exportForAi(): ExportResult | null {
-  const state = useEditor.getState();
-  const selected =
-    state.root === null || state.selectedUid === null
-      ? null
-      : (locate(state.root, state.selectedUid)?.node ?? null);
-
-  return exportAs(selected === null || selected.path === "" ? "expanded" : "subtree");
+  return exportAs("heading", "selection");
 }
 
 /** 操作を実行する。割り当ての無い状態では何もしない */
