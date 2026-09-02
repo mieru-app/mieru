@@ -59,6 +59,25 @@
   ただし戻った先の内容は自分が読んだ内容と同一なので、上書きしても失うものが無い。
   `LocalFolderStore` と同じ理屈で受容できる
 
+### 2.3 ブラウザから直接呼べる（CORS）✅
+
+**構成全体がこの前提に乗っているので、明示的に確かめた。**
+
+```
+Access-Control-Allow-Origin: *
+access-control-allow-methods: GET, POST, PATCH, PUT, DELETE
+access-control-allow-headers: Authorization, Content-Type, If-Match,
+  If-None-Match, If-Modified-Since, ..., X-GitHub-Api-Version
+Access-Control-Expose-Headers: ETag, ..., X-RateLimit-Remaining, ...
+```
+
+`PUT` の事前確認（preflight）も `204` で通る。**中継サーバが要らない。**
+`If-None-Match` が許可ヘッダに、`ETag` が公開ヘッダに含まれているため、
+**4.1 の条件付き GET はブラウザからそのまま実装できる。**
+
+ここが塞がっていれば `GitHubStore` は中継サーバを必要とし、
+「サーバレス（Lambda不使用）」という判断（設計書 12.4）ごと崩れていた。
+
 ---
 
 ## 3. 楽観ロックは機能する（疑問1）✅
