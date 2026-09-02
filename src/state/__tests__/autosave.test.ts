@@ -174,6 +174,69 @@ describe("保存中に入った編集を落とさない", () => {
   });
 });
 
+describe("保存先が指定する保存間隔", () => {
+  /**
+   * 保存間隔は保存先の制約で決まる。GitHub は内容を作る要求を 500回/時 に
+   * 制限しており、ローカルと同じ 800ms のままでは上限に達する（設計書 8.7.5）。
+   */
+  function storeWithDelay(delayMs: number): MapStore {
+    const inner = new MemoryStore();
+    return {
+      list: () => inner.list(),
+      read: (id) => inner.read(id),
+      write: (id, md, base) => inner.write(id, md, base),
+      remove: (id) => inner.remove(id),
+      autosaveDelayMs: delayMs,
+    };
+  }
+
+  it("保存先が指定していればそれに従う", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = storeWithDelay(8_000);
+      const version = await store.write("a.md", SOURCE, null);
+      open(version);
+      const autosave = new AutoSave(store, useEditor);
+      autosave.start();
+
+      useEditor.getState().select(uidOf("A"));
+      useEditor.getState().rename("変更");
+
+      // 既定の 800ms では書かれず、保存先が言う 8000ms で書かれること
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(useEditor.getState().status.kind).toBe("dirty");
+      await vi.advanceTimersByTimeAsync(8_000);
+      expect(useEditor.getState().status.kind).toBe("saved");
+
+      autosave.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("明示した debounceMs は保存先の指定より優先する", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = storeWithDelay(8_000);
+      const version = await store.write("a.md", SOURCE, null);
+      open(version);
+      const autosave = new AutoSave(store, useEditor, { debounceMs: 5 });
+      autosave.start();
+
+      useEditor.getState().select(uidOf("A"));
+      useEditor.getState().rename("変更");
+
+      // 8000ms を待たずに保存されること
+      await vi.advanceTimersByTimeAsync(20);
+      expect(useEditor.getState().status.kind).toBe("saved");
+
+      autosave.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("保存できなかったとき", () => {
   it("競合は自動マージせず、サーバ版を保持したまま止まる", async () => {
     const conflict = new ConflictError("a.md", "v9", "# 外部で書かれた内容\n");

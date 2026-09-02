@@ -11,7 +11,8 @@ paths:
 
 `MapStore` は UI 層と永続化の唯一の境界であり、Phase 3 のクラウド同期をこの背後で差し替えられることが存在意義である。
 
-- **UI の都合でメソッドを追加しない。** 4つの実装（`MemoryStore` / `LocalFolderStore` / `S3Store` / `SyncingStore`）すべてで意味が通るものだけを置く
+- **UI の都合でメソッドを追加しない。** 全実装（`MemoryStore` / `LocalFolderStore` / `GitHubStore`）で意味が通るものだけを置く
+- 保存先の制約に由来する値（`autosaveDelayMs` など）はここに置いてよい。UI の都合ではなく保存先の性質だからである
 - 特定の実装にしか存在しない機能は、`watch?()` のように任意メソッドとして定義し、未対応の実装は no-op を返す
 - インターフェースを変更する場合は、先に `docs/design.md` 8.1 を更新する
 

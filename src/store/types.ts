@@ -43,6 +43,15 @@ export interface MapStore {
    * @returns 監視を停止する関数
    */
   watch?(onChange: (id: string) => void): () => void;
+
+  /**
+   * 自動保存の推奨待機時間（ミリ秒）。省略時は `src/state/` の既定（800ms）を使う。
+   *
+   * 保存先ごとに書き込み頻度の上限が違うために要る。`GitHubStore` は保存1回が
+   * コミット1つで、GitHub は内容を作る要求を 500回/時 に制限している
+   * （設計書 8.7.5）。UI の都合ではなく保存先の制約なので、ここに置く。
+   */
+  readonly autosaveDelayMs?: number;
 }
 
 /**

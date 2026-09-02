@@ -38,7 +38,9 @@ export class AutoSave {
   constructor(store: MapStore, editor: StoreApi<EditorState>, options: AutoSaveOptions = {}) {
     this.#store = store;
     this.#editor = editor;
-    this.#debounceMs = options.debounceMs ?? DEBOUNCE_MS;
+    // 保存先が上限を持つ場合はそれに従う。GitHub は内容を作る要求が 500回/時 で、
+    // 800ms のままでは集中して編集した1時間で上限に達する（設計書 8.7.5）
+    this.#debounceMs = options.debounceMs ?? store.autosaveDelayMs ?? DEBOUNCE_MS;
     this.#now = options.now ?? Date.now;
   }
 

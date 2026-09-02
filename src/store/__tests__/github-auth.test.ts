@@ -146,6 +146,13 @@ describe("入力の受け取り", () => {
     });
   });
 
+  it("ブランチ名の空白を弾く", () => {
+    expect(parseCredentialInput({ ...base, branch: "main 2" })).toMatchObject({
+      ok: false,
+      field: "branch",
+    });
+  });
+
   it("リポジトリとフォルダの不正を、どの欄の問題かと共に返す", () => {
     expect(parseCredentialInput({ ...base, repo: "mieru" })).toMatchObject({
       ok: false,

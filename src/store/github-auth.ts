@@ -169,11 +169,24 @@ export interface HttpResponseLike {
   json(): Promise<unknown>;
 }
 
+export interface GitHubRequestInit {
+  /** 省略時は GET */
+  method?: string;
+  headers: Record<string, string>;
+  body?: string;
+  /**
+   * `"no-store"` を指定した要求はブラウザのキャッシュを通さない。
+   * GET の応答には60秒のキャッシュが付くため、競合の判定に使う読み取りでは必ず指定する
+   * （設計書 8.7.6）
+   */
+  cache?: "no-store";
+}
+
 /** `fetch` の必要な部分だけを写した型。テストでは偽物を渡す */
-export type FetchLike = (
-  url: string,
-  init: { headers: Record<string, string> },
-) => Promise<HttpResponseLike>;
+export type FetchLike = (url: string, init: GitHubRequestInit) => Promise<HttpResponseLike>;
+
+/** 実物の `fetch` を `FetchLike` として使う。`Response` はこの型を構造的に満たす */
+export const browserFetch: FetchLike = (url, init) => fetch(url, init);
 
 export type VerifyFailure =
   | "unauthorized"
