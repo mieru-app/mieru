@@ -42,6 +42,65 @@ function manifest(): string {
   );
 }
 
+/**
+ * Content Security Policy（設計書 NF-43）。
+ *
+ * **利用者のトークンを持ち出す経路を、ブラウザ側に塞がせる。**
+ * 本ツールは第三者のスクリプトを読み込まない方針だが、方針は破れる。
+ * 解析ツールを1つ足した瞬間、それは同一オリジンで動き、IndexedDB のトークンを
+ * 読んで外部へ送れる。CSP を置けば、そのコードは**書いても動かない**。
+ *
+ * 要は `connect-src` である。通信先を GitHub API に限れば、
+ * 万一トークンを読まれても送り先が無い。
+ *
+ * `style-src` に `'unsafe-inline'` が要るのは `mind-elixir` が
+ * スタイルを直接注入するため。持ち出しに関わるのは `connect-src` と
+ * `script-src` なので、防御の要は損なわれない。
+ *
+ * `frame-ancestors` は meta では効かない（HTTP ヘッダ専用）。
+ * GitHub Pages はヘッダを設定できないため、埋め込み防止は別の手段が要る。
+ */
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  // 通信先は GitHub API だけ。ここが本体
+  "connect-src 'self' https://api.github.com",
+  "script-src 'self'",
+  // mind-elixir がスタイルを注入する
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  // フォームは送信しない（作成画面は preventDefault で受ける）
+  "form-action 'none'",
+].join("; ");
+
+/**
+ * CSP をビルド成果物にだけ入れる。
+ *
+ * 開発サーバに同じ制限を掛けると起動しない。Vite は HMR のために
+ * インラインスクリプトと WebSocket を使うためで、そこを許すと
+ * 本番の CSP が緩む。**緩めるより、開発サーバには入れない。**
+ */
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: "mieru-csp",
+    apply: "build",
+    transformIndexHtml(html) {
+      return {
+        html,
+        tags: [
+          {
+            tag: "meta",
+            attrs: { "http-equiv": "Content-Security-Policy", content: CONTENT_SECURITY_POLICY },
+            injectTo: "head-prepend",
+          },
+        ],
+      };
+    },
+  };
+}
+
 /** manifest をビルド出力へ書き出し、開発サーバでも同じ内容を返す */
 function webManifest(): Plugin {
   const fileName = "manifest.webmanifest";
@@ -61,7 +120,7 @@ function webManifest(): Plugin {
 
 export default defineConfig({
   base,
-  plugins: [react(), webManifest()],
+  plugins: [react(), webManifest(), contentSecurityPolicy()],
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],

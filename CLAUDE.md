@@ -54,7 +54,9 @@ Contents API の `sha` は git の blob ハッシュそのもので内容だけ�
   そこに置いた IndexedDB は隣のページから読める。移行先は **https://mieru-app.github.io/** （直下配信、`base` は `/` のまま）
 - **`mieru-app.github.io` に Mieru 以外を公開してはいけない。** 運用の約束ではなく要件（設計書 NF-44）
 - **第三者のスクリプト・フォント・解析ツールを読み込まない**（同 NF-43）。
-  外部リソースは他人のトークンの持ち出し口になる。現在 `index.html` に外部参照は無い
+  外部リソースは他人のトークンの持ち出し口になる。**CSP で強制済み**（`vite.config.ts`、設計書 8.6）。
+  **通信先は `api.github.com` だけに限られている。** 別の接続先が要る変更をするときは、
+  CSP を緩める前に「本当にブラウザから直接通信する必要があるか」を先に問うこと
 
 決定済み: 名称 **Mieru**（設計書 12.5）／アイコン **「放射する光条」**（同 12.6、`assets/icon/generate.mjs` で生成）／
 配信 **GitHub Pages**・独自ドメインなし（同 8.6）。現在の公開先は https://kyritk.github.io/mieru/ 。
