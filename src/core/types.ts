@@ -34,7 +34,7 @@ export interface MapMeta {
   created: string;
   /** ISO8601 (UTC) */
   updated: string;
-  /** 楽観ロック用。ローカルは更新日時、S3 は ETag */
+  /** 楽観ロック用。ローカルは内容ハッシュ、GitHub は Blob SHA（設計書 8.2） */
   version: string;
 }
 
