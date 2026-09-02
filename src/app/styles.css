@@ -105,14 +105,20 @@ button.primary {
   color: #ffffff;
 }
 
+/*
+ * 縦並びにする。grid の行数を決め打ちにすると、告知（.banners）が
+ * 出ていないときに行が1つずれ、余った空間が画面下に残る。
+ * 子の数が変わっても崩れない書き方にしておく。
+ */
 .app {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
 .toolbar {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 0.75rem;
   height: var(--toolbar-height);
@@ -174,6 +180,7 @@ button.primary {
 
 .workarea {
   display: grid;
+  flex: 1;
   grid-template-columns: 15rem 1fr;
   min-height: 0;
 }
@@ -195,9 +202,10 @@ button.primary {
 
 /* ── サイドバー ─────────────────────────────────────────── */
 
+/* .app と同じ理由。タグが無いと .sidebar-tags が出ず、行がずれる */
 .sidebar {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   border-right: 1px solid var(--border);
 }
@@ -255,6 +263,8 @@ button.primary {
 }
 
 .sidebar-list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 0.5rem;
 }
@@ -335,6 +345,7 @@ button.primary {
 }
 
 .sidebar-new {
+  flex: none;
   margin: 0.5rem;
   border-style: dashed;
 }
@@ -512,6 +523,7 @@ button.primary {
 
 .banners {
   display: flex;
+  flex: none;
   flex-direction: column;
 }
 
@@ -531,6 +543,7 @@ button.primary {
 
 .statusbar {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 1rem;
   height: var(--statusbar-height);
