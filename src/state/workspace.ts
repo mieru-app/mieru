@@ -24,7 +24,7 @@ import {
   saveCredential,
   verifyCredential,
 } from "../store/github-auth.js";
-import { GitHubStore } from "../store/GitHubStore.js";
+import { GitHubHistoryStore, GitHubStore } from "../store/GitHubStore.js";
 import { IdbHistoryStore } from "../store/IdbHistoryStore.js";
 import { LocalFolderStore } from "../store/LocalFolderStore.js";
 import type { QuarantinedEntry } from "../store/quarantine.js";
@@ -201,16 +201,21 @@ export function retitle(md: string, id: string, title: string, at: string): stri
 
 export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** 保存先が決まった後の共通処理。監視と自動保存を開始する */
-  async function attach(backend: BackendKind, label: string): Promise<void> {
+  async function attach(
+    backend: BackendKind,
+    label: string,
+    historyStore: HistoryStore = new IdbHistoryStore(),
+  ): Promise<void> {
     const current = store;
     if (current === null) return;
 
     /*
-     * 履歴の実体は保存先で違う（設計書 8.8）。ローカルフォルダには履歴が無く
-     * （File System Access API は上書きするだけである）、IndexedDB で補う。
-     * GitHub は保存1回がコミット1つなので、控える先が既にある
+     * **履歴の実体は保存先で違う**（設計書 8.8）。ローカルフォルダには履歴が無く
+     * （File System Access API は上書きするだけである）、IndexedDB で控える。
+     * GitHub は保存1回がコミット1つなので、控える先が既にある。同じ内容を
+     * IndexedDB にも積むと、二重に持ったうえに片方だけが古くなる
      */
-    history = backend === "github" ? null : new IdbHistoryStore();
+    history = historyStore;
 
     autoSave = new AutoSave(current, useEditor, { history });
     autoSave.start();
@@ -237,7 +242,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   async function attachGitHub(credential: Parameters<typeof describeCredential>[0]): Promise<void> {
     teardown();
     store = new GitHubStore(credential);
-    await attach("github", describeCredential(credential));
+    await attach("github", describeCredential(credential), new GitHubHistoryStore(credential));
   }
 
   return {

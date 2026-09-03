@@ -7,7 +7,7 @@ import { authHeaders, browserFetch, GITHUB_API } from "./github-auth.js";
 import { idbGet, idbPut, STORE_SETTINGS } from "./idb.js";
 import type { QuarantineSink } from "./quarantine.js";
 import { indexedDbQuarantine } from "./quarantine.js";
-import type { MapStore } from "./types.js";
+import type { HistoryEntry, HistoryStore, MapStore } from "./types.js";
 import { ConflictError, MapNotFoundError, SaveFailedError } from "./types.js";
 
 /**
@@ -30,6 +30,14 @@ import { ConflictError, MapNotFoundError, SaveFailedError } from "./types.js";
  * 集中して編集した1時間で上限に達する（設計書 8.7.5）。
  */
 const AUTOSAVE_DELAY_MS = 8_000;
+
+/**
+ * 一度に読む版の数（2.8-5）。
+ *
+ * IndexedDB 側の上限（`history-policy.ts` の `MAX_ENTRIES`）と揃える。
+ * 保存先によって遡れる深さが変わると、同じ画面が別のことを意味する。
+ */
+const MAX_HISTORY = 50;
 
 /** 保存を試みる回数（初回を含む） */
 const SAVE_ATTEMPTS = 3;
@@ -177,6 +185,49 @@ function readDirectory(value: unknown): DirectoryEntry[] | null {
   return entries;
 }
 
+interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  extraHeaders?: Record<string, string>;
+}
+
+/**
+ * GitHub API への1回の要求。
+ *
+ * **`MapStore` と `HistoryStore` の両方から使う。** それぞれで書くと、
+ * `cache: "no-store"` のような「忘れると静かに壊れる」設定が片方だけ古くなる。
+ */
+function githubRequest(
+  fetchImpl: FetchLike,
+  token: string,
+  url: string,
+  init: RequestOptions = {},
+): Promise<HttpResponseLike> {
+  const headers = { ...authHeaders(token), ...(init.extraHeaders ?? {}) };
+  if (init.body !== undefined) headers["Content-Type"] = "application/json";
+  return fetchImpl(url, {
+    ...(init.method === undefined ? {} : { method: init.method }),
+    headers,
+    ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+    // 60秒のキャッシュを踏むと競合の判定が狂う（設計書 8.7.6）
+    cache: "no-store",
+  });
+}
+
+/** リポジトリ内のパス。日本語のファイル名があるので必ず符号化する */
+function encodePath(path: string): string {
+  return path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+/** 置き場所のフォルダを含めたパス */
+function pathIn(credential: GitHubCredential, id: string): string {
+  const { directory } = credential;
+  return directory === "" ? id : `${directory}/${id}`;
+}
+
 export class GitHubStore implements MapStore {
   readonly #credential: GitHubCredential;
   readonly #fetch: FetchLike;
@@ -206,36 +257,19 @@ export class GitHubStore implements MapStore {
     return `${this.#credential.repo}:${this.#credential.branch ?? ""}:${this.#credential.directory}`;
   }
 
-  /** リポジトリ内のパス。日本語のファイル名があるので必ず符号化する */
   #pathFor(id: string): string {
-    const { directory } = this.#credential;
-    return directory === "" ? id : `${directory}/${id}`;
+    return pathIn(this.#credential, id);
   }
 
   #urlFor(path: string): string {
-    const encoded = path
-      .split("/")
-      .map((segment) => encodeURIComponent(segment))
-      .join("/");
-    const url = `${GITHUB_API}/repos/${this.#credential.repo}/contents/${encoded}`;
+    const url = `${GITHUB_API}/repos/${this.#credential.repo}/contents/${encodePath(path)}`;
     const branch = this.#credential.branch;
     // ブランチ未指定なら GitHub の既定ブランチが使われる
     return branch === null ? url : `${url}?ref=${encodeURIComponent(branch)}`;
   }
 
-  #request(
-    url: string,
-    init: { method?: string; body?: unknown; extraHeaders?: Record<string, string> } = {},
-  ): Promise<HttpResponseLike> {
-    const headers = { ...authHeaders(this.#credential.token), ...(init.extraHeaders ?? {}) };
-    if (init.body !== undefined) headers["Content-Type"] = "application/json";
-    return this.#fetch(url, {
-      ...(init.method === undefined ? {} : { method: init.method }),
-      headers,
-      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
-      // 60秒のキャッシュを踏むと競合の判定が狂う（設計書 8.7.6）
-      cache: "no-store",
-    });
+  #request(url: string, init: RequestOptions = {}): Promise<HttpResponseLike> {
+    return githubRequest(this.#fetch, this.#credential.token, url, init);
   }
 
   // -------------------------------------------------------------------------
@@ -460,5 +494,100 @@ export class GitHubStore implements MapStore {
       throw new GitHubApiError(response.status, await messageOf(response));
     }
     if (this.#cache !== null) delete this.#cache[id];
+  }
+}
+
+/** `GET /commits` の1件から要る所だけ取り出す */
+function readCommits(body: unknown): HistoryEntry[] {
+  if (!Array.isArray(body)) return [];
+  const entries: HistoryEntry[] = [];
+  for (const item of body) {
+    if (typeof item !== "object" || item === null) continue;
+    const each = item as Record<string, unknown>;
+    const sha = each["sha"];
+    if (typeof sha !== "string") continue;
+
+    const commit = each["commit"];
+    const committer =
+      typeof commit === "object" && commit !== null
+        ? (commit as Record<string, unknown>)["committer"]
+        : undefined;
+    const date =
+      typeof committer === "object" && committer !== null
+        ? (committer as Record<string, unknown>)["date"]
+        : undefined;
+    const at = typeof date === "string" ? Date.parse(date) : Number.NaN;
+
+    // 時刻が読めない版は出さない。並び順も「いつの版か」も示せない
+    if (Number.isNaN(at)) continue;
+    entries.push({ id: sha, at });
+  }
+  return entries;
+}
+
+/**
+ * GitHub のコミットを履歴として見せる（2.8-5、設計書 8.8）。
+ *
+ * **こちらは何も控えない。** 保存1回がコミット1つなので（設計書 8.7）、
+ * 履歴の実体は既にリポジトリの側にある。同じ内容を IndexedDB にも積むと、
+ * 二重に持ったうえに片方だけが古くなる。
+ *
+ * そのため `record` / `forget` / `rename` を持たない。**マップを消したときに
+ * 過去の版が残るのは git の性質であり、こちらで消せるものではない。**
+ * 利用者にはリポジトリが履歴を持つことを設定画面で示してある（設計書 8.7.2）。
+ */
+export class GitHubHistoryStore implements HistoryStore {
+  readonly #credential: GitHubCredential;
+  readonly #fetch: FetchLike;
+
+  constructor(credential: GitHubCredential, options: GitHubStoreOptions = {}) {
+    this.#credential = credential;
+    this.#fetch = options.fetchImpl ?? browserFetch;
+  }
+
+  #request(url: string): Promise<HttpResponseLike> {
+    return githubRequest(this.#fetch, this.#credential.token, url);
+  }
+
+  async list(mapId: string): Promise<HistoryEntry[]> {
+    if (!isValidMapId(mapId)) return [];
+
+    const params = new URLSearchParams({
+      path: pathIn(this.#credential, mapId),
+      per_page: String(MAX_HISTORY),
+    });
+    const { branch } = this.#credential;
+    // ブランチ未指定なら GitHub の既定ブランチが使われる
+    if (branch !== null) params.set("sha", branch);
+
+    const response = await this.#request(
+      `${GITHUB_API}/repos/${this.#credential.repo}/commits?${params.toString()}`,
+    );
+    /*
+     * **まだ何も置かれていないことは異常ではない。**
+     * コミットの無いパスは 200 と空配列、コミットが1つも無いリポジトリは 409、
+     * 消えたパスは 404 を返す。どれも「版が無い」として扱う
+     */
+    if (response.status === 404 || response.status === 409) return [];
+    if (response.status !== 200) {
+      throw new GitHubApiError(response.status, await messageOf(response));
+    }
+    return readCommits(await response.json());
+  }
+
+  async read(mapId: string, entryId: string): Promise<string> {
+    if (!isValidMapId(mapId)) throw new MapNotFoundError(mapId);
+
+    const path = encodePath(pathIn(this.#credential, mapId));
+    const url = `${GITHUB_API}/repos/${this.#credential.repo}/contents/${path}?ref=${encodeURIComponent(entryId)}`;
+    const response = await this.#request(url);
+
+    if (response.status === 404) throw new MapNotFoundError(`${mapId}#${entryId}`);
+    if (response.status !== 200) {
+      throw new GitHubApiError(response.status, await messageOf(response));
+    }
+    const content = readContent(await response.json());
+    if (content === null) throw new GitHubApiError(200, "本文の形式が想定と違います");
+    return content.md;
   }
 }

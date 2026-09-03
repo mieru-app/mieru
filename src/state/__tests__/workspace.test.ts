@@ -818,15 +818,17 @@ describe("履歴（Phase 2.8）", () => {
     expect(await useWorkspace.getState().listHistory()).toHaveLength(1);
   });
 
-  it("履歴を持たない保存先では空を返す", async () => {
-    // GitHub は保存1回がコミット1つで、控える先が保存先の側にある（2.8-5）
+  it("GitHub 保存先ではコミットが版になる（2.8-5）", async () => {
+    // 保存1回がコミット1つなので、控える先が保存先の側にある。
+    // IndexedDB にも積むと二重に持ったうえ片方だけが古くなる
     reset();
     await clearCredential();
     await clearBackend();
     const api = new FakeGitHub();
     api.files.set("maps/既存のマップ.md", MD);
     vi.stubGlobal("fetch", ((url: string, init: GitHubRequestInit) => {
-      if (!url.includes("/contents")) {
+      // 到達確認だけがリポジトリそのものを見る。内容とコミットは偽の API へ回す
+      if (!url.includes("/contents") && !url.includes("/commits")) {
         return Promise.resolve({
           status: 200,
           headers: { get: () => null },
@@ -848,7 +850,23 @@ describe("履歴（Phase 2.8）", () => {
     );
     await useWorkspace.getState().openMap("既存のマップ.md");
 
+    // 置いただけのファイルにはコミットが無い。「使えない」ではなく「まだ無い」
     expect(await useWorkspace.getState().listHistory()).toEqual([]);
+    expect(useWorkspace.getState().historyAvailable).toBe(true);
+
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("大事な枝");
+    useEditor.getState().endEdit();
+    await useWorkspace.getState().saveNow();
+
+    const entries = await useWorkspace.getState().listHistory();
+    expect(entries).toHaveLength(1);
+    // 大きさは返らない。出すには版ごとに本文を取りに行くことになる（設計書 8.7.8）
+    expect(entries[0]?.size).toBeUndefined();
+
+    const restored = await useWorkspace.getState().readVersion(entries[0]?.id ?? "");
+    expect(restored).toContain("大事な枝");
+
     vi.unstubAllGlobals();
   });
 });

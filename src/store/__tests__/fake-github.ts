@@ -62,6 +62,15 @@ function toResponse(response: FakeResponse): HttpResponseLike {
 export class FakeGitHub {
   /** リポジトリ内のパス → 本文 */
   readonly files = new Map<string, string>();
+  /**
+   * リポジトリ内のパス → そのパスへのコミット（古い順）。
+   *
+   * **保存1回がコミット1つ**という GitHub の性質を写している。
+   * `GitHubHistoryStore`（2.8-5）はここを履歴として読む
+   */
+  readonly commits = new Map<string, { sha: string; date: string; md: string }[]>();
+  /** コミットの時刻。テストから進められるようにする */
+  now = Date.parse("2026-09-04T00:00:00Z");
   readonly requests: RecordedRequest[] = [];
   /** 次の1回だけこの状態を返す。通信断や 5xx の試験に使う */
   failNext: "network" | number | null = null;
@@ -79,6 +88,27 @@ export class FakeGitHub {
 
   reset(): void {
     this.requests.length = 0;
+  }
+
+  /** そのパスへコミットを1つ積む */
+  #commit(path: string, md: string): void {
+    const log = this.commits.get(path) ?? [];
+    log.push({
+      sha: `c${String(log.length + 1)}-${blobSha(md).slice(0, 7)}`,
+      date: new Date(this.now).toISOString(),
+      md,
+    });
+    this.commits.set(path, log);
+    this.now += 60_000;
+  }
+
+  /** `GET /commits?path=...` の応答。新しい順に返す */
+  #commitList(url: string): unknown[] {
+    const path = new URL(url).searchParams.get("path") ?? "";
+    const log = this.commits.get(path) ?? [];
+    return [...log]
+      .reverse()
+      .map((entry) => ({ sha: entry.sha, commit: { committer: { date: entry.date } } }));
   }
 
   #parse(url: string): string {
@@ -119,7 +149,9 @@ export class FakeGitHub {
   }
 
   readonly fetchImpl: FetchLike = (url, init) => {
-    const path = this.#parse(url);
+    // コミット一覧は contents とは別の道である（2.8-5）
+    const isCommits = new URL(url).pathname === `/repos/${this.repo}/commits`;
+    const path = isCommits ? "commits" : this.#parse(url);
     const method = init.method ?? "GET";
     const conditional = init.headers["If-None-Match"] !== undefined;
 
@@ -152,14 +184,32 @@ export class FakeGitHub {
       return Promise.resolve(toResponse(response));
     };
 
+    // 失敗の注入を通り抜けてから応える。ここを先に置くと 5xx を試験できない
+    if (isCommits) return respond({ status: 200, body: this.#commitList(url) });
+
     if (method === "GET") {
       if (this.#isDirectory(path)) return respond({ status: 200, body: this.#entriesIn(path) });
 
-      const content = this.files.get(path);
+      /*
+       * `?ref=` にコミットの sha が来たら、その時点の内容を返す。
+       * ブランチ名や未指定のときは現在の内容になる（本物と同じ）。
+       * コミットの sha は `c<番号>-` で始めてあり、ブランチ名と見分けられる
+       */
+      const ref = new URL(url).searchParams.get("ref");
+      const byCommit = ref !== null && /^c\d+-/.test(ref);
+      const atCommit = byCommit
+        ? this.commits.get(path)?.find((entry) => entry.sha === ref)
+        : undefined;
+      // 知らないコミットを指されたら現在の内容へ落とさない。本物は 404 を返す
+      if (byCommit && atCommit === undefined) {
+        return respond({ status: 404, body: { message: "No commit found for the ref" } });
+      }
+      const content = atCommit?.md ?? this.files.get(path);
       if (content === undefined) return respond({ status: 404, body: { message: "Not Found" } });
 
       const sha = blobSha(content);
-      if (init.headers["If-None-Match"] === `"${sha}"`) return respond({ status: 304, etag: `"${sha}"` });
+      if (init.headers["If-None-Match"] === `"${sha}"`)
+        return respond({ status: 304, etag: `"${sha}"` });
       return respond({
         status: 200,
         etag: `"${sha}"`,
@@ -199,10 +249,14 @@ export class FakeGitHub {
       // **存在しない場合、GitHub は sha を見ない。** 実測どおり作成してしまう
       const content = Buffer.from(String(body["content"]), "base64").toString("utf8");
       this.files.set(path, content);
+      this.#commit(path, content);
       const sha = blobSha(content);
       return respond({
         status: existing === undefined ? 201 : 200,
-        body: { content: { path, sha, content: toApiBase64(content) }, commit: { sha: `c-${sha}` } },
+        body: {
+          content: { path, sha, content: toApiBase64(content) },
+          commit: { sha: `c-${sha}` },
+        },
       });
     }
 

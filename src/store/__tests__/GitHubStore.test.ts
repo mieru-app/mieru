@@ -3,8 +3,9 @@ import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 
 import { decodeBase64, encodeBase64 } from "../base64.js";
-import { GitHubApiError, GitHubStore } from "../GitHubStore.js";
+import { GitHubApiError, GitHubHistoryStore, GitHubStore } from "../GitHubStore.js";
 import type { GitHubCredential } from "../github-auth.js";
+import type { HistoryStore } from "../types.js";
 import { ConflictError, MapNotFoundError, SaveFailedError } from "../types.js";
 import { describeMapStoreContract } from "./contract.js";
 import { blobSha, FakeGitHub, memoryMetaCache, memoryQuarantine } from "./fake-github.js";
@@ -513,5 +514,87 @@ describe("保存間隔", () => {
     const { store } = createStore(new FakeGitHub());
     expect(store.label).toBe("kyritk/mieru-maps/maps");
     expect(store.label).not.toContain("github_pat");
+  });
+});
+
+describe("GitHubHistoryStore（2.8-5）", () => {
+  /**
+   * **こちらは何も控えない。** 保存1回がコミット1つなので、履歴の実体は
+   * 既にリポジトリの側にある。読めていること、そして「まだ何も無い」状態を
+   * 異常として扱わないことを確かめる。
+   */
+  function createHistory(api: FakeGitHub): GitHubHistoryStore {
+    return new GitHubHistoryStore(credential(), { fetchImpl: api.fetchImpl });
+  }
+
+  async function withCommits(): Promise<{ api: FakeGitHub; history: GitHubHistoryStore }> {
+    const api = new FakeGitHub();
+    const { store } = createStore(api);
+    const first = await store.write("検証用マップ.md", MD, null);
+    await store.write("検証用マップ.md", MD2, first);
+    return { api, history: createHistory(api) };
+  }
+
+  it("コミットを新しい順の版として返す", async () => {
+    const { history } = await withCommits();
+    const entries = await history.list("検証用マップ.md");
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]?.at).toBeGreaterThan(entries[1]?.at ?? 0);
+    // 大きさは返らない。出すには版ごとに本文を取りに行くことになる（設計書 8.7.8）
+    expect(entries[0]?.size).toBeUndefined();
+  });
+
+  it("版の本文はその時点の内容になる", async () => {
+    const { history } = await withCommits();
+    const entries = await history.list("検証用マップ.md");
+
+    expect(await history.read("検証用マップ.md", entries[0]?.id ?? "")).toBe(MD2);
+    expect(await history.read("検証用マップ.md", entries[1]?.id ?? "")).toBe(MD);
+  });
+
+  it("一覧は本文を取りに行かない", async () => {
+    // 50版で 1+N リクエストになるのを避ける（設計書 8.7.8）
+    const { api, history } = await withCommits();
+    api.reset();
+    await history.list("検証用マップ.md");
+    expect(api.requests).toHaveLength(1);
+  });
+
+  it("まだ何も置かれていないパスは版0件として返す", async () => {
+    // 「使えない」ではなく「まだ無い」である
+    const api = new FakeGitHub();
+    expect(await createHistory(api).list("まだ無いマップ.md")).toEqual([]);
+  });
+
+  it("コミットが1つも無いリポジトリ（409）も版0件として扱う", async () => {
+    const api = new FakeGitHub();
+    api.failNext = 409;
+    expect(await createHistory(api).list("検証用マップ.md")).toEqual([]);
+  });
+
+  it("読めない応答は握りつぶさない", async () => {
+    const api = new FakeGitHub();
+    api.failNext = 500;
+    await expect(createHistory(api).list("検証用マップ.md")).rejects.toBeInstanceOf(GitHubApiError);
+  });
+
+  it("無い版を読もうとしたら MapNotFoundError", async () => {
+    const { history } = await withCommits();
+    await expect(history.read("検証用マップ.md", "c9-deadbee")).rejects.toBeInstanceOf(
+      MapNotFoundError,
+    );
+  });
+
+  it("控える手段を持たない", async () => {
+    // 持たせると、リポジトリと IndexedDB の二重持ちになり片方だけが古くなる
+    const api = new FakeGitHub();
+    const history: HistoryStore = createHistory(api);
+    // 添字で見るのは、メソッドを値として取り出すと unbound-method に掛かるため
+    const asRecord = history as unknown as Record<string, unknown>;
+    for (const name of ["record", "forget", "rename"]) {
+      expect(asRecord[name]).toBeUndefined();
+    }
+    await Promise.resolve();
   });
 });

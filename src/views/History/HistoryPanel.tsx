@@ -88,17 +88,16 @@ export function HistoryPanel({
 
       <div className="sheet-body">
         {!available ? (
-          /*
-           * GitHub 保存先ではコミットが履歴そのものである（2.8-5）。
-           * 「使えない」ではなく「どこにあるか」を出す
-           */
-          <p className="sheet-note">この保存先の履歴は、リポジトリのコミットとして残ります。</p>
+          <p className="sheet-note">保存先を選ぶと、過去の版がここに残ります。</p>
         ) : loading ? (
           <p className="sheet-note">読み込んでいます…</p>
         ) : entries.length === 0 ? (
-          <p className="sheet-note">
-            まだ控えがありません。編集して保存されると、5分ごとに1つずつ残ります。
-          </p>
+          /*
+           * **版の作られ方は保存先で違う**（設計書 8.8）。ローカルフォルダは
+           * 5分に1版、GitHub は保存1回がコミット1つである。ここで片方の
+           * 刻み方を名指しすると、もう片方の利用者には合わない案内になる
+           */
+          <p className="sheet-note">まだ版がありません。編集して保存されると、ここに残ります。</p>
         ) : (
           <>
             <ul className="history-list">
@@ -110,9 +109,16 @@ export function HistoryPanel({
                     onClick={() => setSelected(entry.id)}
                   >
                     <span className="history-when">{stamp(entry.at)}</span>
-                    {/* 先頭が最も新しい。どれが直前かを名前で示す */}
+                    {/*
+                     * 先頭が最も新しい。どれが直前かを名前で示す。
+                     * 大きさは分かる保存先だけが持つ（GitHub は返さない）
+                     */}
                     <span className="history-note">
-                      {index === 0 ? "最新の控え" : `${String(entry.size)} バイト`}
+                      {index === 0
+                        ? "最新の控え"
+                        : entry.size === undefined
+                          ? ""
+                          : `${String(entry.size)} バイト`}
                     </span>
                   </button>
                 </li>
