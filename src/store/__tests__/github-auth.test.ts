@@ -56,6 +56,30 @@ function fakeFetch(response: Partial<HttpResponseLike> & { status: number; body?
   return { fetchImpl, calls };
 }
 
+/** 呼ばれた順に応答を返す偽の fetch。`verifyCredential` は2回投げる */
+function fakeSequence(
+  responses: { status: number; body?: unknown }[],
+): { fetchImpl: FetchLike; urls: string[] } {
+  const urls: string[] = [];
+  let index = 0;
+  const fetchImpl: FetchLike = (url) => {
+    urls.push(url);
+    const response = responses[Math.min(index, responses.length - 1)];
+    index += 1;
+    return Promise.resolve({
+      status: response?.status ?? 500,
+      headers: { get: () => null },
+      json: () =>
+        response?.body === undefined
+          ? Promise.reject(new Error("本文がない"))
+          : Promise.resolve(response.body),
+    });
+  };
+  return { fetchImpl, urls };
+}
+
+const REPO_OK = { status: 200, body: { default_branch: "main", permissions: { push: true } } };
+
 beforeEach(clearCredential);
 
 describe("リポジトリ名の正規化", () => {
@@ -293,5 +317,57 @@ describe("保管", () => {
       await idbPut(STORE_SETTINGS, broken, "githubCredential");
       await expect(loadCredential()).resolves.toBeNull();
     }
+  });
+});
+
+describe("Contents 権限の確認", () => {
+  /**
+   * **リポジトリ情報だけを見ても検査にならない。**
+   * `GET /repos/{owner}/{repo}` は Metadata 権限だけで通り、Metadata は GitHub が
+   * 必須にしていて常に付く。Contents を付け忘れたトークンでもここは 200 を返し、
+   * 実際に 2026-09-03 の実機確認でそれを踏んだ。
+   */
+  it("リポジトリ情報のあとに Contents も確かめる", async () => {
+    const { fetchImpl, urls } = fakeSequence([REPO_OK, { status: 200, body: [] }]);
+    await expect(verifyCredential(CREDENTIAL, fetchImpl)).resolves.toMatchObject({ ok: true });
+
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toBe("https://api.github.com/repos/kyritk/mieru-maps");
+    expect(urls[1]).toBe("https://api.github.com/repos/kyritk/mieru-maps/contents/maps");
+  });
+
+  it("Contents に触れないトークンを、直し方と共に弾く", async () => {
+    const { fetchImpl } = fakeSequence([
+      REPO_OK,
+      { status: 403, body: { message: "Resource not accessible by personal access token" } },
+    ]);
+    const result = await verifyCredential(CREDENTIAL, fetchImpl);
+
+    expect(result).toMatchObject({ ok: false, reason: "no-write" });
+    // 何をどう直すのかまで言えていること
+    expect(result.ok === false && result.message).toContain("Contents");
+    expect(result.ok === false && result.message).toContain("Read and write");
+  });
+
+  it("置き場所のフォルダが未作成でも通す", async () => {
+    // 権限が無ければ GitHub は 404 ではなく 403 を返す（実測）。
+    // つまり 404 は「権限はあるが、まだフォルダが無い」を意味する
+    const { fetchImpl } = fakeSequence([REPO_OK, { status: 404, body: { message: "Not Found" } }]);
+    await expect(verifyCredential(CREDENTIAL, fetchImpl)).resolves.toMatchObject({ ok: true });
+  });
+
+  it("Contents の確認中に上限へ達したら、権限不足と混同しない", async () => {
+    const calls: number[] = [];
+    const fetchImpl: FetchLike = () => {
+      calls.push(1);
+      return Promise.resolve({
+        status: calls.length === 1 ? 200 : 403,
+        headers: { get: () => (calls.length === 1 ? null : "0") },
+        json: () => Promise.resolve(calls.length === 1 ? REPO_OK.body : { message: "rate" }),
+      });
+    };
+    await expect(verifyCredential(CREDENTIAL, fetchImpl)).resolves.toMatchObject({
+      reason: "rate-limited",
+    });
   });
 });

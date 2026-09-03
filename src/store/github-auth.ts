@@ -237,11 +237,27 @@ function readRepoInfo(
   return { defaultBranch, isPrivate: body["private"] === true, canWrite };
 }
 
+/** 権限不足を伝える文言。**何をどう直せばよいかまで言う** */
+const NO_CONTENTS_MESSAGE =
+  "トークンにこのリポジトリの Contents 権限がありません。" +
+  "GitHub のトークン設定で Permissions → Repository permissions → Contents を" +
+  "「Read and write」にしてください。Metadata だけでは読み書きできません。";
+
 /**
  * リポジトリへ到達できるかを確かめる。**書き込みは行わない。**
  *
  * 保存を試すには実際にコミットを作るしかなく、確認のために検証用ファイルを
  * 置いて消すと、利用者のリポジトリに履歴が残る。読み取りで分かる範囲に留める。
+ *
+ * **確認は2回に分ける。**
+ *
+ * 1. `GET /repos/{owner}/{repo}` — リポジトリの存在と既定ブランチ
+ * 2. `GET /repos/{owner}/{repo}/contents/...` — **Contents 権限があるか**
+ *
+ * **2 が無いと検査にならない。** 1 は Metadata 権限だけで通り、Metadata は
+ * GitHub が必須にしていて常に付く。つまり **Contents を付け忘れたトークンでも
+ * 1 は 200 を返す**（2026-09-03 に実機で踏んだ）。そのまま通すと、
+ * 接続は成功したのに最初の保存で初めて失敗する、という最も分かりにくい壊れ方をする。
  *
  * 応答コードの意味は実測で確かめてある（docs/github-api-verification.md）。
  * とくに **404 は「無い」と「権限が無い」の両方**を指す。GitHub は権限の無い
@@ -289,11 +305,7 @@ export async function verifyCredential(
         message: "GitHub の利用回数の上限に達しました。しばらく待ってから試してください。",
       };
     }
-    return {
-      ok: false,
-      reason: "no-write",
-      message: "このリポジトリへの操作を GitHub に拒否されました。トークンの権限を確認してください。",
-    };
+    return { ok: false, reason: "no-write", message: NO_CONTENTS_MESSAGE };
   }
   if (response.status !== 200) {
     return {
@@ -327,11 +339,72 @@ export async function verifyCredential(
     };
   }
 
+  // ここまでは Metadata 権限だけでも通る。Contents に触れるかを別に確かめる
+  const contents = await verifyContentsAccess(credential, fetchImpl);
+  if (contents !== null) return contents;
+
   return {
     ok: true,
     defaultBranch: info.defaultBranch,
     isPrivate: info.isPrivate,
     canWrite: info.canWrite,
+  };
+}
+
+/**
+ * Contents を読めるかだけを確かめる。問題が無ければ null を返す。
+ *
+ * **`404` は合格である。** 置き場所のフォルダがまだ無いだけであり、
+ * 権限が無ければ GitHub は `404` ではなく `403` を返す（実測）。
+ *
+ * **読めることは書けることを保証しない。** Contents が Read-only のトークンは
+ * ここを通る。書き込みの可否はコミットを作らずには確かめられないため、
+ * 最初の保存で分かる。そのときの文言も同じ内容を指すようにしてある
+ * （`GitHubStore`）。
+ */
+async function verifyContentsAccess(
+  credential: GitHubCredential,
+  fetchImpl: FetchLike,
+): Promise<VerifyResult | null> {
+  const path = credential.directory
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const url = `${GITHUB_API}/repos/${credential.repo}/contents/${path}`;
+
+  let response: HttpResponseLike;
+  try {
+    response = await fetchImpl(url, { headers: authHeaders(credential.token), cache: "no-store" });
+  } catch {
+    return {
+      ok: false,
+      reason: "network",
+      message: "GitHub に接続できませんでした。通信の状態を確認してください。",
+    };
+  }
+
+  if (response.status === 200 || response.status === 404) return null;
+  if (response.status === 401) {
+    return {
+      ok: false,
+      reason: "unauthorized",
+      message: "トークンが無効か、期限が切れています。GitHub で作り直してください。",
+    };
+  }
+  if (response.status === 403) {
+    if (response.headers.get("x-ratelimit-remaining") === "0") {
+      return {
+        ok: false,
+        reason: "rate-limited",
+        message: "GitHub の利用回数の上限に達しました。しばらく待ってから試してください。",
+      };
+    }
+    return { ok: false, reason: "no-write", message: NO_CONTENTS_MESSAGE };
+  }
+  return {
+    ok: false,
+    reason: "unexpected",
+    message: `GitHub が予期しない応答を返しました（HTTP ${response.status}）。`,
   };
 }
 

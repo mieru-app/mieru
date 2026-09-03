@@ -250,6 +250,30 @@ describe("失敗の扱い", () => {
 
     await expect(store.list()).rejects.toBeInstanceOf(GitHubApiError);
   });
+
+  it("403 は「何をどう直すか」まで伝える", async () => {
+    // GitHub の "Resource not accessible by personal access token" だけでは、
+    // 何の権限が足りないのかも、どこで直すのかも分からない
+    const api = new FakeGitHub();
+    const { store } = createStore(api);
+    api.failNext = 403;
+
+    const error = await store.list().catch((e: unknown) => e);
+    expect((error as Error).message).toContain("Contents");
+    expect((error as Error).message).toContain("Read and write");
+  });
+
+  it("保存が権限で拒まれたときも同じ案内をする", async () => {
+    const api = new FakeGitHub();
+    const { store, quarantine } = createStore(api);
+    api.failNext = 403;
+    api.failNextMethod = "PUT";
+
+    const error = await store.write("a.md", MD, null).catch((e: unknown) => e);
+    expect((error as Error).message).toContain("Contents");
+    // 読み書きどちらで踏んでも、内容は失われない
+    expect(quarantine.entries[0]?.md).toBe(MD);
+  });
 });
 
 describe("壊れた応答と不正な入力", () => {

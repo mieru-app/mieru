@@ -66,6 +66,28 @@ const indexedDbMetaCache: MetaCache = {
   },
 };
 
+/**
+ * 応答コードを、利用者が次にすべきことへ翻訳する。
+ *
+ * **`403` に説明が要る。** GitHub が返す `Resource not accessible by personal access token`
+ * だけでは、何の権限が足りないのかも、どこで直すのかも分からない。
+ * Contents を付け忘れたトークンは実際に作れてしまう（2026-09-03 に実機で踏んだ）。
+ */
+function explainStatus(status: number, detail: string): string {
+  const suffix = detail === "" ? "" : `（${detail}）`;
+  if (status === 401) {
+    return `トークンが無効か、期限が切れています。GitHub で作り直してください。${suffix}`;
+  }
+  if (status === 403) {
+    return (
+      "トークンにこのリポジトリの Contents 権限がありません。" +
+      "GitHub のトークン設定で Permissions → Repository permissions → Contents を" +
+      `「Read and write」にしてください。${suffix}`
+    );
+  }
+  return `GitHub が要求を拒否しました（HTTP ${status}）${suffix}`;
+}
+
 /** GitHub が返した、競合でも不在でもない失敗 */
 export class GitHubApiError extends Error {
   override readonly name = "GitHubApiError";
@@ -74,7 +96,7 @@ export class GitHubApiError extends Error {
     readonly status: number,
     readonly detail: string,
   ) {
-    super(`GitHub API ${status}: ${detail}`);
+    super(explainStatus(status, detail));
   }
 }
 
@@ -395,7 +417,7 @@ export class GitHubStore implements MapStore {
         return await this.#failSave(
           id,
           md,
-          `GitHub が保存を拒否しました（HTTP ${response.status}）${detail === "" ? "" : `: ${detail}`}`,
+          explainStatus(response.status, detail),
           new GitHubApiError(response.status, detail),
         );
       }
