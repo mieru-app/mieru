@@ -18,9 +18,23 @@ infra/.cdk.staging/
 .env.*
 !.env.example
 
-# Claude Code の個人設定（CLAUDE.md と .claude/rules/ は共有するのでコミットする）
+# Claude Code の設定。
+# **既定を「公開しない」にしてある。** 個人設定は環境ごとに異なり資格情報を含みうるが、
+# このリポジトリは公開である。共有するもの（rules）だけを明示的に戻す。
 CLAUDE.local.md
-.claude/settings.local.json
+.claude/*
+!.claude/rules/
+
+# 資格情報。**リポジトリの中に置かないのが約束**で、これは置かれた場合の受け皿である。
+# 名前で広く弾く書き方（*token* など）は採らない。打ち消しで戻す規則が要るようになり、
+# その打ち消しが別の規則まで無効にする。拡張子と決め打ちの名前だけにする。
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+.netrc
+.mieru-verify-token
 
 # エディタ・OS
 .vscode/*
