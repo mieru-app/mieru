@@ -22,9 +22,12 @@
 
 **2.7 で分かったこと（設計書 7.2.1）。**
 
-- **`mind-elixir` は2本指のピンチ拡大を実装していない。** `pointerdown` / `pointermove`
-  しか持たず `touchstart` は1つも無い。1本指の移動は動く。**拡大縮小は
-  `scale()` / `scaleFit()` を押しボタンに繋いで自前で用意した**（`src/views/Canvas/`）
+- **IMPORTANT: `mind-elixir` は指では何もできない。拡大縮小も移動も自前で用意した**
+  （`src/views/Canvas/`）。ピンチは実装されておらず（`touchstart` を1つも持たない）、
+  マップの移動は **`pointerType === "mouse"` で門番されている**。
+  **pointer イベントを使い `touch-action: none` を自分で置き `move`/`scale` も
+  公開しているのに、指では動かなかった。** ライブラリの対応可否を API の存在で
+  判断しないこと。移動の判定は `pan.ts` に切り出してテストがある
 - **`mind-elixir` はキャンバス要素の `className` を `"map-container"` で上書きする。**
   あの要素にクラスを書いても消える。大きさ・`touch-action: none`・`font-size: 16px` は
   向こうの CSS が持っている

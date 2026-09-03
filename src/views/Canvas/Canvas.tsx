@@ -7,6 +7,7 @@ import type { MapNode } from "../../core/types.js";
 import { useEditor } from "../../state/editor.js";
 import type { MindElixirData } from "./adapter.js";
 import { fromMindElixir, toMindElixir } from "./adapter.js";
+import { shouldStartPan } from "./pan.js";
 
 /**
  * キャンバス表示。mind-elixir への依存はこのフォルダの中だけに閉じる（不変条件4）。
@@ -105,6 +106,66 @@ export function Canvas(): React.JSX.Element {
     return () => {
       mind.destroy();
       instance.current = null;
+    };
+  }, []);
+
+  /*
+   * 指でマップを動かす（2.7-6）。
+   *
+   * **mind-elixir のマップ移動はマウス専用で、指では動かない**（`pan.ts`）。
+   * 拡大縮小と同じく、向こうの公開 API（`move`）を自分で呼ぶ。
+   *
+   * 掴んだ指を1本だけ追う。2本目は無視する（ピンチは持たない。
+   * 拡大縮小は押しボタンで用意してある）。
+   */
+  useEffect(() => {
+    const element = container.current;
+    if (element === null) return;
+
+    let pointer: number | null = null;
+    let lastX = 0;
+    let lastY = 0;
+
+    const onDown = (event: PointerEvent): void => {
+      if (pointer !== null) return;
+      if (
+        !shouldStartPan({ pointerType: event.pointerType, onEmptyArea: event.target === element })
+      )
+        return;
+      pointer = event.pointerId;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      // 指が要素の外へ出ても追い続ける。掴んだまま画面の端まで運べる
+      element.setPointerCapture(event.pointerId);
+    };
+
+    const onMove = (event: PointerEvent): void => {
+      if (pointer !== event.pointerId) return;
+      const mind = instance.current;
+      if (mind === null) return;
+      // 移動は拡大率の外側に掛かるので、指の動いた画素をそのまま渡してよい
+      mind.move(event.clientX - lastX, event.clientY - lastY);
+      lastX = event.clientX;
+      lastY = event.clientY;
+    };
+
+    const onEnd = (event: PointerEvent): void => {
+      if (pointer !== event.pointerId) return;
+      pointer = null;
+      if (element.hasPointerCapture(event.pointerId)) {
+        element.releasePointerCapture(event.pointerId);
+      }
+    };
+
+    element.addEventListener("pointerdown", onDown);
+    element.addEventListener("pointermove", onMove);
+    element.addEventListener("pointerup", onEnd);
+    element.addEventListener("pointercancel", onEnd);
+    return () => {
+      element.removeEventListener("pointerdown", onDown);
+      element.removeEventListener("pointermove", onMove);
+      element.removeEventListener("pointerup", onEnd);
+      element.removeEventListener("pointercancel", onEnd);
     };
   }, []);
 
