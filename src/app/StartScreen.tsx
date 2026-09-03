@@ -1,47 +1,46 @@
-import type { FolderState } from "../state/workspace.js";
+import { useState } from "react";
+
+import type { BackendState, GitHubConnectResult } from "../state/workspace.js";
+import { GitHubConnect } from "./GitHubConnect.js";
 
 /**
- * フォルダを選ぶまでの画面と、非対応ブラウザへの案内（F-30 / 1-14）。
+ * 保存先を選ぶまでの画面（F-30 / 1-14 / 2.6-4）。
  *
- * File System Access API は Chromium 系デスクトップでしか動かない。
- * これは Phase 1 の制約であり、Phase 3 のクラウド同期で解消される（設計書 8.3）。
+ * **Phase 2.6 で「非対応ブラウザです」で終わる画面をやめた。** GitHub を
+ * 保存先に選べるようになったため、File System Access API が無いことは
+ * 行き止まりではなくなった（設計書 8.7）。
  */
 
 interface Props {
-  folder: FolderState;
+  backend: BackendState;
   onChoose: () => void;
   onGrant: () => void;
+  onConnect: (
+    input: { token: string; repo: string; branch: string; directory: string },
+    remember: boolean,
+  ) => Promise<GitHubConnectResult>;
 }
 
-export function StartScreen({ folder, onChoose, onGrant }: Props): React.JSX.Element | null {
-  if (folder.kind === "ready") return null;
+export function StartScreen({
+  backend,
+  onChoose,
+  onGrant,
+  onConnect,
+}: Props): React.JSX.Element | null {
+  const [connecting, setConnecting] = useState(false);
 
-  if (folder.kind === "loading") {
+  if (backend.kind === "ready") return null;
+
+  if (backend.kind === "loading") {
     return <div className="startscreen">読み込み中…</div>;
   }
 
-  if (folder.kind === "unsupported") {
-    return (
-      <div className="startscreen">
-        <h1>このブラウザでは使えません</h1>
-        <p>
-          Mieru はローカルフォルダの Markdown を直接読み書きします。 この仕組み（File System Access
-          API）に対応しているのは、
-          <strong>デスクトップ版の Microsoft Edge / Google Chrome</strong> です。
-        </p>
-        <p className="startscreen-note">
-          Firefox・Safari・スマートフォンへの対応は、クラウド同期を入れる Phase 3 で行います。
-        </p>
-      </div>
-    );
-  }
-
-  if (folder.kind === "needsPermission") {
+  if (backend.kind === "needsPermission") {
     return (
       <div className="startscreen">
         <h1>フォルダへのアクセスを許可してください</h1>
         <p>
-          前回使っていたフォルダ「{folder.folderName}」を開くには、
+          前回使っていたフォルダ「{backend.folderName}」を開くには、
           ブラウザの制約により、もう一度だけ許可の操作が必要です。
         </p>
         <button type="button" className="primary" onClick={onGrant}>
@@ -54,37 +53,68 @@ export function StartScreen({ folder, onChoose, onGrant }: Props): React.JSX.Ele
     );
   }
 
+  if (connecting) {
+    return (
+      <div className="startscreen">
+        <h1>GitHub に接続</h1>
+        <p>マップは、あなたのリポジトリの Markdown として保存されます。</p>
+        <GitHubConnect
+          onConnect={onConnect}
+          onCancel={() => {
+            setConnecting(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="startscreen">
       <h1>Mieru</h1>
       <p>考えを整理し、そのまま AI に渡せるマインドマップツール。</p>
-      <ol className="startscreen-steps">
-        <li>
-          <strong>フォルダを選ぶ</strong>
-          <span>
-            マップは選んだフォルダに <code>.md</code> として保存されます。
-            新しい空のフォルダで構いません。
-          </span>
-        </li>
-        <li>
-          <strong>「新規作成」でマップを作る</strong>
-          <span>中心テーマを1つ決めるところから始めます。</span>
-        </li>
-        <li>
-          <strong>キーボードで枝を伸ばす</strong>
-          <span>
-            <kbd>Tab</kbd> で子、<kbd>Enter</kbd> で兄弟。<kbd>?</kbd> でキー操作の一覧が出ます。
-          </span>
-        </li>
-      </ol>
 
-      <button type="button" className="primary" onClick={onChoose}>
-        フォルダを選ぶ
-      </button>
+      <p className="startscreen-lead">まず、マップの保存先を決めます。</p>
+
+      <div className="startscreen-choices">
+        <section>
+          <h2>このパソコンのフォルダ</h2>
+          <p>
+            選んだフォルダ直下に <code>.md</code> として保存します。 Obsidian や VS Code
+            でもそのまま開けます。
+          </p>
+          {backend.localAvailable ? (
+            <button type="button" className="primary" onClick={onChoose}>
+              フォルダを選ぶ
+            </button>
+          ) : (
+            <p className="startscreen-note">
+              このブラウザでは選べません。フォルダを直接読み書きする仕組み（File System Access
+              API）に対応しているのは <strong>デスクトップ版の Edge / Chrome</strong> だけです。
+            </p>
+          )}
+        </section>
+
+        <section>
+          <h2>GitHub のリポジトリ</h2>
+          <p>
+            あなたのリポジトリに保存します。
+            <strong>どの端末からでも同じマップを開けます。</strong>
+            GitHub のアカウントとアクセストークンが要ります。
+          </p>
+          <button
+            type="button"
+            className={backend.localAvailable ? "" : "primary"}
+            onClick={() => {
+              setConnecting(true);
+            }}
+          >
+            GitHub に接続する
+          </button>
+        </section>
+      </div>
 
       <p className="startscreen-note">
-        作った .md は Obsidian や VS Code でもそのまま開けます。
-        保存ボタンはありません（入力が止まって 0.8 秒で自動保存）。
+        保存先は後から設定で変えられます。保存ボタンはありません（入力が止まると自動保存）。
       </p>
     </div>
   );

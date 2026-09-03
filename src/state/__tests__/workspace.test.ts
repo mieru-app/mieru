@@ -1,9 +1,13 @@
 import "fake-indexeddb/auto";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DirectoryHandleLike } from "../../store/fsa.js";
+import { clearBackend, loadBackend } from "../../store/backend-preference.js";
+import { clearCredential, loadCredential } from "../../store/github-auth.js";
+import type { GitHubRequestInit } from "../../store/github-auth.js";
 import { FakeDirectory } from "../../store/__tests__/fake-fs.js";
+import { FakeGitHub } from "../../store/__tests__/fake-github.js";
 import { useEditor } from "../editor.js";
 import { useWorkspace } from "../workspace.js";
 
@@ -59,7 +63,9 @@ function reset(): FakeDirectory {
   stub.afterRequest = "granted";
   useEditor.getState().close();
   useWorkspace.setState({
-    folder: { kind: "loading" },
+    backend: { kind: "loading" },
+    github: null,
+    localAvailable: false,
     maps: [],
     error: null,
     externallyChanged: false,
@@ -72,15 +78,17 @@ function reset(): FakeDirectory {
 beforeEach(reset);
 
 describe("起動時のフォルダ復帰", () => {
-  it("非対応ブラウザだと分かる", async () => {
+  it("File System Access API が無くても行き止まりにしない", async () => {
+    // Phase 2.6 以降、フォルダが使えないことは「使えない」を意味しない。
+    // GitHub を選ぶ道が残っている（設計書 8.7）
     stub.supported = false;
     await useWorkspace.getState().init();
-    expect(useWorkspace.getState().folder).toEqual({ kind: "unsupported" });
+    expect(useWorkspace.getState().backend).toEqual({ kind: "none", localAvailable: false });
   });
 
   it("フォルダ未選択なら選択を促す", async () => {
     await useWorkspace.getState().init();
-    expect(useWorkspace.getState().folder).toEqual({ kind: "none" });
+    expect(useWorkspace.getState().backend).toEqual({ kind: "none", localAvailable: true });
   });
 
   it("前回のフォルダがあれば黙って復帰する", async () => {
@@ -90,7 +98,7 @@ describe("起動時のフォルダ復帰", () => {
 
     await useWorkspace.getState().init();
 
-    expect(useWorkspace.getState().folder).toEqual({ kind: "ready", folderName: "作業用" });
+    expect(useWorkspace.getState().backend).toEqual({ kind: "ready", backend: "local", label: "作業用" });
     expect(useWorkspace.getState().maps.map((meta) => meta.title)).toEqual(["既存のマップ"]);
   });
 
@@ -101,7 +109,7 @@ describe("起動時のフォルダ復帰", () => {
 
     await useWorkspace.getState().init();
 
-    expect(useWorkspace.getState().folder).toEqual({
+    expect(useWorkspace.getState().backend).toEqual({
       kind: "needsPermission",
       folderName: "作業用",
     });
@@ -116,7 +124,7 @@ describe("起動時のフォルダ復帰", () => {
     await useWorkspace.getState().init();
     await useWorkspace.getState().grantPermission();
 
-    expect(useWorkspace.getState().folder).toEqual({ kind: "ready", folderName: "作業用" });
+    expect(useWorkspace.getState().backend).toEqual({ kind: "ready", backend: "local", label: "作業用" });
   });
 
   it("再許可を断られたら理由を残す", async () => {
@@ -128,7 +136,7 @@ describe("起動時のフォルダ復帰", () => {
     await useWorkspace.getState().init();
     await useWorkspace.getState().grantPermission();
 
-    expect(useWorkspace.getState().folder.kind).toBe("needsPermission");
+    expect(useWorkspace.getState().backend.kind).toBe("needsPermission");
     expect(useWorkspace.getState().error).toContain("許可されませんでした");
   });
 });
@@ -140,7 +148,7 @@ describe("フォルダの選択", () => {
 
     await useWorkspace.getState().chooseFolder();
 
-    expect(useWorkspace.getState().folder).toEqual({ kind: "ready", folderName: "作業用" });
+    expect(useWorkspace.getState().backend).toEqual({ kind: "ready", backend: "local", label: "作業用" });
     expect(useWorkspace.getState().maps).toHaveLength(1);
   });
 
@@ -148,7 +156,7 @@ describe("フォルダの選択", () => {
     reset();
     stub.picked = null;
     await useWorkspace.getState().chooseFolder();
-    expect(useWorkspace.getState().folder.kind).toBe("loading");
+    expect(useWorkspace.getState().backend.kind).toBe("loading");
   });
 });
 
@@ -530,7 +538,7 @@ describe("失敗しても状態として残す", () => {
     stub.stored = null;
 
     await useWorkspace.getState().grantPermission();
-    expect(useWorkspace.getState().folder).toEqual({ kind: "none" });
+    expect(useWorkspace.getState().backend).toEqual({ kind: "none", localAvailable: true });
   });
 
   it("一覧の読み込みに失敗したら理由を残す", async () => {
@@ -551,5 +559,127 @@ describe("失敗しても状態として残す", () => {
 
     await useWorkspace.getState().createMap("作れないマップ");
     expect(useWorkspace.getState().error).toContain("マップを作成できませんでした");
+  });
+});
+
+describe("保存先を GitHub にする（2.6-4）", () => {
+  /**
+   * 接続の判断は state 層にある。**トークンを保管する前に到達確認を通すこと**、
+   * **記憶しない選択が本当に残さないこと**が守れているかを確かめる。
+   */
+  function githubFetch(api: FakeGitHub, repoStatus = 200): typeof fetch {
+    const impl = (url: string, init: GitHubRequestInit): Promise<unknown> => {
+      // verifyCredential の到達確認は /contents を含まない
+      if (!url.includes("/contents")) {
+        return Promise.resolve({
+          status: repoStatus,
+          headers: { get: () => null },
+          json: () =>
+            Promise.resolve({ default_branch: "main", private: true, permissions: { push: true } }),
+        });
+      }
+      return api.fetchImpl(url, init);
+    };
+    return impl as unknown as typeof fetch;
+  }
+
+  const INPUT = {
+    token: "github_pat_11ABCDEFG0123456789abc",
+    repo: "kyritk/mieru-maps",
+    branch: "",
+    directory: "maps",
+  };
+
+  beforeEach(async () => {
+    await clearCredential();
+    await clearBackend();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("接続すると保存先が GitHub になる", async () => {
+    const api = new FakeGitHub();
+    api.files.set("maps/既存のマップ.md", MD);
+    vi.stubGlobal("fetch", githubFetch(api));
+
+    await expect(useWorkspace.getState().connectGitHub(INPUT, true)).resolves.toEqual({ ok: true });
+
+    expect(useWorkspace.getState().backend).toEqual({
+      kind: "ready",
+      backend: "github",
+      label: "kyritk/mieru-maps (既定ブランチ) /maps",
+    });
+    expect(useWorkspace.getState().maps.map((meta) => meta.title)).toEqual(["既存のマップ"]);
+  });
+
+  it("入力の不備はどの欄かと共に返し、保存先を変えない", async () => {
+    const result = await useWorkspace.getState().connectGitHub({ ...INPUT, repo: "mieru" }, true);
+    expect(result).toMatchObject({ ok: false, field: "repo" });
+    expect(useWorkspace.getState().backend.kind).toBe("loading");
+    await expect(loadCredential()).resolves.toBeNull();
+  });
+
+  it("届かないトークンは保管しない", async () => {
+    // 保管してしまうと、次の起動が「保存できない状態」から始まる
+    vi.stubGlobal("fetch", githubFetch(new FakeGitHub(), 401));
+
+    const result = await useWorkspace.getState().connectGitHub(INPUT, true);
+    expect(result).toMatchObject({ ok: false });
+    await expect(loadCredential()).resolves.toBeNull();
+    expect(useWorkspace.getState().backend.kind).toBe("loading");
+  });
+
+  it("記憶しない選択なら、その場では使えてもトークンを残さない", async () => {
+    vi.stubGlobal("fetch", githubFetch(new FakeGitHub()));
+
+    await useWorkspace.getState().connectGitHub(INPUT, false);
+
+    expect(useWorkspace.getState().backend.kind).toBe("ready");
+    await expect(loadCredential()).resolves.toBeNull();
+    await expect(loadBackend()).resolves.toBeNull();
+  });
+
+  it("記憶した接続は次の起動で復帰する", async () => {
+    const api = new FakeGitHub();
+    api.files.set("maps/既存のマップ.md", MD);
+    vi.stubGlobal("fetch", githubFetch(api));
+    await useWorkspace.getState().connectGitHub(INPUT, true);
+
+    // 起動し直しの再現
+    useWorkspace.setState({ backend: { kind: "loading" }, maps: [] });
+    await useWorkspace.getState().init();
+
+    expect(useWorkspace.getState().backend).toMatchObject({ kind: "ready", backend: "github" });
+    expect(useWorkspace.getState().maps).toHaveLength(1);
+  });
+
+  it("解除するとトークンが消え、フォルダ運用に戻る", async () => {
+    const dir = reset();
+    stub.stored = dir;
+    vi.stubGlobal("fetch", githubFetch(new FakeGitHub()));
+    await useWorkspace.getState().connectGitHub(INPUT, true);
+
+    await useWorkspace.getState().disconnectGitHub();
+
+    await expect(loadCredential()).resolves.toBeNull();
+    expect(useWorkspace.getState().github).toBeNull();
+    expect(useWorkspace.getState().backend).toMatchObject({ kind: "ready", backend: "local" });
+  });
+
+  it("ローカルへ切り替えても接続情報は残る", async () => {
+    // 切り替えのたびにトークンを入れ直させないため（設計書 8.7 / backend-preference）
+    const dir = reset();
+    stub.stored = dir;
+    vi.stubGlobal("fetch", githubFetch(new FakeGitHub()));
+    await useWorkspace.getState().connectGitHub(INPUT, true);
+
+    await useWorkspace.getState().useLocalFolder();
+    expect(useWorkspace.getState().backend).toMatchObject({ kind: "ready", backend: "local" });
+    await expect(loadCredential()).resolves.not.toBeNull();
+
+    await useWorkspace.getState().useGitHub();
+    expect(useWorkspace.getState().backend).toMatchObject({ kind: "ready", backend: "github" });
   });
 });

@@ -34,7 +34,13 @@ Contents API の `sha` は git の blob ハッシュそのもので内容だけ�
 
 **`MapStore` に `autosaveDelayMs` を足した**（設計書 8.1）。保存先が書き込み頻度の
 上限を持つ場合に `src/state/` の自動保存がそれに従う。`GitHubStore` は 8 秒。
-**`GitHubStore` は `watch()` を持たない**（設計書 8.7.6。競合検出は `write()` が担う）。
+**`GitHubStore` は `watch()` を持たない**（設計書 8.7.7。競合検出は `write()` が担う）。
+
+**2.6-4（保存先の切替 UI）も 2026-09-03 に完了した。** 起動画面は「非対応ブラウザです」で
+終わらず、**フォルダと GitHub を並べて示す**（設計書 8.7.6）。
+`workspace.ts` の `folder` は **`backend` に変わった**（`FolderState` → `BackendState`）。
+**保存先の選択（`backend-preference.ts`）と資格情報は別に持つ。** 一緒にすると
+切り替えのたびにトークンを入れ直させることになる。
 
 **Phase 3（AWS同期）は見送りが決定している。** `GitHubStore`（Phase 2.6）で保存先を
 確保すれば、主目的だったスマートフォン対応（同 2.7）が AWS 無しで成立するため。

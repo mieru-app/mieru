@@ -39,16 +39,17 @@ const HINTS: Record<StatusHint, string> = {
 interface Props {
   status: SaveStatus;
   nodeCount: number;
-  folderName: string | null;
+  /** 保存先の表示名（フォルダ名、または owner/repo） */
+  label: string | null;
   hint: StatusHint;
 }
 
-export function StatusBar({ status, nodeCount, folderName, hint }: Props): React.JSX.Element {
+export function StatusBar({ status, nodeCount, label, hint }: Props): React.JSX.Element {
   const { tone, text } = describe(status);
   return (
     <footer className="statusbar">
       <span className={`status status-${tone}`}>{text}</span>
-      {folderName !== null && <span className="statusbar-item">{folderName}</span>}
+      {label !== null && <span className="statusbar-item">{label}</span>}
       {nodeCount > 0 && <span className="statusbar-item">{nodeCount} ノード</span>}
       <span className="statusbar-hint">{HINTS[hint]}</span>
     </footer>

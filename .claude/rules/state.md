@@ -12,7 +12,8 @@ paths:
 | `tree.ts` | 木の編集の純粋関数。追加・削除・階層変更・並べ替え・移動 |
 | `editor.ts` | 編集中マップの状態と Undo/Redo |
 | `autosave.ts` | デバウンス保存、競合・失敗の扱い |
-| `workspace.ts` | 作業フォルダ、マップ一覧、`MapStore` の生存期間 |
+| `workspace.ts` | 保存先（ローカルフォルダ／GitHub）、マップ一覧、`MapStore` の生存期間 |
+| `github-guide.ts` | トークン作成の案内。**安全の前提を伝える文面であり機能の一部**（設計書 8.7.2） |
 | `commands.ts` | キー操作・ツールバーから呼ばれる操作の実体 |
 
 ## 依存の向き

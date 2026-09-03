@@ -3,6 +3,8 @@ import { create } from "zustand";
 import { parseMarkdown } from "../core/parse.js";
 import { serializeMarkdown } from "../core/serialize.js";
 import type { MapMeta } from "../core/types.js";
+import type { BackendKind } from "../store/backend-preference.js";
+import { clearBackend, loadBackend, saveBackend } from "../store/backend-preference.js";
 import {
   ensurePermission,
   isFileSystemAccessSupported,
@@ -12,9 +14,21 @@ import {
 } from "../store/directory-handle.js";
 import { fileNameFor } from "../store/file-name.js";
 import type { FsaPermissionState } from "../store/fsa.js";
+import type { CredentialInput } from "../store/github-auth.js";
+import {
+  browserFetch,
+  clearCredential,
+  describeCredential,
+  loadCredential,
+  parseCredentialInput,
+  saveCredential,
+  verifyCredential,
+} from "../store/github-auth.js";
+import { GitHubStore } from "../store/GitHubStore.js";
 import { LocalFolderStore } from "../store/LocalFolderStore.js";
 import type { QuarantinedEntry } from "../store/quarantine.js";
 import { dropQuarantined, listQuarantined } from "../store/quarantine.js";
+import type { MapStore } from "../store/types.js";
 import { AutoSave } from "./autosave.js";
 import { useEditor } from "./editor.js";
 import type { MapIndex } from "./search.js";
@@ -27,20 +41,41 @@ import { SearchIndex } from "./search.js";
  * 自動保存と外部変更の監視の生存期間もここで管理する。
  */
 
-/** フォルダの状態。画面はこれを見て何を出すかを決める */
-export type FolderState =
-  /** File System Access API 非対応のブラウザ（Firefox / Safari / モバイル） */
-  | { kind: "unsupported" }
-  /** 起動直後。保存済みのフォルダを調べている最中 */
+/**
+ * 保存先の状態。画面はこれを見て何を出すかを決める。
+ *
+ * **Phase 2.6 で「フォルダの状態」から「保存先の状態」へ広げた。**
+ * GitHub を選べるようになったため、File System Access API が使えないことは
+ * もはや「使えない」を意味しない（設計書 8.7）。
+ */
+export type BackendState =
+  /** 起動直後。保存先を調べている最中 */
   | { kind: "loading" }
-  /** フォルダが未選択 */
-  | { kind: "none" }
+  /**
+   * 保存先が未選択。
+   * `localAvailable` は File System Access API が使えるか。
+   * Firefox / Safari / スマートフォンでは false になるが、GitHub は選べる
+   */
+  | { kind: "none"; localAvailable: boolean }
   /** 前回のフォルダはあるが、再許可が要る */
   | { kind: "needsPermission"; folderName: string }
-  | { kind: "ready"; folderName: string };
+  /** 使える状態。`label` は保存先の表示名 */
+  | { kind: "ready"; backend: BackendKind; label: string };
+
+/** 接続を試みた結果。失敗はどの欄の問題かまで返す */
+export type GitHubConnectResult =
+  | { ok: true }
+  | { ok: false; field?: "token" | "repo" | "branch" | "directory"; message: string };
 
 export interface WorkspaceState {
-  folder: FolderState;
+  backend: BackendState;
+  /** 接続済みの GitHub の表示名。**トークンは持たせない**（設計書 8.7.2） */
+  github: string | null;
+  /**
+   * このブラウザでローカルフォルダを保存先にできるか。
+   * 描画層が `src/store/` を直接呼ばないよう、ここで解決して渡す（NF-51）
+   */
+  localAvailable: boolean;
   maps: MapMeta[];
   /** 一覧や読み込みの失敗。保存の失敗は編集ストアの status が持つ */
   error: string | null;
@@ -51,10 +86,21 @@ export interface WorkspaceState {
   /** 全文検索とタグ絞り込みの索引。突き合わせは `queryIndex` が行う */
   indexes: MapIndex[];
 
-  /** 起動時に呼ぶ。前回のフォルダを復帰させる */
+  /** 起動時に呼ぶ。前回の保存先を復帰させる */
   init(): Promise<void>;
   /** 利用者の操作でフォルダを選ぶ */
   chooseFolder(): Promise<void>;
+  /**
+   * GitHub へ接続する。
+   * @param remember false なら記憶せず、この画面を閉じた時点で消える（共用端末向け）
+   */
+  connectGitHub(input: CredentialInput, remember: boolean): Promise<GitHubConnectResult>;
+  /** 接続を解除し、トークンをこの端末から消す */
+  disconnectGitHub(): Promise<void>;
+  /** 記憶済みの GitHub 接続に切り替える */
+  useGitHub(): Promise<void>;
+  /** ローカルフォルダに切り替える。GitHub の接続情報は消さない */
+  useLocalFolder(): Promise<void>;
   /** 「アクセスを許可」ボタン。利用者の操作が要る */
   grantPermission(): Promise<void>;
   refresh(): Promise<void>;
@@ -77,8 +123,8 @@ export interface WorkspaceState {
   saveNow(): Promise<void>;
 }
 
-/** 現在の作業フォルダ。UI からは触らせない */
-let store: LocalFolderStore | null = null;
+/** 現在の保存先。UI からは触らせない（設計原則3） */
+let store: MapStore | null = null;
 let autoSave: AutoSave | null = null;
 let unwatch: (() => void) | null = null;
 let searchIndex: SearchIndex | null = null;
@@ -126,27 +172,39 @@ export function retitle(md: string, id: string, title: string, at: string): stri
 }
 
 export const useWorkspace = create<WorkspaceState>((set, get) => {
-  /** フォルダが決まった後の共通処理。監視と自動保存を開始する */
-  async function attach(folderName: string): Promise<void> {
-    if (store === null) return;
+  /** 保存先が決まった後の共通処理。監視と自動保存を開始する */
+  async function attach(backend: BackendKind, label: string): Promise<void> {
+    const current = store;
+    if (current === null) return;
 
-    autoSave = new AutoSave(store, useEditor);
+    autoSave = new AutoSave(current, useEditor);
     autoSave.start();
-    searchIndex = new SearchIndex(store);
-    unwatch = store.watch((id) => {
-      // 開いているマップが外部で変わったときだけ知らせる。
-      // 勝手に読み直すと編集中の内容が消えるため、判断は利用者に委ねる
-      if (useEditor.getState().map?.id === id) set({ externallyChanged: true });
-      void get().refresh();
-    });
+    searchIndex = new SearchIndex(current);
+    // 外部変更の監視は任意メソッド。GitHubStore は持たない（設計書 8.7.6）
+    unwatch =
+      current.watch?.((id) => {
+        // 開いているマップが外部で変わったときだけ知らせる。
+        // 勝手に読み直すと編集中の内容が消えるため、判断は利用者に委ねる
+        if (useEditor.getState().map?.id === id) set({ externallyChanged: true });
+        void get().refresh();
+      }) ?? null;
 
-    set({ folder: { kind: "ready", folderName }, error: null });
+    set({ backend: { kind: "ready", backend, label }, error: null });
     await get().refresh();
     set({ quarantined: await listQuarantined() });
   }
 
+  /** GitHub のストアを組み立てて使い始める */
+  async function attachGitHub(credential: Parameters<typeof describeCredential>[0]): Promise<void> {
+    teardown();
+    store = new GitHubStore(credential);
+    await attach("github", describeCredential(credential));
+  }
+
   return {
-    folder: { kind: "loading" },
+    backend: { kind: "loading" },
+    github: null,
+    localAvailable: false,
     maps: [],
     error: null,
     externallyChanged: false,
@@ -154,27 +212,41 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     indexes: [],
 
     async init() {
-      if (!isFileSystemAccessSupported()) {
-        set({ folder: { kind: "unsupported" } });
+      // GitHub を使っている間も、フォルダへ戻せるかどうかは要る（設定画面が出し分ける）
+      set({ localAvailable: isFileSystemAccessSupported() });
+
+      const credential = await loadCredential();
+      set({ github: credential === null ? null : describeCredential(credential) });
+
+      // 記憶した選択があればそれに従う。無ければローカルフォルダを試す
+      if ((await loadBackend()) === "github" && credential !== null) {
+        await attachGitHub(credential);
+        return;
+      }
+
+      const localAvailable = get().localAvailable;
+      if (!localAvailable) {
+        // File System Access API が無くても、GitHub を選ぶ道が残っている
+        set({ backend: { kind: "none", localAvailable: false } });
         return;
       }
 
       const handle = await loadDirectoryHandle();
       if (handle === null) {
-        set({ folder: { kind: "none" } });
+        set({ backend: { kind: "none", localAvailable: true } });
         return;
       }
 
       // 起動時は利用者の操作が無いため、権限を要求せず確認だけする
       const permission: FsaPermissionState = await ensurePermission(handle, false);
       if (permission !== "granted") {
-        set({ folder: { kind: "needsPermission", folderName: handle.name } });
+        set({ backend: { kind: "needsPermission", folderName: handle.name } });
         return;
       }
 
       teardown();
       store = new LocalFolderStore(handle);
-      await attach(handle.name);
+      await attach("local", handle.name);
     },
 
     async chooseFolder() {
@@ -182,16 +254,71 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (handle === null) return;
 
       await saveDirectoryHandle(handle);
+      await saveBackend("local");
       useEditor.getState().close();
       teardown();
       store = new LocalFolderStore(handle);
-      await attach(handle.name);
+      await attach("local", handle.name);
+    },
+
+    async connectGitHub(input, remember) {
+      const parsed = parseCredentialInput(input);
+      if (!parsed.ok) return { ok: false, field: parsed.field, message: parsed.message };
+
+      // 保管する前に、実際に届くかを確かめる。
+      // 届かない設定を記憶すると、次の起動が「保存できない状態」から始まる
+      const verified = await verifyCredential(parsed.credential, browserFetch);
+      if (!verified.ok) return { ok: false, message: verified.message };
+
+      if (remember) {
+        await saveCredential(parsed.credential);
+        await saveBackend("github");
+      } else {
+        // 記憶しない選択のときは、前に記憶したものも残さない
+        await clearCredential();
+        await clearBackend();
+      }
+
+      useEditor.getState().close();
+      set({ github: describeCredential(parsed.credential) });
+      await attachGitHub(parsed.credential);
+      return { ok: true };
+    },
+
+    async disconnectGitHub() {
+      await clearCredential();
+      await clearBackend();
+      useEditor.getState().close();
+      teardown();
+      set({ github: null, maps: [], indexes: [], externallyChanged: false, error: null });
+      await get().init();
+    },
+
+    async useGitHub() {
+      const credential = await loadCredential();
+      if (credential === null) {
+        set({ error: "GitHub の接続情報がありません。" });
+        return;
+      }
+      await get().saveNow();
+      await saveBackend("github");
+      useEditor.getState().close();
+      await attachGitHub(credential);
+    },
+
+    async useLocalFolder() {
+      await get().saveNow();
+      await saveBackend("local");
+      useEditor.getState().close();
+      teardown();
+      set({ maps: [], indexes: [], externallyChanged: false, error: null });
+      await get().init();
     },
 
     async grantPermission() {
       const handle = await loadDirectoryHandle();
       if (handle === null) {
-        set({ folder: { kind: "none" } });
+        set({ backend: { kind: "none", localAvailable: isFileSystemAccessSupported() } });
         return;
       }
 
@@ -202,7 +329,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
       teardown();
       store = new LocalFolderStore(handle);
-      await attach(handle.name);
+      await attach("local", handle.name);
     },
 
     async refresh() {

@@ -1127,3 +1127,125 @@ kbd {
   border-radius: 4px;
   padding: 0 0.2rem;
 }
+
+/* ── 保存先の選択と GitHub 接続（2.6-4） ─────────────────── */
+
+.startscreen-lead {
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+
+.startscreen-choices {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+}
+
+.startscreen-choices section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.startscreen-choices h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.startscreen-choices p {
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
+
+.ghconnect {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.ghconnect label {
+  font-size: 0.85em;
+  color: var(--fg-muted);
+}
+
+.ghconnect input[type="text"],
+.ghconnect input[type="password"],
+.ghconnect input:not([type]) {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.ghconnect-error {
+  color: var(--warn-fg);
+  font-size: 0.85em;
+  margin: 0;
+}
+
+.ghconnect-disclosure {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.ghconnect-steps ol {
+  margin: 0.25rem 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ghconnect-steps li strong {
+  display: block;
+}
+
+.ghconnect-steps li span {
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
+
+.ghconnect-advanced {
+  margin: 0.25rem 0;
+}
+
+.ghconnect-advanced summary {
+  cursor: pointer;
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
+
+.ghconnect-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--fg);
+  font-size: 1em;
+  margin-top: 0.5rem;
+}
+
+.ghconnect-note {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+  margin: 0;
+}
+
+.ghconnect-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

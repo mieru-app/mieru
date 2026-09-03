@@ -41,7 +41,9 @@ async function copyText(text: string): Promise<void> {
 }
 
 export function App(): React.JSX.Element {
-  const folder = useWorkspace((state) => state.folder);
+  const backend = useWorkspace((state) => state.backend);
+  const github = useWorkspace((state) => state.github);
+  const localAvailable = useWorkspace((state) => state.localAvailable);
   const maps = useWorkspace((state) => state.maps);
   const indexes = useWorkspace((state) => state.indexes);
   const workspaceError = useWorkspace((state) => state.error);
@@ -210,12 +212,15 @@ export function App(): React.JSX.Element {
     [deps, startCreating],
   );
 
-  if (folder.kind !== "ready") {
+  if (backend.kind !== "ready") {
     return (
       <StartScreen
-        folder={folder}
+        backend={backend}
         onChoose={() => void useWorkspace.getState().chooseFolder()}
         onGrant={() => void useWorkspace.getState().grantPermission()}
+        onConnect={(input, remember) =>
+          useWorkspace.getState().connectGitHub(input, remember)
+        }
       />
     );
   }
@@ -337,10 +342,18 @@ export function App(): React.JSX.Element {
 
         {showSettings && (
           <SettingsSheet
-            folderName={folder.folderName}
+            backend={backend}
+            github={github}
+            localAvailable={localAvailable}
             theme={theme}
             onChangeTheme={changeTheme}
             onChooseFolder={() => void useWorkspace.getState().chooseFolder()}
+            onUseLocalFolder={() => void useWorkspace.getState().useLocalFolder()}
+            onUseGitHub={() => void useWorkspace.getState().useGitHub()}
+            onDisconnectGitHub={() => void useWorkspace.getState().disconnectGitHub()}
+            onConnect={(input, remember) =>
+              useWorkspace.getState().connectGitHub(input, remember)
+            }
             onShowShortcuts={toggleHelp}
             onClose={toggleSettings}
           />
@@ -362,7 +375,7 @@ export function App(): React.JSX.Element {
       <StatusBar
         status={status}
         nodeCount={root === null ? 0 : flatten(root).length}
-        folderName={folder.folderName}
+        label={backend.label}
         hint={root === null ? "newMap" : rootHasChildren ? "help" : "firstBranch"}
       />
 
