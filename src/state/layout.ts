@@ -25,6 +25,11 @@ export interface LayoutInput {
   sheet: Sheet | null;
   /** ノードが選ばれているか */
   hasSelection: boolean;
+  /**
+   * マップを開いて編集できる状態か。
+   * ホーム画面と作成画面では false になる
+   */
+  editing: boolean;
 }
 
 /**
@@ -38,6 +43,15 @@ export interface Layout {
   sidebar: boolean;
   /** 右または下に出す欄。無ければ null */
   panel: SidePanel | null;
+  /**
+   * 編集バーを出すか（2.7-5）。
+   *
+   * **狭い画面には構造編集の入口が他に無い。** 子や兄弟の追加・削除・改名・取り消しは
+   * すべてキーボードに割り当てられており（`keymap.ts`）、`mind-elixir` の
+   * 右クリックメニューとツールバーも切ってある（設計書 7.4）。
+   * 指しか無い端末では、これが唯一の手段になる。
+   */
+  editBar: boolean;
 }
 
 /**
@@ -53,7 +67,8 @@ export function resolveLayout(input: LayoutInput): Layout {
   const panel: SidePanel | null = input.sheet ?? (input.hasSelection ? "note" : null);
 
   if (!input.narrow) {
-    return { sidebar: input.sidebarOpen, panel };
+    // 広い画面にはキーボードがある。ツールバー1本の原則を崩す理由がない（設計書 7.2）
+    return { sidebar: input.sidebarOpen, panel, editBar: false };
   }
 
   /*
@@ -66,10 +81,12 @@ export function resolveLayout(input: LayoutInput): Layout {
    * **一覧がノートより先に来るのは、ノートが選択に付随して開くためである。**
    * ノートが勝つと、枝を選んだ後は一覧を開いた瞬間に覆われ、一覧に辿り着けない。
    */
-  if (input.sheet !== null) return { sidebar: false, panel: input.sheet };
-  if (input.sidebarOpen) return { sidebar: true, panel: null };
+  // 欄や一覧が覆っている間は編集していない。バーを残しても押す相手が見えない
+  if (input.sheet !== null) return { sidebar: false, panel: input.sheet, editBar: false };
+  if (input.sidebarOpen) return { sidebar: true, panel: null, editBar: false };
 
-  return { sidebar: false, panel };
+  // ノート欄は下半分にしか出ないので、マップは見えたままである
+  return { sidebar: false, panel, editBar: input.editing };
 }
 
 /**

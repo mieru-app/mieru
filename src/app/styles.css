@@ -1369,6 +1369,15 @@ kbd {
 }
 
 /*
+ * 編集バーは `.workarea` の外（下）にあるので拡大縮小の押しボタンとは重ならない。
+ * ただし画面の下端が近くなるため、余白を少し詰めて指の届く位置に保つ
+ */
+:root[data-narrow] .canvas-zoom {
+  bottom: 0.5rem;
+  right: 0.5rem;
+}
+
+/*
  * 指の当たり判定。14px の字に 0.25rem の余白では 26px しかなく、
  * 押したつもりが外れる。44px は iOS / Android 双方の目安である
  */
@@ -1413,4 +1422,35 @@ kbd {
 
 :root[data-narrow] .startscreen {
   padding: 2rem 1rem;
+}
+
+/*
+ * 編集バー（2.7-5）。狭い画面のときだけ、ステータスバーの上に出る。
+ *
+ * **指しか無い端末での唯一の構造編集の入口である。** 出す・出さないの判断は
+ * `src/state/layout.ts`、並べる操作は `src/app/edit-bar.ts` が持つ。
+ */
+.editbar {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+  padding: 0.3rem 0.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sunken);
+}
+
+.editbar button {
+  flex: 1;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.25rem;
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+/*
+ * 取り返しの付きにくい操作は字の色で区別する。
+ * どれがそれかは `edit-bar.ts` の `danger` が決める（並び順で決めない）
+ */
+.editbar button.is-danger:not(:disabled) {
+  color: var(--warn-fg);
 }

@@ -22,6 +22,7 @@ import { Banners } from "./Banners.js";
 import type { PaletteItem } from "./command-palette.js";
 import { CommandPalette } from "./CommandPalette.js";
 import { downloadText } from "./download.js";
+import { EditBar } from "./EditBar.js";
 import { FirstBranchGuide } from "./Guide.js";
 import { HomeScreen } from "./HomeScreen.js";
 import { SettingsSheet } from "./SettingsSheet.js";
@@ -60,6 +61,8 @@ export function App(): React.JSX.Element {
   const selected = useEditor(selectedNode);
 
   const selectedUid = useEditor((state) => state.selectedUid);
+  /** 取り消しの押しボタンを出し分けるために見る（`EditBar`） */
+  const canUndo = useEditor((state) => state.past.length > 0);
 
   const [toast, setToast] = useState<string | null>(null);
   /**
@@ -90,6 +93,8 @@ export function App(): React.JSX.Element {
     sidebarOpen,
     sheet,
     hasSelection: selected !== null,
+    // ホーム・作成画面には編集する木が無い。`root` の判定は下の描画と揃える
+    editing: root !== null && !creating,
   });
 
   /*
@@ -416,6 +421,19 @@ export function App(): React.JSX.Element {
           />
         )}
       </div>
+
+      {/*
+       * 狭い画面の編集バー（2.7-5）。**ここが唯一の構造編集の入口である。**
+       * 追加・改名・削除・取り消しはすべてキーボードにしか割り当てておらず、
+       * mind-elixir の右クリックメニューも切ってある（設計書 7.4）
+       */}
+      {layout.editBar && (
+        <EditBar
+          hasSelection={selected !== null}
+          canUndo={canUndo}
+          onRun={(command) => void runCommand(command, { copyText, ...deps })}
+        />
+      )}
 
       <StatusBar
         status={status}
