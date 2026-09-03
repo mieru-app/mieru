@@ -12,12 +12,14 @@ import { TEMPLATES, templateMarkdown } from "../state/templates.js";
 import type { Theme } from "../state/theme.js";
 import { readTheme, THEME_KEY } from "../state/theme.js";
 import { flatten } from "../state/tree.js";
+import { isEditableMode } from "../state/view-mode.js";
 import { useWorkspace } from "../state/workspace.js";
 import { Canvas } from "../views/Canvas/Canvas.js";
 import { ExportPanel } from "../views/Export/ExportPanel.js";
 import { NotePanel } from "../views/NotePanel/NotePanel.js";
 import { Outline } from "../views/Outline/Outline.js";
 import { Sidebar } from "../views/Sidebar/Sidebar.js";
+import { Source } from "../views/Source/Source.js";
 import { Banners } from "./Banners.js";
 import type { PaletteItem } from "./command-palette.js";
 import { CommandPalette } from "./CommandPalette.js";
@@ -93,8 +95,12 @@ export function App(): React.JSX.Element {
     sidebarOpen,
     sheet,
     hasSelection: selected !== null,
-    // ホーム・作成画面には編集する木が無い。`root` の判定は下の描画と揃える
-    editing: root !== null && !creating,
+    /*
+     * 木を書き換えられる画面を出しているか。
+     * ホーム・作成画面には編集する木が無く、Markdown 表示は読むだけである（2.8-1）。
+     * `root` と `creating` の判定は下の描画と揃える
+     */
+    editing: root !== null && !creating && isEditableMode(mode),
   });
 
   /*
@@ -359,8 +365,11 @@ export function App(): React.JSX.Element {
             />
           ) : (
             <>
-              {mode === "canvas" ? <Canvas /> : <Outline />}
-              {!rootHasChildren && <FirstBranchGuide />}
+              {mode === "canvas" && <Canvas />}
+              {mode === "outline" && <Outline />}
+              {mode === "source" && <Source />}
+              {/* 最初の枝の案内は、枝を足せる画面でだけ出す */}
+              {!rootHasChildren && isEditableMode(mode) && <FirstBranchGuide />}
             </>
           )}
         </main>

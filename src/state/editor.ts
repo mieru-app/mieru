@@ -21,6 +21,7 @@ import {
 } from "./tree.js";
 import type { Direction } from "./tree.js";
 import type { EditorSnapshot, OpenMap, SaveStatus, ViewMode } from "./types.js";
+import { isEditableMode } from "./view-mode.js";
 
 /**
  * 編集中のマップの状態。
@@ -220,13 +221,17 @@ export const useEditor = create<EditorState>((set, get) => {
       set({ selectedUid: uid, editingUid: null });
     },
     beginEdit(uid) {
+      // Markdown 表示には入力欄が無い。ここで編集中にすると、以後どのキーも
+      // 「入力中」として無視され（`useKeymap`）、抜ける手段が無くなる
+      if (!isEditableMode(get().mode)) return;
       set({ selectedUid: uid, editingUid: uid });
     },
     endEdit() {
       set({ editingUid: null, lastEdit: null });
     },
     setMode(mode) {
-      set({ mode });
+      // 書き換えられない画面へ移るときは、書きかけの入力欄ごと閉じる
+      set({ mode, editingUid: isEditableMode(mode) ? get().editingUid : null });
     },
 
     move(direction) {

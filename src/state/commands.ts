@@ -4,6 +4,7 @@ import type { Command } from "../app/keymap.js";
 import { toFileNameBase } from "../store/file-name.js";
 import { useEditor } from "./editor.js";
 import { locate } from "./tree.js";
+import { nextViewMode } from "./view-mode.js";
 import { useWorkspace } from "./workspace.js";
 
 /**
@@ -138,7 +139,8 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
       editor.redo();
       return;
     case "toggleMode":
-      editor.setMode(editor.mode === "canvas" ? "outline" : "canvas");
+      // 巡回の順は `view-mode.ts` が持つ。ツールバーの並び順と同じ配列から出す
+      editor.setMode(nextViewMode(editor.mode));
       return;
 
     case "copyForAi": {

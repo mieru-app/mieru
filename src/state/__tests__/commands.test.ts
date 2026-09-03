@@ -208,7 +208,23 @@ describe("木の操作", () => {
     await runCommand("toggleMode", noop);
     expect(useEditor.getState().mode).toBe("outline");
     await runCommand("toggleMode", noop);
+    expect(useEditor.getState().mode).toBe("source");
+    await runCommand("toggleMode", noop);
     expect(useEditor.getState().mode).toBe("canvas");
+  });
+
+  it("Markdown 表示へ移ると書きかけの入力欄を閉じる（2.8-1）", async () => {
+    // 入力欄が無い画面で editingUid が残ると、以後どのキーも「入力中」として
+    // 無視され（`useKeymap`）、抜ける手段が無くなる
+    useEditor.getState().select(uidOf("市場"));
+    await runCommand("beginEdit", noop);
+    expect(useEditor.getState().editingUid).not.toBeNull();
+
+    useEditor.getState().setMode("source");
+    expect(useEditor.getState().editingUid).toBeNull();
+
+    await runCommand("beginEdit", noop);
+    expect(useEditor.getState().editingUid).toBeNull();
   });
 });
 

@@ -443,6 +443,54 @@ button.primary {
   color: var(--fg);
 }
 
+/*
+ * Markdown 表示（2.8-1、設計書 F-25）。
+ *
+ * 保存されるバイト列をそのまま出す画面なので、**整形も折り返しもしない。**
+ * 折り返すと1行の切れ目が見た目で分からなくなり、「保存されている形」を
+ * 確かめるという唯一の目的が果たせない。長い行は横に送る。
+ */
+.source {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.source-caption,
+.source-size {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+.source-caption {
+  border-bottom: 1px solid var(--border);
+}
+
+.source-size {
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.source-caption code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.source-body {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  white-space: pre;
+  tab-size: 2;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
 .outline {
   height: 100%;
   overflow: auto;
@@ -1395,9 +1443,21 @@ kbd {
   gap: 0.3rem;
 }
 
-/* 表示切替は残す唯一の主要な操作なので、字は削らず余白だけ詰める */
+/*
+ * 表示切替は狭い画面に残す唯一の主要な操作である。
+ *
+ * **2.8-1 で3つ目（Markdown）が加わり、正式な名前では入らなくなった。**
+ * 360px から ☰・ロゴ・⚙ を引いた残りは約 180px で、正式な名前3つは 270px を超える。
+ * 2.7 では「字は削らず余白だけ詰める」としていたが、余白ではもう足りない。
+ * 字は `VIEW_MODE_SHORT_LABELS` へ切り替え、名前は `aria-label` に残す。
+ */
 :root[data-narrow] .segmented button {
   padding: 0.4rem 0.55rem;
+}
+
+/* 保存される全文は、狭い画面でも折り返さない（横に送る） */
+:root[data-narrow] .source-body {
+  font-size: 0.8rem;
 }
 
 :root[data-narrow] .toolbar-icon {

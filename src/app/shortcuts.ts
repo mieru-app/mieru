@@ -67,7 +67,11 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     entries: [
       { keys: ["Ctrl + Z"], commands: ["undo"], description: "元に戻す" },
       { keys: ["Ctrl + Shift + Z"], commands: ["redo"], description: "やり直す" },
-      { keys: ["Ctrl + E"], commands: ["toggleMode"], description: "キャンバス ⇄ アウトライン" },
+      {
+        keys: ["Ctrl + E"],
+        commands: ["toggleMode"],
+        description: "表示を順に切り替える（キャンバス → アウトライン → Markdown）",
+      },
     ],
   },
   {
@@ -130,7 +134,7 @@ const PALETTE_COMMANDS: { command: Command; title: string }[] = [
   { command: "toggleCollapse", title: "折り畳む・展開する" },
   { command: "undo", title: "元に戻す" },
   { command: "redo", title: "やり直す" },
-  { command: "toggleMode", title: "キャンバス ⇄ アウトライン" },
+  { command: "toggleMode", title: "表示を順に切り替える（キャンバス → アウトライン → Markdown）" },
   { command: "copyForAi", title: "テキストをコピーする（見出し形式）" },
   { command: "toggleExport", title: "テキスト出力を開く（形式と範囲を選ぶ）" },
   { command: "saveNow", title: "すぐ保存する" },

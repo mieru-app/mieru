@@ -26,8 +26,11 @@ export interface LayoutInput {
   /** ノードが選ばれているか */
   hasSelection: boolean;
   /**
-   * マップを開いて編集できる状態か。
-   * ホーム画面と作成画面では false になる
+   * 木を書き換えられる画面を出しているか。
+   *
+   * ホーム画面と作成画面では書き換える木が無いので false。
+   * **Markdown 表示でも false になる**（2.8-1）。読むだけの画面であり、
+   * 判断は `view-mode.ts` の `isEditableMode` が持つ。
    */
   editing: boolean;
 }
@@ -63,8 +66,15 @@ export interface Layout {
 export const NARROW_MAX_WIDTH = "40rem";
 
 export function resolveLayout(input: LayoutInput): Layout {
-  // 明示的に開いた欄が、選択に付随するノートより優先する（設計書 7.2）
-  const panel: SidePanel | null = input.sheet ?? (input.hasSelection ? "note" : null);
+  /*
+   * 明示的に開いた欄が、選択に付随するノートより優先する（設計書 7.2）。
+   *
+   * **ノート欄は書き換えられる画面のときだけ出す**（2.8-1）。Markdown 表示は
+   * ノートを含む全文をそのまま出しているので、隣に同じ内容を編集できる欄を
+   * 並べると、どちらが正なのか見た目では決められなくなる。
+   */
+  const showNote = input.hasSelection && input.editing;
+  const panel: SidePanel | null = input.sheet ?? (showNote ? "note" : null);
 
   if (!input.narrow) {
     // 広い画面にはキーボードがある。ツールバー1本の原則を崩す理由がない（設計書 7.2）

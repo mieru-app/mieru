@@ -92,10 +92,30 @@ describe("編集バー（2.7-5）", () => {
   });
 
   it("ノート欄が出ていても残す。下半分しか覆わないのでマップは見えている", () => {
-    const layout = resolveLayout(
-      input({ narrow: true, sidebarOpen: false, hasSelection: true }),
-    );
+    const layout = resolveLayout(input({ narrow: true, sidebarOpen: false, hasSelection: true }));
     expect(layout).toEqual({ sidebar: false, panel: "note", editBar: true });
+  });
+});
+
+describe("Markdown 表示（2.8-1）", () => {
+  it("選択があってもノート欄を出さない", () => {
+    // 全文をそのまま出している隣に、同じノートを編集できる欄は並べない
+    const layout = resolveLayout(input({ hasSelection: true, editing: false }));
+    expect(layout.panel).toBeNull();
+  });
+
+  it("明示的に開いた欄は読むだけの画面でも出す", () => {
+    // テキスト出力も設定も、木を書き換える操作ではない
+    const layout = resolveLayout(input({ hasSelection: true, editing: false, sheet: "export" }));
+    expect(layout.panel).toBe("export");
+  });
+
+  it("狭い画面でも編集バーを出さない", () => {
+    // 押しても何も起きない押しボタンを、唯一の入口として見せない
+    const layout = resolveLayout(
+      input({ narrow: true, sidebarOpen: false, hasSelection: true, editing: false }),
+    );
+    expect(layout).toEqual({ sidebar: false, panel: null, editBar: false });
   });
 });
 

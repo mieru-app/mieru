@@ -1,9 +1,13 @@
 import type { ViewMode } from "../state/types.js";
+import { VIEW_MODE_LABELS, VIEW_MODE_SHORT_LABELS, VIEW_MODES } from "../state/view-mode.js";
 import { Wordmark } from "./Wordmark.js";
 
 /**
- * ツールバー1本。モードは2つだけに限る（原則4・設計書 7.2）。
- * ここに機能を足したくなったら、まず設計書 2.2「対象外」を読むこと。
+ * ツールバー1本。ここに機能を足したくなったら、まず設計書 2.2「対象外」を読むこと。
+ *
+ * **表示は3つある**（設計書 F-25、2.8-1）。並び順と字は `state/view-mode.ts` が持ち、
+ * `Ctrl+E` の巡回も同じ配列から出す。ここで手書きすると、押しボタンには
+ * 出ているのにキーでは辿り着けない表示が生まれる。
  *
  * **狭い画面では8個が入らない**（2.7-1）。残すのは
  * ☰・ロゴ・表示切替・⚙ の4つで、外した3つは行き先がある。
@@ -80,22 +84,20 @@ export function Toolbar({
 
       <div className="toolbar-actions">
         <div className="segmented" role="group" aria-label="表示の切り替え">
-          <button
-            type="button"
-            aria-pressed={mode === "canvas"}
-            onClick={() => onChangeMode("canvas")}
-            disabled={!canEdit}
-          >
-            キャンバス
-          </button>
-          <button
-            type="button"
-            aria-pressed={mode === "outline"}
-            onClick={() => onChangeMode("outline")}
-            disabled={!canEdit}
-          >
-            アウトライン
-          </button>
+          {VIEW_MODES.map((each) => (
+            <button
+              key={each}
+              type="button"
+              aria-pressed={mode === each}
+              // 狭い画面では字を縮めるが、名前は読み上げに残す（`view-mode.ts`）
+              aria-label={VIEW_MODE_LABELS[each]}
+              title={VIEW_MODE_LABELS[each]}
+              onClick={() => onChangeMode(each)}
+              disabled={!canEdit}
+            >
+              {narrow ? VIEW_MODE_SHORT_LABELS[each] : VIEW_MODE_LABELS[each]}
+            </button>
+          ))}
         </div>
 
         {!narrow && (

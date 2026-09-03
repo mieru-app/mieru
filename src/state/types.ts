@@ -1,7 +1,12 @@
 import type { MapMeta, MapNode, ViewState } from "../core/types.js";
 
-/** 主表示領域のモード。キャンバスとアウトラインが同じ場所で入れ替わる（設計書 7.2） */
-export type ViewMode = "canvas" | "outline";
+/**
+ * 主表示領域のモード。3つが同じ場所で入れ替わる（設計書 7.2）。
+ *
+ * 実体は `view-mode.ts` にある。並び順・名前・巡回の順と1文字もずれないよう、
+ * 型もそこから導いている。ここでは今までどおり読めるように再輸出するだけ。
+ */
+export type { ViewMode } from "./view-mode.js";
 
 /**
  * 保存状態。ステータスバーに常時表示し、「保存ボタンを探す」体験を作らない（原則4）。
