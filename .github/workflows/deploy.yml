@@ -43,9 +43,18 @@ jobs:
 
       - name: ビルド
         env:
-          # サブパス配信（https://<ユーザー名>.github.io/<リポジトリ名>/）に合わせる。
-          # 独自ドメインへ移すときはここだけを "/" にすればよい（設計書 8.6）
-          BASE_PATH: /${{ github.event.repository.name }}/
+          # 配信先の形に合わせて base を決める（設計書 8.6）。
+          #
+          # リポジトリ名が「<所有者>.github.io」のときだけ、Pages は直下（/）に配る。
+          # それ以外はサブパス（/<リポジトリ名>/）になる。
+          #
+          # **所有者と一致するかまで見るのは、フォークのためである。** 他の人が
+          # `mieru-app.github.io` という名前のまま fork すると、その人の環境では
+          # サブパス配信になる。名前の末尾だけで判断すると、フォークが必ず壊れる。
+          BASE_PATH: >-
+            ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner)
+                && '/'
+                || format('/{0}/', github.event.repository.name) }}
         run: npm run build
 
       - uses: actions/configure-pages@v6

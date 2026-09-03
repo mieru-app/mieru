@@ -817,7 +817,8 @@ PWA としてインストールするには HTTPS 配信が要る。Phase 2 で�
 
 #### 決定を改める（2026-09-03。OSS 配信を決めたことによる）
 
-**専用の Organization `mieru-app` を作り、`https://mieru-app.github.io/` の直下に配信する。**
+**専用の Organization `mieru-app` を作り、そこへ移す。**
+配信先は `https://mieru-app.github.io/mieru/` とする。
 
 前提が変わったのは1点だけで、そこが決定的である。**Phase 2.6 以降、この保管庫には
 利用者のトークンが入る**（8.7.2）。しかも OSS として配ると、それは**他人のトークン**である。
@@ -832,11 +833,19 @@ PWA としてインストールするには HTTPS 配信が要る。Phase 2 で�
 
 **この配信先には Mieru 以外を publish しない。** 規則ではなく、これが唯一の防御である（NF-44）。
 
+**直下（`/`）に置かないのは、パスがオリジンの一部ではないからである。**
+`https://mieru-app.github.io/mieru/` と `https://mieru-app.github.io/` は
+**同じオリジン**であり、守りたい性質（隣のページから保管庫を読まれない）は
+どちらでも等しく満たされる。**直下配信で得られるのは URL の見た目だけ**で、
+その対価にリポジトリ名を `mieru-app.github.io` にすることになる。
+OSS として公開する以上、**人が見て star し clone するのはリポジトリ名**なので、
+そちらを優先する。
+
 | 項目 | 内容 |
 |---|---|
-| 配信元 | `https://mieru-app.github.io/`（Organization `mieru-app` の Pages） |
-| リポジトリ | `mieru-app/mieru-app.github.io` |
-| `base` | **`/` のまま。** 直下配信なのでコード変更は要らない |
+| 配信元 | `https://mieru-app.github.io/mieru/`（Organization `mieru-app` の Pages） |
+| リポジトリ | `mieru-app/mieru`（`kyritk/mieru` を移管する） |
+| `base` | `/mieru/`。**Actions が配信先の形から自動で決める**ので、手で書き換えない |
 
 **移行の代償は「いま払う」。** オリジンが変わると PWA の入れ直し・作業フォルダの選び直し・
 退避データの喪失が起きる（計画書 PR-07）。**利用者が1人のうちなら1回のやり直しで済むが、
