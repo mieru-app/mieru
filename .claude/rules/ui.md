@@ -42,12 +42,18 @@ paths:
 
 ## 実機でしか分からなかったこと（Phase 2.7、設計書 7.2.1）
 
-**IMPORTANT: `mind-elixir` は指では何もできない。拡大縮小も移動も自前で用意した**
-（`src/views/Canvas/`）。ピンチは実装されておらず（`touchstart` を1つも持たない）、
-マップの移動は **`pointerType === "mouse"` で門番されている**。
-**pointer イベントを使い `touch-action: none` を自分で置き `move`/`scale` も
-公開しているのに、指では動かなかった。** ライブラリの対応可否を API の存在で
-判断しないこと。移動の判定は `pan.ts` に切り出してテストがある。
+**IMPORTANT: `mind-elixir` は実機の指では動かなかった。拡大縮小も移動も自前で用意した**
+（`src/views/Canvas/`）。**pointer イベントを使い `touch-action: none` を自分で置き
+`move`/`scale` も公開しているのに、指では動かなかった。** ライブラリの対応可否を
+API の存在で判断しないこと。移動の判定は `pan.ts` に切り出してテストがある。
+
+**訂正（2026-09-04）: 原因の説明は誤りだった。** ここには「移動は
+`pointerType === "mouse"` で門番されている」と書いてあったが、5.15.1 の実際の式は
+`!e.editable || t.button === o && t.pointerType === "mouse" || t.pointerType === "touch"`
+で、**末尾に `|| t.pointerType === "touch"` がある**（引用時に落としていた）。
+ライブラリ側は指でのパンを受け付ける。**動かなかった事実は実機で確かめたとおりだが、
+理由は未解明である。** 二重に効いている疑いがあるので、`pan.ts` を触るときは
+**指1cm に対して地図が2cm動かないか**を先に実機で見ること。
 
 - **`mind-elixir` はキャンバス要素の `className` を `"map-container"` で上書きする。**
   あの要素にクラスを書いても消える。大きさ・`touch-action: none`・`font-size: 16px` は
