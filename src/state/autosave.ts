@@ -1,7 +1,7 @@
 import type { StoreApi } from "zustand";
 
 import { serializeMarkdown } from "../core/serialize.js";
-import type { MapStore } from "../store/types.js";
+import type { HistoryStore, MapStore } from "../store/types.js";
 import { ConflictError, MapNotFoundError, SaveFailedError } from "../store/types.js";
 import type { EditorState } from "./editor.js";
 
@@ -22,6 +22,14 @@ export interface AutoSaveOptions {
   debounceMs?: number;
   /** 現在時刻。テストから固定するために差し替える */
   now?: () => number;
+  /**
+   * 保存できた内容を控える先（Phase 2.8）。
+   *
+   * **保存が成功した瞬間だけが、書かれたバイト列を確実に知っている場所である。**
+   * ここ以外から控えると、保存に失敗した内容や、保存されなかった内容が
+   * 履歴に混ざる。履歴を持たない保存先では省略する。
+   */
+  history?: HistoryStore | null;
 }
 
 export class AutoSave {
@@ -29,6 +37,7 @@ export class AutoSave {
   readonly #editor: StoreApi<EditorState>;
   readonly #debounceMs: number;
   readonly #now: () => number;
+  readonly #history: HistoryStore | null;
 
   #timer: ReturnType<typeof setTimeout> | null = null;
   #unsubscribe: (() => void) | null = null;
@@ -42,6 +51,7 @@ export class AutoSave {
     // 800ms のままでは集中して編集した1時間で上限に達する（設計書 8.7.5）
     this.#debounceMs = options.debounceMs ?? store.autosaveDelayMs ?? DEBOUNCE_MS;
     this.#now = options.now ?? Date.now;
+    this.#history = options.history ?? null;
   }
 
   /** 編集の監視を始める */
@@ -135,6 +145,7 @@ export class AutoSave {
       if (after.map?.id !== map.id) return;
 
       after.markSaved(version, at);
+      await this.#record(map.id, md, at);
       if (after.root !== rootAtSave || after.collapsedUids !== collapsedAtSave) {
         // 保存中に入った編集はまだ書かれていない
         after.setStatus({ kind: "dirty" });
@@ -142,6 +153,23 @@ export class AutoSave {
       }
     } catch (error) {
       this.#handleFailure(error, map.id);
+    }
+  }
+
+  /**
+   * 保存できた内容を履歴へ控える。
+   *
+   * **失敗しても保存の成否に影響させない。** 履歴は控えであって正本ではなく（原則1）、
+   * 控えられなかったことを理由に「保存できていない」と見せる方が有害である。
+   * IndexedDB が使えない環境（プライベートウィンドウ）では常に失敗する。
+   */
+  async #record(id: string, md: string, at: number): Promise<void> {
+    const history = this.#history;
+    if (history?.record === undefined) return;
+    try {
+      await history.record(id, md, at);
+    } catch {
+      // 握りつぶす。控えられなかったことは保存の結果を変えない
     }
   }
 

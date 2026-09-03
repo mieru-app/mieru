@@ -7,6 +7,8 @@ import { clearBackend, loadBackend } from "../../store/backend-preference.js";
 import { clearCredential, loadCredential } from "../../store/github-auth.js";
 import type { GitHubRequestInit } from "../../store/github-auth.js";
 import { FakeDirectory } from "../../store/__tests__/fake-fs.js";
+import { IdbHistoryStore } from "../../store/IdbHistoryStore.js";
+import { idbDelete, STORE_HISTORY } from "../../store/idb.js";
 import { FakeGitHub } from "../../store/__tests__/fake-github.js";
 import { useEditor } from "../editor.js";
 import { useWorkspace } from "../workspace.js";
@@ -98,7 +100,11 @@ describe("起動時のフォルダ復帰", () => {
 
     await useWorkspace.getState().init();
 
-    expect(useWorkspace.getState().backend).toEqual({ kind: "ready", backend: "local", label: "作業用" });
+    expect(useWorkspace.getState().backend).toEqual({
+      kind: "ready",
+      backend: "local",
+      label: "作業用",
+    });
     expect(useWorkspace.getState().maps.map((meta) => meta.title)).toEqual(["既存のマップ"]);
   });
 
@@ -124,7 +130,11 @@ describe("起動時のフォルダ復帰", () => {
     await useWorkspace.getState().init();
     await useWorkspace.getState().grantPermission();
 
-    expect(useWorkspace.getState().backend).toEqual({ kind: "ready", backend: "local", label: "作業用" });
+    expect(useWorkspace.getState().backend).toEqual({
+      kind: "ready",
+      backend: "local",
+      label: "作業用",
+    });
   });
 
   it("再許可を断られたら理由を残す", async () => {
@@ -148,7 +158,11 @@ describe("フォルダの選択", () => {
 
     await useWorkspace.getState().chooseFolder();
 
-    expect(useWorkspace.getState().backend).toEqual({ kind: "ready", backend: "local", label: "作業用" });
+    expect(useWorkspace.getState().backend).toEqual({
+      kind: "ready",
+      backend: "local",
+      label: "作業用",
+    });
     expect(useWorkspace.getState().maps).toHaveLength(1);
   });
 
@@ -681,5 +695,160 @@ describe("保存先を GitHub にする（2.6-4）", () => {
 
     await useWorkspace.getState().useGitHub();
     expect(useWorkspace.getState().backend).toMatchObject({ kind: "ready", backend: "github" });
+  });
+});
+
+describe("履歴（Phase 2.8）", () => {
+  /**
+   * DoD の「誤って消した枝を、履歴から取り戻せる」を、保存から復元まで通しで確かめる。
+   *
+   * **ローカルフォルダ保存先には履歴の実体が無い。** File System Access API は
+   * 上書きするだけで前の内容がどこにも残らないため、ここが切れていると
+   * 消した枝を取り戻す手段が Undo しか無く、それはアプリを閉じた時点で消える。
+   */
+  async function openWithHistory(): Promise<FakeDirectory> {
+    /*
+     * **時計を止めるのは `AutoSave` を組み立てる前でなければならない。**
+     * `AutoSave` は構築時に `Date.now` の参照を持つため、後から
+     * `useFakeTimers` を呼んでも差し替わらず、控える時刻が実時刻のままになる。
+     * すると2回の保存が同じ窓に入り、まとめられて1つの版になる。
+     */
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-04T00:00:00Z"));
+
+    const dir = reset();
+    dir.putRaw("既存のマップ.md", MD);
+    await idbDelete(STORE_HISTORY, "既存のマップ.md");
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().openMap("既存のマップ.md");
+    return dir;
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("保存した内容が版として残り、消した枝を取り戻せる", async () => {
+    await openWithHistory();
+    const branch = useEditor.getState().root?.children[0]?.uid ?? "";
+    useEditor.getState().select(branch);
+    useEditor.getState().rename("大事な枝");
+    useEditor.getState().endEdit();
+    await useWorkspace.getState().saveNow();
+
+    // 5分の窓を跨がせる。跨がないと1つの版にまとめられる（history-policy）
+    vi.setSystemTime(new Date("2026-09-04T00:06:00Z"));
+    useEditor.getState().select(branch);
+    useEditor.getState().remove();
+    await useWorkspace.getState().saveNow();
+    expect(useEditor.getState().root?.children).toHaveLength(0);
+
+    const entries = await useWorkspace.getState().listHistory();
+    expect(entries).toHaveLength(2);
+
+    // 新しい順に並ぶので、消す前の版は後ろにある
+    const before = entries[1]?.id ?? "";
+    await useWorkspace.getState().restoreVersion(before);
+    expect(useEditor.getState().root?.children[0]?.label).toBe("大事な枝");
+  });
+
+  it("復元は Undo で取り消せる。保存先へは直接書き戻さない", async () => {
+    const dir = await openWithHistory();
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("大事な枝");
+    useEditor.getState().endEdit();
+    await useWorkspace.getState().saveNow();
+
+    vi.setSystemTime(new Date("2026-09-04T00:06:00Z"));
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().remove();
+    await useWorkspace.getState().saveNow();
+
+    const wasWritten = dir.entries.get("既存のマップ.md")?.content ?? "";
+    const entries = await useWorkspace.getState().listHistory();
+    await useWorkspace.getState().restoreVersion(entries[1]?.id ?? "");
+
+    // ファイルはまだ書き換わっていない。書き戻すと取り消す手段が無くなる
+    expect(dir.entries.get("既存のマップ.md")?.content).toBe(wasWritten);
+
+    useEditor.getState().undo();
+    expect(useEditor.getState().root?.children).toHaveLength(0);
+  });
+
+  it("内容が変わらない保存では版を増やさない", async () => {
+    await openWithHistory();
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("大事な枝");
+    useEditor.getState().endEdit();
+    await useWorkspace.getState().saveNow();
+
+    // 折り畳んで戻すだけでも保存は走る。同じ内容の版が並ぶと一覧が読めなくなる
+    vi.setSystemTime(new Date("2026-09-04T01:00:00Z"));
+    useEditor.getState().toggleCollapse();
+    useEditor.getState().toggleCollapse();
+    await useWorkspace.getState().saveNow();
+
+    expect(await useWorkspace.getState().listHistory()).toHaveLength(1);
+  });
+
+  it("マップを消したら履歴も消える", async () => {
+    await openWithHistory();
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("大事な枝");
+    useEditor.getState().endEdit();
+    await useWorkspace.getState().saveNow();
+
+    await useWorkspace.getState().deleteMap("既存のマップ.md");
+
+    // 残すと、削除したはずの内容が端末に残り続ける
+    expect(await new IdbHistoryStore().list("既存のマップ.md")).toEqual([]);
+  });
+
+  it("改名しても過去の版へ辿り着ける", async () => {
+    await openWithHistory();
+    await idbDelete(STORE_HISTORY, "新しい名前.md");
+    useEditor.getState().select(useEditor.getState().root?.children[0]?.uid ?? "");
+    useEditor.getState().rename("大事な枝");
+    useEditor.getState().endEdit();
+    await useWorkspace.getState().saveNow();
+
+    await useWorkspace.getState().renameMap("既存のマップ.md", "新しい名前");
+
+    expect(useEditor.getState().map?.id).toBe("新しい名前.md");
+    expect(await useWorkspace.getState().listHistory()).toHaveLength(1);
+  });
+
+  it("履歴を持たない保存先では空を返す", async () => {
+    // GitHub は保存1回がコミット1つで、控える先が保存先の側にある（2.8-5）
+    reset();
+    await clearCredential();
+    await clearBackend();
+    const api = new FakeGitHub();
+    api.files.set("maps/既存のマップ.md", MD);
+    vi.stubGlobal("fetch", ((url: string, init: GitHubRequestInit) => {
+      if (!url.includes("/contents")) {
+        return Promise.resolve({
+          status: 200,
+          headers: { get: () => null },
+          json: () =>
+            Promise.resolve({ default_branch: "main", private: true, permissions: { push: true } }),
+        });
+      }
+      return api.fetchImpl(url, init);
+    }));
+
+    await useWorkspace.getState().connectGitHub(
+      {
+        token: "github_pat_11ABCDEFG0123456789abc",
+        repo: "kyritk/mieru-maps",
+        branch: "",
+        directory: "maps",
+      },
+      true,
+    );
+    await useWorkspace.getState().openMap("既存のマップ.md");
+
+    expect(await useWorkspace.getState().listHistory()).toEqual([]);
+    vi.unstubAllGlobals();
   });
 });

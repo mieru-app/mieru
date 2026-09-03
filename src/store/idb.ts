@@ -1,18 +1,22 @@
 /**
  * IndexedDB の最小ラッパー。
  *
- * 用途は3つに限る。
+ * 用途は4つに限る。
  * 1. 選択したフォルダのハンドルを次回起動へ引き継ぐ（設計書 8.3）
  * 2. 保存できなかった編集内容の退避（設計書 11章・原則「データを失わない」）
  * 3. GitHub 保存先の資格情報（設計書 8.7。Phase 2.6 で追加）
+ * 4. 過去の版の控え（設計書 8.8。Phase 2.8 で追加）
  *
  * `idb` などのライブラリを入れないのは、必要な操作が get/put/delete/getAll の
  * 4つだけで、依存を増やす理由が乏しいため（CLAUDE.md「依存の追加は最小限」）。
  */
 
 const DB_NAME = "mieru";
-/** 2: `settings` を追加（Phase 2.6）。既存の保管庫には触れないので移行処理は要らない */
-const DB_VERSION = 2;
+/**
+ * 2: `settings` を追加（Phase 2.6）。3: `history` を追加（Phase 2.8）。
+ * 既存の保管庫には触れないので移行処理は要らない
+ */
+const DB_VERSION = 3;
 
 /** フォルダハンドルの保管庫。キーは固定の1件のみ */
 export const STORE_HANDLES = "handles";
@@ -20,6 +24,11 @@ export const STORE_HANDLES = "handles";
 export const STORE_QUARANTINE = "quarantine";
 /** 設定の保管庫。現在は GitHub の資格情報1件のみ（`github-auth.ts`） */
 export const STORE_SETTINGS = "settings";
+/**
+ * 過去の版の控え。キーはマップの id で、1マップぶんを1件にまとめて持つ
+ * （`IdbHistoryStore`）。索引を張らずに済ませるための形である
+ */
+export const STORE_HISTORY = "history";
 
 /** IndexedDB が使えない環境（プライベートウィンドウ等）では null を返す */
 function openDatabase(): Promise<IDBDatabase | null> {
@@ -41,6 +50,7 @@ function openDatabase(): Promise<IDBDatabase | null> {
         db.createObjectStore(STORE_QUARANTINE, { keyPath: "key", autoIncrement: true });
       }
       if (!db.objectStoreNames.contains(STORE_SETTINGS)) db.createObjectStore(STORE_SETTINGS);
+      if (!db.objectStoreNames.contains(STORE_HISTORY)) db.createObjectStore(STORE_HISTORY);
     };
     request.onsuccess = () => {
       resolve(request.result);

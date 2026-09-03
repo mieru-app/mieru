@@ -25,12 +25,14 @@ import {
   verifyCredential,
 } from "../store/github-auth.js";
 import { GitHubStore } from "../store/GitHubStore.js";
+import { IdbHistoryStore } from "../store/IdbHistoryStore.js";
 import { LocalFolderStore } from "../store/LocalFolderStore.js";
 import type { QuarantinedEntry } from "../store/quarantine.js";
 import { dropQuarantined, listQuarantined } from "../store/quarantine.js";
-import type { MapStore } from "../store/types.js";
+import type { HistoryEntry, HistoryStore, MapStore } from "../store/types.js";
 import { AutoSave } from "./autosave.js";
 import { useEditor } from "./editor.js";
+import { collapsedPathsToUids } from "./tree.js";
 import type { MapIndex } from "./search.js";
 import { SearchIndex } from "./search.js";
 
@@ -64,8 +66,7 @@ export type BackendState =
 
 /** 接続を試みた結果。失敗はどの欄の問題かまで返す */
 export type GitHubConnectResult =
-  | { ok: true }
-  | { ok: false; field?: "token" | "repo" | "branch" | "directory"; message: string };
+  { ok: true } | { ok: false; field?: "token" | "repo" | "branch" | "directory"; message: string };
 
 export interface WorkspaceState {
   backend: BackendState;
@@ -121,11 +122,32 @@ export interface WorkspaceState {
   discardQuarantined(entry: QuarantinedEntry): Promise<void>;
   /** 直ちに保存する（Ctrl+S、画面を離れる前） */
   saveNow(): Promise<void>;
+
+  /**
+   * 開いているマップの過去の版を新しい順に返す（Phase 2.8、F-07）。
+   * 履歴を持たない保存先では空を返す
+   */
+  listHistory(): Promise<HistoryEntry[]>;
+  /** 版の本文を読む。差分の表示に使う */
+  readVersion(entryId: string): Promise<string | null>;
+  /**
+   * 版の中身を今の内容にする。
+   *
+   * **戻すのは枝とノートと折り畳みだけで、表題とタグは今のものを保つ。**
+   * 表題まで戻すとファイル名（id）が変わり、復元が改名を巻き込む（F-03）。
+   * Undo スタックに積むので `Ctrl+Z` で取り消せる
+   */
+  restoreVersion(entryId: string): Promise<void>;
 }
 
 /** 現在の保存先。UI からは触らせない（設計原則3） */
 let store: MapStore | null = null;
 let autoSave: AutoSave | null = null;
+/**
+ * 過去の版の控え（Phase 2.8）。保存先ごとに実体が違う。
+ * ローカルフォルダは IndexedDB、GitHub はコミットそのもの
+ */
+let history: HistoryStore | null = null;
 let unwatch: (() => void) | null = null;
 let searchIndex: SearchIndex | null = null;
 
@@ -133,6 +155,7 @@ let searchIndex: SearchIndex | null = null;
 function teardown(): void {
   autoSave?.stop();
   autoSave = null;
+  history = null;
   unwatch?.();
   unwatch = null;
   store = null;
@@ -177,7 +200,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     const current = store;
     if (current === null) return;
 
-    autoSave = new AutoSave(current, useEditor);
+    /*
+     * 履歴の実体は保存先で違う（設計書 8.8）。ローカルフォルダには履歴が無く
+     * （File System Access API は上書きするだけである）、IndexedDB で補う。
+     * GitHub は保存1回がコミット1つなので、控える先が既にある
+     */
+    history = backend === "github" ? null : new IdbHistoryStore();
+
+    autoSave = new AutoSave(current, useEditor, { history });
     autoSave.start();
     searchIndex = new SearchIndex(current);
     // 外部変更の監視は任意メソッド。GitHubStore は持たない（設計書 8.7.6）
@@ -409,6 +439,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           // 消した後で書き込みに失敗したときにマップそのものが失われる
           await store.write(newId, body, null);
           await store.remove(id);
+          // 引き継がないと、改名した瞬間に過去の版へ辿り着けなくなる
+          await history?.rename?.(id, newId);
         }
 
         await get().refresh();
@@ -441,6 +473,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
       try {
         await store.remove(id);
+        // 履歴も片付ける。残すと、削除したはずの内容が端末に残り続ける
+        await history?.forget?.(id);
         await get().refresh();
       } catch (error) {
         set({ error: `マップを削除できませんでした: ${messageOf(error)}` });
@@ -490,6 +524,53 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     async saveNow() {
       await autoSave?.flush();
+    },
+
+    async listHistory() {
+      const open = useEditor.getState().map;
+      if (history === null || open === null) return [];
+      try {
+        return await history.list(open.id);
+      } catch (error) {
+        // 控えが読めないことでマップの編集を止めない（原則1: `.md` が正）
+        set({ error: `履歴を読み込めませんでした: ${messageOf(error)}` });
+        return [];
+      }
+    },
+
+    async readVersion(entryId) {
+      const open = useEditor.getState().map;
+      if (history === null || open === null) return null;
+      try {
+        return await history.read(open.id, entryId);
+      } catch (error) {
+        set({ error: `この版を読み込めませんでした: ${messageOf(error)}` });
+        return null;
+      }
+    },
+
+    async restoreVersion(entryId) {
+      const open = useEditor.getState().map;
+      if (history === null || open === null) return;
+
+      let md: string;
+      try {
+        md = await history.read(open.id, entryId);
+      } catch (error) {
+        set({ error: `この版を読み込めませんでした: ${messageOf(error)}` });
+        return;
+      }
+
+      /*
+       * 木ごと差し替える。**保存先へ直接書き戻さない。**
+       * `replaceTree` は Undo スタックへ積むので `Ctrl+Z` で取り消せるが、
+       * ファイルを上書きしてしまうと取り消す手段が無くなる。
+       * 書き込みは、いつもどおり自動保存に任せる。
+       */
+      const { doc } = parseMarkdown(md, { id: open.id });
+      useEditor
+        .getState()
+        .replaceTree(doc.root, collapsedPathsToUids(doc.root, doc.view.collapsed));
     },
   };
 });
