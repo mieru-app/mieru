@@ -12,7 +12,7 @@
  */
 
 /** 右（狭い画面では下）に出る欄 */
-export type SidePanel = "note" | "export" | "settings" | "help";
+export type SidePanel = "note" | "export" | "settings" | "help" | "history";
 
 /** 利用者が明示的に開く欄。ノートは選択に付随して開くので含まない */
 export type Sheet = Exclude<SidePanel, "note">;

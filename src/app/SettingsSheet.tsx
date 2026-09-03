@@ -34,6 +34,11 @@ interface Props {
    * ここが唯一の行き先になる（`Toolbar.tsx`）
    */
   onShowExport: () => void;
+  /**
+   * 履歴を開く。**狭い画面ではここが唯一の行き先である**（2.8-4）。
+   * `Ctrl+H` はブラウザの履歴に取られているため、キー割り当てを持たない
+   */
+  onShowHistory: () => void;
   /** マップを開いていなければ出力するものが無い */
   canExport: boolean;
   onClose: () => void;
@@ -52,6 +57,7 @@ export function SettingsSheet({
   onConnect,
   onShowShortcuts,
   onShowExport,
+  onShowHistory,
   canExport,
   onClose,
 }: Props): React.JSX.Element {
@@ -137,6 +143,11 @@ export function SettingsSheet({
         <p className="sheet-group">テキスト出力</p>
         <button type="button" onClick={onShowExport} disabled={!canExport}>
           出力を開く（Ctrl+Shift+C）
+        </button>
+
+        <p className="sheet-group">履歴</p>
+        <button type="button" onClick={onShowHistory} disabled={!canExport}>
+          過去の版を開く
         </button>
 
         <p className="sheet-group">キー操作</p>

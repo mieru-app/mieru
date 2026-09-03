@@ -27,6 +27,8 @@ export interface CommandDeps {
   focusSearch?(): void;
   /** AI 出力パネルの開閉 */
   toggleExport?(): void;
+  /** 履歴パネルの開閉（2.8-4） */
+  toggleHistory?(): void;
   /** コマンドパレットを開く */
   openPalette?(): void;
 }
@@ -167,6 +169,10 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
 
     case "focusSearch":
       deps.focusSearch?.();
+      return;
+
+    case "toggleHistory":
+      deps.toggleHistory?.();
       return;
 
     case "toggleExport":

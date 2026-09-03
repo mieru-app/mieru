@@ -86,6 +86,11 @@ export interface WorkspaceState {
   quarantined: QuarantinedEntry[];
   /** 全文検索とタグ絞り込みの索引。突き合わせは `queryIndex` が行う */
   indexes: MapIndex[];
+  /**
+   * 履歴を持つ保存先か（Phase 2.8）。
+   * GitHub はコミットが履歴そのものなので、こちらでは控えない
+   */
+  historyAvailable: boolean;
 
   /** 起動時に呼ぶ。前回の保存先を復帰させる */
   init(): Promise<void>;
@@ -219,7 +224,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         void get().refresh();
       }) ?? null;
 
-    set({ backend: { kind: "ready", backend, label }, error: null });
+    set({
+      backend: { kind: "ready", backend, label },
+      error: null,
+      historyAvailable: history !== null,
+    });
     await get().refresh();
     set({ quarantined: await listQuarantined() });
   }
@@ -240,6 +249,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     externallyChanged: false,
     quarantined: [],
     indexes: [],
+    historyAvailable: false,
 
     async init() {
       // GitHub を使っている間も、フォルダへ戻せるかどうかは要る（設定画面が出し分ける）

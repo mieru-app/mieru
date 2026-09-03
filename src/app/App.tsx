@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ExportFormat } from "../core/export.js";
+import { serializeMarkdown } from "../core/serialize.js";
 import type { ExportScope } from "../state/commands.js";
 import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
@@ -13,11 +14,13 @@ import type { Theme } from "../state/theme.js";
 import { readTheme, THEME_KEY } from "../state/theme.js";
 import { flatten } from "../state/tree.js";
 import { isEditableMode } from "../state/view-mode.js";
+import type { HistoryEntry } from "../store/types.js";
 import { useWorkspace } from "../state/workspace.js";
 import { Canvas } from "../views/Canvas/Canvas.js";
 import { ExportPanel } from "../views/Export/ExportPanel.js";
 import { NotePanel } from "../views/NotePanel/NotePanel.js";
 import { Outline } from "../views/Outline/Outline.js";
+import { HistoryPanel } from "../views/History/HistoryPanel.js";
 import { Sidebar } from "../views/Sidebar/Sidebar.js";
 import { Source } from "../views/Source/Source.js";
 import { Banners } from "./Banners.js";
@@ -82,6 +85,9 @@ export function App(): React.JSX.Element {
   /** 新規作成に使う下敷き（2-10） */
   const [templateId, setTemplateId] = useState("blank");
   const [showPalette, setShowPalette] = useState(false);
+  /** 履歴の一覧（2.8-4）。開いている間だけ読み込む */
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [theme, setTheme] = useState<Theme>("system");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -135,6 +141,12 @@ export function App(): React.JSX.Element {
     setToast(message);
   }, []);
 
+  const historyAvailable = useWorkspace((state) => state.historyAvailable);
+  const readVersion = useCallback(
+    (entryId: string) => useWorkspace.getState().readVersion(entryId),
+    [],
+  );
+
   // 右の欄は1つだけ出す。並べると主表示領域が狭くなる（設計書 7.2）
   const toggleSheet = useCallback((next: Sheet) => {
     setSheet((current) => (current === next ? null : next));
@@ -143,6 +155,21 @@ export function App(): React.JSX.Element {
   const toggleHelp = useCallback(() => toggleSheet("help"), [toggleSheet]);
   const toggleExport = useCallback(() => toggleSheet("export"), [toggleSheet]);
   const toggleSettings = useCallback(() => toggleSheet("settings"), [toggleSheet]);
+  const toggleHistory = useCallback(() => toggleSheet("history"), [toggleSheet]);
+
+  const restoreVersion = useCallback(
+    (entryId: string) => {
+      void useWorkspace
+        .getState()
+        .restoreVersion(entryId)
+        .then(() => {
+          // 保存先へは書き戻していない。取り消せることをその場で伝える（設計書 8.8.3）
+          notify("この版に戻しました。Ctrl+Z で取り消せます");
+          toggleHistory();
+        });
+    },
+    [notify, toggleHistory],
+  );
 
   /*
    * ☰ は「一覧を出す／しまう」。
@@ -169,11 +196,52 @@ export function App(): React.JSX.Element {
   }, []);
 
   const deps = useMemo(
-    () => ({ notify, toggleHelp, toggleSidebar, focusSearch, toggleExport, openPalette }),
-    [notify, toggleHelp, toggleSidebar, focusSearch, toggleExport, openPalette],
+    () => ({
+      notify,
+      toggleHelp,
+      toggleSidebar,
+      focusSearch,
+      toggleExport,
+      toggleHistory,
+      openPalette,
+    }),
+    [notify, toggleHelp, toggleSidebar, focusSearch, toggleExport, toggleHistory, openPalette],
   );
 
   useKeymap(deps);
+
+  const historyOpen = layout.panel === "history";
+
+  /*
+   * 差分の右側になる「今の内容」。**開いている間だけ作る。**
+   * 保存されるのと同じ関数から出すので（`Source.tsx` と同じ理由）、
+   * 差分に出る内容と実際に書かれる内容が食い違わない
+   */
+  const currentMarkdown = useEditor((state) => {
+    if (!historyOpen) return "";
+    const doc = state.buildDoc();
+    return doc === null ? "" : serializeMarkdown(doc);
+  });
+
+  /** 保存が終わるたびに一覧を取り直す。控えは保存の直後に増える（設計書 8.8.1） */
+  const savedAt = status.kind === "saved" ? status.at : 0;
+
+  useEffect(() => {
+    if (!historyOpen) return undefined;
+    let alive = true;
+    setHistoryLoading(true);
+    void useWorkspace
+      .getState()
+      .listHistory()
+      .then((entries) => {
+        if (!alive) return;
+        setHistoryEntries(entries);
+        setHistoryLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [historyOpen, savedAt, map?.id]);
 
   useEffect(() => {
     void useWorkspace.getState().init();
@@ -299,6 +367,8 @@ export function App(): React.JSX.Element {
         onChangeMode={(next) => useEditor.getState().setMode(next)}
         onToggleExport={toggleExport}
         exportOpen={showExport}
+        onToggleHistory={toggleHistory}
+        historyOpen={layout.panel === "history"}
         onNewMap={() => startCreating("blank")}
         onToggleHelp={toggleHelp}
         helpOpen={layout.panel === "help"}
@@ -410,8 +480,21 @@ export function App(): React.JSX.Element {
             onConnect={(input, remember) => useWorkspace.getState().connectGitHub(input, remember)}
             onShowShortcuts={toggleHelp}
             onShowExport={toggleExport}
+            onShowHistory={toggleHistory}
             canExport={root !== null}
             onClose={toggleSettings}
+          />
+        )}
+
+        {layout.panel === "history" && (
+          <HistoryPanel
+            entries={historyEntries}
+            loading={historyLoading}
+            available={historyAvailable}
+            current={currentMarkdown}
+            onRead={readVersion}
+            onRestore={restoreVersion}
+            onClose={toggleHistory}
           />
         )}
 

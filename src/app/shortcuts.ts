@@ -137,6 +137,7 @@ const PALETTE_COMMANDS: { command: Command; title: string }[] = [
   { command: "toggleMode", title: "表示を順に切り替える（キャンバス → アウトライン → Markdown）" },
   { command: "copyForAi", title: "テキストをコピーする（見出し形式）" },
   { command: "toggleExport", title: "テキスト出力を開く（形式と範囲を選ぶ）" },
+  { command: "toggleHistory", title: "履歴を開く（過去の版を見て戻す）" },
   { command: "saveNow", title: "すぐ保存する" },
   { command: "toggleSidebar", title: "サイドバーを開閉する" },
   { command: "focusSearch", title: "全マップを検索する" },

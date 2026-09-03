@@ -15,6 +15,7 @@ import { Wordmark } from "./Wordmark.js";
  * | 外すもの | 行き先 |
  * |---|---|
  * | テキスト出力 | 設定シート（`Ctrl+Shift+C` は狭い画面では押せない） |
+ * | 履歴 | 設定シート（キー割り当てを持たない。2.8-4） |
  * | 新規作成 | サイドバーとホーム画面に元からある |
  * | キー操作 | 設定シート。物理キーボードが無ければそもそも要らない |
  *
@@ -28,12 +29,14 @@ interface Props {
   mode: ViewMode;
   onChangeMode: (mode: ViewMode) => void;
   onToggleExport: () => void;
+  onToggleHistory: () => void;
   onNewMap: () => void;
   onToggleHelp: () => void;
   onToggleSidebar: () => void;
   onToggleSettings: () => void;
   helpOpen: boolean;
   exportOpen: boolean;
+  historyOpen: boolean;
   settingsOpen: boolean;
   sidebarOpen: boolean;
   canEdit: boolean;
@@ -47,12 +50,14 @@ export function Toolbar({
   mode,
   onChangeMode,
   onToggleExport,
+  onToggleHistory,
   onNewMap,
   onToggleHelp,
   onToggleSidebar,
   onToggleSettings,
   helpOpen,
   exportOpen,
+  historyOpen,
   settingsOpen,
   sidebarOpen,
   canEdit,
@@ -110,6 +115,15 @@ export function Toolbar({
               title="Ctrl+Shift+C ですぐコピーもできます"
             >
               テキスト出力
+            </button>
+            <button
+              type="button"
+              onClick={onToggleHistory}
+              aria-pressed={historyOpen}
+              disabled={!canEdit}
+              title="過去の版を見て戻す"
+            >
+              履歴
             </button>
             <button type="button" onClick={onNewMap}>
               新規作成

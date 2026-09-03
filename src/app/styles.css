@@ -1121,6 +1121,107 @@ kbd {
  * 出力結果はそのまま貼り付ける物なので、折り返さず等幅で出す。
  * 見た目を整えるために改行位置を変えると、渡る中身と食い違う。
  */
+/*
+ * 履歴パネル（2.8-4、設計書 8.8）。
+ *
+ * **一覧と差分を同じ欄に縦に積む。** 版を選んでから別の場所へ目を移すと、
+ * どの版の差分を見ているのかが分からなくなる。
+ *
+ * 増減の色は既存の `--ok`（保存済みの緑）と `--warn-fg`（警告の橙）を使い回す。
+ * 差分のためだけに色を増やすと、同じ意味の色が2つある状態になる。
+ */
+.history-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  max-height: 12rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.history-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.history-list li:last-child button {
+  border-bottom: none;
+}
+
+.history-list button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.history-when {
+  font-variant-numeric: tabular-nums;
+}
+
+.history-note {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+}
+
+.history-list button[aria-pressed="true"] .history-note {
+  color: inherit;
+}
+
+.history-summary {
+  margin: 0 0 0.5rem;
+  font-size: 0.9em;
+}
+
+.history-summary .is-added {
+  color: var(--ok);
+}
+
+.history-summary .is-removed {
+  color: var(--warn-fg);
+}
+
+.history-diff {
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.4rem 0;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.8em;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.history-diff > div {
+  padding: 0 0.5rem;
+}
+
+/*
+ * **印は色だけに頼らない。** 行頭の `+` / `-` を常に出す。
+ * 色覚の違いや、白黒で見る場合に増減が読めなくなる
+ */
+.history-mark {
+  display: inline-block;
+  width: 1ch;
+  margin-right: 0.5ch;
+  color: var(--fg-muted);
+}
+
+.history-diff .is-added {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+
+.history-diff .is-removed {
+  background: color-mix(in srgb, var(--warn-fg) 16%, transparent);
+}
+
 .export-preview {
   margin: 0;
   padding: 0.6rem;
@@ -1458,6 +1559,11 @@ kbd {
 /* 保存される全文は、狭い画面でも折り返さない（横に送る） */
 :root[data-narrow] .source-body {
   font-size: 0.8rem;
+}
+
+/* 欄が全面を覆うので、履歴の差分に高さを回せる */
+:root[data-narrow] .history-diff {
+  max-height: none;
 }
 
 :root[data-narrow] .toolbar-icon {

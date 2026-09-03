@@ -31,7 +31,14 @@ export type Command =
   | "focusSearch"
   | "openPalette"
   /** キー割り当てを持たない。ツールバーとコマンドパレットから呼ぶ */
-  | "toggleExport";
+  | "toggleExport"
+  /**
+   * 履歴を開く（2.8-4）。キー割り当てを持たない。
+   *
+   * `Ctrl+H` はブラウザの履歴に取られており、奪うと利用者の他の操作を壊す。
+   * ツールバー・コマンドパレット・設定シートから呼ぶ
+   */
+  | "toggleHistory";
 
 /** `KeyboardEvent` のうち割り当ての判定に使う部分 */
 export interface KeyStroke {
