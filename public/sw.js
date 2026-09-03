@@ -50,8 +50,13 @@ self.addEventListener("activate", (event) => {
 async function handleNavigate(request) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(CACHE);
-    await cache.put(SCOPE.pathname, response.clone());
+    // **エラー応答を起点として蓄えない。** 配信先が変わって旧 URL が 404 になったとき、
+    // それをアプリの起点として保存すると、以後オフライン時に 404 が「アプリ」として
+    // 出続け、利用者の側から復旧できなくなる（静的ファイル側と同じ理由）。
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      await cache.put(SCOPE.pathname, response.clone());
+    }
     return response;
   } catch (error) {
     const cached = await caches.match(SCOPE.pathname);
