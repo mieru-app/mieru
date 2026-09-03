@@ -1,6 +1,6 @@
 import MindElixir from "mind-elixir";
 import type { MindElixirInstance, NodeObj, Topic } from "mind-elixir";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "mind-elixir/style";
 
 import type { MapNode } from "../../core/types.js";
@@ -14,6 +14,26 @@ import { fromMindElixir, toMindElixir } from "./adapter.js";
  * 本ツールのモデルが正であり、mind-elixir は描画と操作の面にすぎない。
  * mind-elixir 側で編集が起きたら木ごと取り込み直す（`adapter.ts`）。
  */
+
+/**
+ * 拡大縮小の刻みと範囲（2.7-4）。
+ *
+ * **`mind-elixir` は `pointerdown` / `pointermove` しか持たず、
+ * 2本指のピンチ拡大を実装していない。** 1本指の移動は動くが、
+ * 拡大縮小の手段が無いとスマートフォンでは全体も枝先も見られない。
+ * ライブラリ自身の `scale()` / `scaleFit()` を押しボタンに繋ぐ。
+ *
+ * 範囲はライブラリ既定の `scaleMin` 0.2 / `scaleMax` 1.4 に合わせてある。
+ * `scale()` は範囲外を黙って捨てるため、押しても何も起きないボタンを
+ * 出さないよう、こちら側でも同じ値を持って `disabled` にする。
+ */
+const SCALE_MIN = 0.2;
+const SCALE_MAX = 1.4;
+const SCALE_STEP = 0.2;
+
+function clampScale(value: number): number {
+  return Math.min(SCALE_MAX, Math.max(SCALE_MIN, Math.round(value * 100) / 100));
+}
 
 /** 選択やインライン編集のために、描画済みのノード要素を引く */
 function topicElement(mind: MindElixirInstance, uid: string): Topic | null {
@@ -37,6 +57,8 @@ export function Canvas(): React.JSX.Element {
   const collapsedUids = useEditor((state) => state.collapsedUids);
   const selectedUid = useEditor((state) => state.selectedUid);
   const editingUid = useEditor((state) => state.editingUid);
+  /** 押しボタンの有効・無効に使う。描画は mind-elixir 側が持つ */
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const element = container.current;
@@ -71,6 +93,7 @@ export function Canvas(): React.JSX.Element {
       editor.replaceTree(nextRoot, nextCollapsed);
     };
 
+    mind.bus.addListener("scale", (value: number) => setScale(value));
     mind.bus.addListener("operation", absorb);
     mind.bus.addListener("expandNode", absorb);
     mind.bus.addListener("selectNodes", (nodes: NodeObj[]) => {
@@ -115,5 +138,53 @@ export function Canvas(): React.JSX.Element {
     if (element !== null) mind.editTopic(element);
   }, [editingUid]);
 
-  return <div className="canvas" ref={container} />;
+  const zoom = useCallback((delta: number) => {
+    const mind = instance.current;
+    if (mind === null) return;
+    const next = clampScale(mind.scaleVal + delta);
+    mind.scale(next);
+    // scale() は範囲外を黙って捨てる。捨てられた場合に印だけ動かさないよう、
+    // 実際に反映された値を読み直す
+    setScale(mind.scaleVal);
+  }, []);
+
+  const fit = useCallback(() => {
+    const mind = instance.current;
+    if (mind === null) return;
+    mind.scaleFit();
+    setScale(mind.scaleVal);
+  }, []);
+
+  return (
+    <div className="canvas">
+      {/*
+       * **クラス名を付けない。** mind-elixir はこの要素の className を
+       * "map-container" で上書きするため、付けても消える。
+       * 大きさ（100%）・touch-action: none・font-size: 16px は
+       * 向こうの .map-container が持っている（mind-elixir/style）
+       */}
+      <div ref={container} />
+      <div className="canvas-zoom" role="group" aria-label="拡大縮小">
+        <button
+          type="button"
+          aria-label="拡大"
+          onClick={() => zoom(SCALE_STEP)}
+          disabled={scale >= SCALE_MAX}
+        >
+          ＋
+        </button>
+        <button
+          type="button"
+          aria-label="縮小"
+          onClick={() => zoom(-SCALE_STEP)}
+          disabled={scale <= SCALE_MIN}
+        >
+          －
+        </button>
+        <button type="button" aria-label="全体を表示" onClick={fit}>
+          ⛶
+        </button>
+      </div>
+    </div>
+  );
 }

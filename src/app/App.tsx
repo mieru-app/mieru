@@ -5,6 +5,8 @@ import type { ExportScope } from "../state/commands.js";
 import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
 import { IMPORT_PROMPT } from "../state/import-prompt.js";
+import type { Sheet } from "../state/layout.js";
+import { keepSidebarAfterOpen, resolveLayout } from "../state/layout.js";
 import { collectTags, queryIndex } from "../state/search.js";
 import { TEMPLATES, templateMarkdown } from "../state/templates.js";
 import type { Theme } from "../state/theme.js";
@@ -28,6 +30,7 @@ import { StartScreen } from "./StartScreen.js";
 import { StatusBar } from "./StatusBar.js";
 import { Toolbar } from "./Toolbar.js";
 import { useKeymap } from "./useKeymap.js";
+import { isNarrowNow, useNarrow } from "./useNarrow.js";
 
 /**
  * 画面全体の組み立て。
@@ -59,20 +62,47 @@ export function App(): React.JSX.Element {
   const selectedUid = useEditor((state) => state.selectedUid);
 
   const [toast, setToast] = useState<string | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
-  const [showExport, setShowExport] = useState(false);
+  /**
+   * 明示的に開いた欄。**同時に1つだけに限る**（設計書 7.2）。
+   * 真偽値を3つ持つと排他を手で保つことになり、増えるたびに条件が伸びる
+   */
+  const [sheet, setSheet] = useState<Sheet | null>(null);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("heading");
   const [exportScope, setExportScope] = useState<ExportScope>("whole");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // 狭い画面で一覧を開いた状態から始めると、起動した瞬間に全面が覆われる
+  const [sidebarOpen, setSidebarOpen] = useState(() => !isNarrowNow());
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   /** 新規作成に使う下敷き（2-10） */
   const [templateId, setTemplateId] = useState("blank");
   const [showPalette, setShowPalette] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState<Theme>("system");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * 何を画面に出すか。**判断は `src/state/layout.ts` にある**（規約「層の分け方」）。
+   * ここでするのは幅を測ることと、決まった結果を描くことだけである
+   */
+  const narrow = useNarrow();
+  const layout = resolveLayout({
+    narrow,
+    sidebarOpen,
+    sheet,
+    hasSelection: selected !== null,
+  });
+
+  /*
+   * 幅を CSS からも見えるようにする（2.7-1）。
+   *
+   * **境目を持つのは `NARROW_MAX_WIDTH` ひとつだけにする。** メディアクエリで
+   * 同じ値を書くと、片方だけ直したときに JS と CSS がずれる。
+   * `StartScreen` は `.app` の外に描かれるため、印は `:root` に付ける。
+   */
+  useEffect(() => {
+    if (narrow) document.documentElement.dataset["narrow"] = "";
+    else delete document.documentElement.dataset["narrow"];
+  }, [narrow]);
 
   // 保存済みの配色を読む。壊れた値でも既定へ倒れる（`readTheme`）
   useEffect(() => {
@@ -95,33 +125,33 @@ export function App(): React.JSX.Element {
   }, []);
 
   // 右の欄は1つだけ出す。並べると主表示領域が狭くなる（設計書 7.2）
-  const toggleHelp = useCallback(() => {
-    setShowExport(false);
-    setShowSettings(false);
-    setShowHelp((open) => !open);
+  const toggleSheet = useCallback((next: Sheet) => {
+    setSheet((current) => (current === next ? null : next));
   }, []);
 
-  const toggleExport = useCallback(() => {
-    setShowHelp(false);
-    setShowSettings(false);
-    setShowExport((open) => !open);
-  }, []);
+  const toggleHelp = useCallback(() => toggleSheet("help"), [toggleSheet]);
+  const toggleExport = useCallback(() => toggleSheet("export"), [toggleSheet]);
+  const toggleSettings = useCallback(() => toggleSheet("settings"), [toggleSheet]);
 
-  const toggleSettings = useCallback(() => {
-    setShowHelp(false);
-    setShowExport(false);
-    setShowSettings((open) => !open);
-  }, []);
-
+  /*
+   * ☰ は「一覧を出す／しまう」。
+   *
+   * 狭い画面では欄が一覧より前に出るため（`resolveLayout`）、欄を閉じないと
+   * **押しても何も変わらない。** 印（`aria-pressed`）は出ていない側を指しているのに
+   * 押すと逆へ倒れる、という状態も避けるため、`sidebarOpen` ではなく
+   * **いま出ているか**を基準に反転させる。広い画面では両者は一致する。
+   */
   const toggleSidebar = useCallback(() => {
-    setSidebarOpen((open) => !open);
-  }, []);
+    if (narrow) setSheet(null);
+    setSidebarOpen(!layout.sidebar);
+  }, [narrow, layout.sidebar]);
 
   // 検索は畳んだサイドバーの中にある。開かずに入力位置だけ移しても何も見えない
   const focusSearch = useCallback(() => {
+    if (narrow) setSheet(null);
     setSidebarOpen(true);
     requestAnimationFrame(() => searchRef.current?.select());
-  }, []);
+  }, [narrow]);
 
   const openPalette = useCallback(() => {
     setShowPalette((open) => !open);
@@ -161,6 +191,7 @@ export function App(): React.JSX.Element {
 
   // 木や選択が動けば出力も変わる。開いている間だけ作り直す。
   // exportAs はストアから直に読むため、root と selectedUid は再計算の契機として渡している
+  const showExport = layout.panel === "export";
   const exported = useMemo(
     () => (showExport ? exportAs(exportFormat, exportScope) : null),
     [showExport, exportFormat, exportScope, root, selectedUid],
@@ -187,6 +218,18 @@ export function App(): React.JSX.Element {
     setCreating(true);
   }, []);
 
+  /**
+   * マップを開く。狭い画面では一覧が主表示を覆っているため、
+   * 残したままだと**開いた先が見えない**（`keepSidebarAfterOpen`）
+   */
+  const openMap = useCallback(
+    (id: string) => {
+      if (!keepSidebarAfterOpen(narrow)) setSidebarOpen(false);
+      void useWorkspace.getState().openMap(id);
+    },
+    [narrow],
+  );
+
   /** ホームへ戻る。作成中なら作成をやめる（F-38） */
   const goHome = useCallback(() => {
     setCreating(false);
@@ -206,10 +249,10 @@ export function App(): React.JSX.Element {
     (item: PaletteItem) => {
       setShowPalette(false);
       if (item.kind === "command") void runCommand(item.command, { copyText, ...deps });
-      if (item.kind === "map") void useWorkspace.getState().openMap(item.id);
+      if (item.kind === "map") openMap(item.id);
       if (item.kind === "template") startCreating(item.id);
     },
-    [deps, startCreating],
+    [deps, startCreating, openMap],
   );
 
   if (backend.kind !== "ready") {
@@ -218,9 +261,7 @@ export function App(): React.JSX.Element {
         backend={backend}
         onChoose={() => void useWorkspace.getState().chooseFolder()}
         onGrant={() => void useWorkspace.getState().grantPermission()}
-        onConnect={(input, remember) =>
-          useWorkspace.getState().connectGitHub(input, remember)
-        }
+        onConnect={(input, remember) => useWorkspace.getState().connectGitHub(input, remember)}
       />
     );
   }
@@ -235,22 +276,23 @@ export function App(): React.JSX.Element {
   };
 
   return (
-    <div className={`app${sidebarOpen ? "" : " is-sidebar-closed"}`}>
+    <div className={`app${layout.sidebar ? "" : " is-sidebar-closed"}`}>
       <Toolbar
         title={map?.meta.title ?? "マップを開いてください"}
         onHome={goHome}
         mode={mode}
         canEdit={root !== null}
-        sidebarOpen={sidebarOpen}
+        narrow={narrow}
+        sidebarOpen={layout.sidebar}
         onToggleSidebar={toggleSidebar}
         onChangeMode={(next) => useEditor.getState().setMode(next)}
         onToggleExport={toggleExport}
         exportOpen={showExport}
         onNewMap={() => startCreating("blank")}
         onToggleHelp={toggleHelp}
-        helpOpen={showHelp}
+        helpOpen={layout.panel === "help"}
         onToggleSettings={toggleSettings}
-        settingsOpen={showSettings}
+        settingsOpen={layout.panel === "settings"}
       />
 
       <Banners
@@ -265,7 +307,7 @@ export function App(): React.JSX.Element {
       />
 
       <div className="workarea">
-        {sidebarOpen && (
+        {layout.sidebar && (
           <Sidebar
             hits={hits}
             tags={tags}
@@ -284,7 +326,7 @@ export function App(): React.JSX.Element {
                   : [...current, tag],
               )
             }
-            onOpen={(id) => void useWorkspace.getState().openMap(id)}
+            onOpen={openMap}
             onRename={(id, title) => void useWorkspace.getState().renameMap(id, title)}
             onDelete={confirmDelete}
           />
@@ -318,7 +360,7 @@ export function App(): React.JSX.Element {
           )}
         </main>
 
-        {showExport && (
+        {layout.panel === "export" && (
           <ExportPanel
             format={exportFormat}
             scope={exportScope}
@@ -340,7 +382,7 @@ export function App(): React.JSX.Element {
           />
         )}
 
-        {showSettings && (
+        {layout.panel === "settings" && (
           <SettingsSheet
             backend={backend}
             github={github}
@@ -351,20 +393,23 @@ export function App(): React.JSX.Element {
             onUseLocalFolder={() => void useWorkspace.getState().useLocalFolder()}
             onUseGitHub={() => void useWorkspace.getState().useGitHub()}
             onDisconnectGitHub={() => void useWorkspace.getState().disconnectGitHub()}
-            onConnect={(input, remember) =>
-              useWorkspace.getState().connectGitHub(input, remember)
-            }
+            onConnect={(input, remember) => useWorkspace.getState().connectGitHub(input, remember)}
             onShowShortcuts={toggleHelp}
+            onShowExport={toggleExport}
+            canExport={root !== null}
             onClose={toggleSettings}
           />
         )}
 
-        {showHelp && <ShortcutSheet onClose={toggleHelp} />}
+        {layout.panel === "help" && <ShortcutSheet onClose={toggleHelp} />}
 
-        {selected !== null && !showHelp && !showExport && !showSettings && (
+        {layout.panel === "note" && selected !== null && (
           <NotePanel
             node={selected}
             linkCandidates={linkCandidates}
+            // 狭い画面ではノート欄が主表示に重なるため、閉じる手段が要る。
+            // 広い画面では列として並ぶので閉じるものがない
+            onClose={narrow ? () => useEditor.getState().select(null) : undefined}
             onChange={(note) => useEditor.getState().writeNote(note)}
             onChangeEmoji={(emoji) => useEditor.getState().setEmoji(emoji)}
             onAddLink={(label) => useEditor.getState().addLink(label)}

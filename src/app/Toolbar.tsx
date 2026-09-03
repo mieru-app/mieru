@@ -4,6 +4,17 @@ import { Wordmark } from "./Wordmark.js";
 /**
  * ツールバー1本。モードは2つだけに限る（原則4・設計書 7.2）。
  * ここに機能を足したくなったら、まず設計書 2.2「対象外」を読むこと。
+ *
+ * **狭い画面では8個が入らない**（2.7-1）。残すのは
+ * ☰・ロゴ・表示切替・⚙ の4つで、外した3つは行き先がある。
+ *
+ * | 外すもの | 行き先 |
+ * |---|---|
+ * | テキスト出力 | 設定シート（`Ctrl+Shift+C` は狭い画面では押せない） |
+ * | 新規作成 | サイドバーとホーム画面に元からある |
+ * | キー操作 | 設定シート。物理キーボードが無ければそもそも要らない |
+ *
+ * マップ名も外す。切り替えの左右に挟まれて、数文字で切れて意味をなさない。
  */
 
 interface Props {
@@ -22,6 +33,8 @@ interface Props {
   settingsOpen: boolean;
   sidebarOpen: boolean;
   canEdit: boolean;
+  /** 1ペインしか置けない画面か。測るのは `useNarrow` */
+  narrow: boolean;
 }
 
 export function Toolbar({
@@ -39,6 +52,7 @@ export function Toolbar({
   settingsOpen,
   sidebarOpen,
   canEdit,
+  narrow,
 }: Props): React.JSX.Element {
   return (
     <header className="toolbar">
@@ -62,7 +76,7 @@ export function Toolbar({
       >
         <Wordmark label="" />
       </button>
-      <span className="toolbar-title">{title}</span>
+      {!narrow && <span className="toolbar-title">{title}</span>}
 
       <div className="toolbar-actions">
         <div className="segmented" role="group" aria-label="表示の切り替え">
@@ -84,21 +98,25 @@ export function Toolbar({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleExport}
-          aria-pressed={exportOpen}
-          disabled={!canEdit}
-          title="Ctrl+Shift+C ですぐコピーもできます"
-        >
-          テキスト出力
-        </button>
-        <button type="button" onClick={onNewMap}>
-          新規作成
-        </button>
-        <button type="button" onClick={onToggleHelp} aria-pressed={helpOpen} title="?">
-          キー操作
-        </button>
+        {!narrow && (
+          <>
+            <button
+              type="button"
+              onClick={onToggleExport}
+              aria-pressed={exportOpen}
+              disabled={!canEdit}
+              title="Ctrl+Shift+C ですぐコピーもできます"
+            >
+              テキスト出力
+            </button>
+            <button type="button" onClick={onNewMap}>
+              新規作成
+            </button>
+            <button type="button" onClick={onToggleHelp} aria-pressed={helpOpen} title="?">
+              キー操作
+            </button>
+          </>
+        )}
         <button
           type="button"
           className="toolbar-icon"

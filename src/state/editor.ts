@@ -42,7 +42,8 @@ export interface EditorActions {
   /** マップを閉じる */
   close(): void;
 
-  select(uid: string): void;
+  /** 選択を移す。`null` で選択を外す（狭い画面でノート欄を閉じるのに使う） */
+  select(uid: string | null): void;
   beginEdit(uid: string): void;
   endEdit(): void;
   setMode(mode: ViewMode): void;

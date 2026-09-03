@@ -72,6 +72,20 @@ body,
   margin: 0;
 }
 
+/*
+ * iOS Safari では URL バーの分だけ 100% が「実際に見えている高さ」より大きく、
+ * ステータスバーが画面の外へ出る。動的ビューポート単位で上書きする（2.7-1）。
+ * 対応していない環境では上の 100% がそのまま残る。
+ */
+body {
+  height: 100dvh;
+  /*
+   * 引っ張って更新を止める。キャンバスを下へ動かす操作と見分けが付かず、
+   * 枝を動かしたつもりでアプリが再読み込みされる
+   */
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--bg);
   color: var(--fg);
@@ -377,6 +391,11 @@ button.primary {
   min-height: 0;
   position: relative;
   overflow: hidden;
+  /*
+   * 主表示の中の重なりを外へ漏らさない。拡大縮小の押しボタンが
+   * 覆いかぶさるノート欄や設定シートより前に出ないようにする
+   */
+  isolation: isolate;
 }
 
 .main-empty {
@@ -385,8 +404,43 @@ button.primary {
 }
 
 .canvas {
+  position: relative;
   width: 100%;
   height: 100%;
+}
+
+/*
+ * 中の要素にクラスは書けない。mind-elixir が className を "map-container" で
+ * 上書きするためである（`Canvas.tsx`）。大きさと `touch-action: none` は
+ * 向こうの CSS が持っているので、こちらで指定する必要もない。
+ * **指でのドラッグは向こうの pointermove と pointer capture で動く。**
+ */
+
+/*
+ * 拡大縮小（2.7-4）。mind-elixir は2本指のピンチを実装していないため、
+ * ライブラリ自身の scale() / scaleFit() を押しボタンで呼ぶ（`Canvas.tsx`）
+ */
+.canvas-zoom {
+  position: absolute;
+  z-index: 1;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.canvas-zoom button {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg-muted);
+  line-height: 1;
+}
+
+.canvas-zoom button:hover:not(:disabled) {
+  color: var(--fg);
 }
 
 .outline {
@@ -466,6 +520,13 @@ button.primary {
 /* 説明欄の名前。入力欄の字下げに揃える */
 .notepanel-note-label {
   padding: 0.5rem 0.75rem 0;
+}
+
+/* 狭い画面でノート欄が主表示に重なるときだけ出る（`App.tsx`） */
+.notepanel-close {
+  border: none;
+  padding: 0.1rem 0.45rem;
+  color: var(--fg-muted);
 }
 
 .notepanel-emoji {
@@ -1248,4 +1309,108 @@ kbd {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
+}
+
+/* ── 狭い画面 ───────────────────────────────────────────── */
+
+/*
+ * スマートフォン対応（2.7-1）。
+ *
+ * **境目の幅を持つのは `src/state/layout.ts` の `NARROW_MAX_WIDTH` だけにする。**
+ * ここでメディアクエリに同じ値を書くと、片方だけ直したときに黙ってずれる。
+ * 幅は `App.tsx` が測って `:root[data-narrow]` を付ける。
+ *
+ * 一覧 15rem と欄 20rem は固定幅で、足すと 560px ある。スマートフォンは
+ * 360〜390px なので、列として並べたままでは主表示に回る幅が残らない。
+ * **列をやめて、開いたものを主表示の上に重ねる。**
+ *
+ * 主表示（.main）は覆われている間も外さない。外すとキャンバスの
+ * mind-elixir が破棄され、拡大率と位置が失われる（`layout.ts`）。
+ */
+
+:root[data-narrow] .workarea,
+:root[data-narrow] .workarea:has(.notepanel),
+:root[data-narrow] .workarea:has(.sheet),
+:root[data-narrow] .is-sidebar-closed .workarea,
+:root[data-narrow] .is-sidebar-closed .workarea:has(.notepanel),
+:root[data-narrow] .is-sidebar-closed .workarea:has(.sheet) {
+  position: relative;
+  grid-template-columns: 1fr;
+}
+
+/* 一覧と、テキスト出力・設定・キー操作は全面を覆う */
+:root[data-narrow] .sidebar,
+:root[data-narrow] .sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--bg);
+  border: none;
+}
+
+/*
+ * ノート欄だけは下から半分だけ出す。
+ * 全面を覆うと、いま触った枝が見えないまま説明を書くことになる
+ */
+:root[data-narrow] .notepanel {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  height: 55%;
+  background: var(--bg);
+  border-left: none;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgb(0 0 0 / 12%);
+}
+
+/* 拡大縮小の押しボタンがノート欄に隠れないよう、上へ逃がす */
+:root[data-narrow] .workarea:has(.notepanel) .canvas-zoom {
+  bottom: calc(55% + 0.75rem);
+}
+
+/*
+ * 指の当たり判定。14px の字に 0.25rem の余白では 26px しかなく、
+ * 押したつもりが外れる。44px は iOS / Android 双方の目安である
+ */
+:root[data-narrow] button {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.8rem;
+}
+
+:root[data-narrow] .toolbar {
+  gap: 0.4rem;
+  padding: 0 0.5rem;
+}
+
+:root[data-narrow] .toolbar-actions {
+  gap: 0.3rem;
+}
+
+/* 表示切替は残す唯一の主要な操作なので、字は削らず余白だけ詰める */
+:root[data-narrow] .segmented button {
+  padding: 0.4rem 0.55rem;
+}
+
+:root[data-narrow] .toolbar-icon {
+  min-width: 2.75rem;
+}
+
+/*
+ * **iOS Safari は 16px 未満の入力欄に合焦するとページを拡大する。**
+ * 本文は 14px なので、`font: inherit` の入力欄が全部その対象になる。
+ * 拡大されたままになり、以後どの画面も横にはみ出す
+ */
+:root[data-narrow] input,
+:root[data-narrow] textarea,
+:root[data-narrow] select {
+  font-size: 16px;
+}
+
+/* キー操作の案内。物理キーボードが無い画面では読む意味がない */
+:root[data-narrow] .statusbar-hint {
+  display: none;
+}
+
+:root[data-narrow] .startscreen {
+  padding: 2rem 1rem;
 }

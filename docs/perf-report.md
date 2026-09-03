@@ -87,7 +87,7 @@ NF-01 が満たせないとすれば原因は mind-elixir の再描画であっ�
 
 ### 実測の手順
 
-1. 配信先（https://kyritk.github.io/mieru/）を開く。ローカルで見るなら
+1. 配信先（https://mieru-app.github.io/mieru/）を開く。ローカルで見るなら
    `npm run build` して `npm run preview`
 2. 1000ノードのマップを用意する。`scripts/perf.test.ts` の `bigMarkdown()` が生成する
    Markdown をそのまま `.md` として保存先フォルダへ置けばよい

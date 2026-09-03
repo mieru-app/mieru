@@ -29,6 +29,13 @@ interface Props {
     remember: boolean,
   ) => Promise<GitHubConnectResult>;
   onShowShortcuts: () => void;
+  /**
+   * テキスト出力を開く。狭い画面ではツールバーから外れるため、
+   * ここが唯一の行き先になる（`Toolbar.tsx`）
+   */
+  onShowExport: () => void;
+  /** マップを開いていなければ出力するものが無い */
+  canExport: boolean;
   onClose: () => void;
 }
 
@@ -44,6 +51,8 @@ export function SettingsSheet({
   onDisconnectGitHub,
   onConnect,
   onShowShortcuts,
+  onShowExport,
+  canExport,
   onClose,
 }: Props): React.JSX.Element {
   const [connecting, setConnecting] = useState(false);
@@ -124,6 +133,11 @@ export function SettingsSheet({
             </button>
           ))}
         </div>
+
+        <p className="sheet-group">テキスト出力</p>
+        <button type="button" onClick={onShowExport} disabled={!canExport}>
+          出力を開く（Ctrl+Shift+C）
+        </button>
 
         <p className="sheet-group">キー操作</p>
         <button type="button" onClick={onShowShortcuts}>

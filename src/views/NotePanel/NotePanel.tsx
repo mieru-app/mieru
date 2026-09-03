@@ -20,6 +20,11 @@ interface Props {
   onChange: (note: string) => void;
   onChangeEmoji: (emoji: string) => void;
   onAddLink: (label: string) => void;
+  /**
+   * 閉じる手段。狭い画面ではノート欄が主表示に重なるため要る。
+   * 広い画面では列として並ぶので渡らない（`App.tsx`）
+   */
+  onClose?: (() => void) | undefined;
 }
 
 export function NotePanel({
@@ -28,6 +33,7 @@ export function NotePanel({
   onChange,
   onChangeEmoji,
   onAddLink,
+  onClose,
 }: Props): React.JSX.Element {
   const [draft, setDraft] = useState(node.note ?? "");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -52,6 +58,11 @@ export function NotePanel({
         >
           {node.emoji ?? "＋"}
         </button>
+        {onClose !== undefined && (
+          <button type="button" className="notepanel-close" aria-label="ノートを閉じる" onClick={onClose}>
+            ✕
+          </button>
+        )}
       </div>
 
       {showEmoji && (
