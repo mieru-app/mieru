@@ -34,6 +34,23 @@ paths:
 | `GitHubStore` | Blob SHA。git の blob ハッシュそのもので、内容だけで決まる |
 | `S3Store` / `SyncingStore` | S3 の ETag |
 
+## GitHub Contents API の落とし穴（実測。設計書 8.7.4〜8.7.7）
+
+事前検証の記録は `docs/github-api-verification.md`。**どれも実際に叩くまで分からなかった**ので、
+`GitHubStore` を触るときは先にここを読むこと。
+
+- **存在しないパスへ `sha` 付きで PUT すると、無視して 201 で作られる。**
+  設計書 8.1 の契約表5行目（`MapNotFoundError`）が GitHub 単体では満たせない。
+  **保存の前に `If-None-Match` を付けた GET を1回入れて 304/200/404 で分ける**（メモ 4.1）
+- **セカンダリ制限「内容を作る要求は 500/時」。** 自動保存の 800ms をそのまま使えない。
+  `GitHubStore` の `autosaveDelayMs` が 8 秒なのはこれが理由である
+- 409 の応答本文に現在の内容は入らない／GET には60秒のキャッシュが付く／
+  `list()` は 1+N リクエストになる／`btoa()` は日本語で例外になる（`base64.ts` を使う）
+- **`GitHubStore` は `watch()` を持たない**（設計書 8.7.7）。競合検出は `write()` が担う
+
+**保存先の選択（`backend-preference.ts`）と資格情報は別に持つ。**
+一緒にすると、保存先を切り替えるたびにトークンを入れ直させることになる。
+
 ## 資格情報
 
 **トークン文字列を持つのは `src/store/github-auth.ts` だけにする。**
