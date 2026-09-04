@@ -185,6 +185,37 @@ export function indent(root: MapNode, uid: string): EditResult {
   });
 }
 
+
+/**
+ * 親子を反転する（`Ctrl+Shift+↑`、設計書 7.4）。
+ * 選択したノードが親のいた位置へ上がり、親はその先頭の子として下がる。
+ *
+ * **`outdent` とは別物である。** `outdent` は自分だけを 1 つ上げて後続の兄弟を
+ * 引き取るが、こちらは**親と入れ替わる**。親は残りの子（自分の兄弟）を
+ * 連れたまま下がるので、反転しても枝の中身は失われない。
+ *
+ * **親がルートのときは何もしない。** ルートのラベルはマップの題名であり
+ * （`parse.ts` の `title: data.title ?? root.label`）、ここで反転させると
+ * 構造を組み替えたつもりで題名が変わる。題名の変更は改名で行う。
+ */
+export function swapWithParent(root: MapNode, uid: string): EditResult {
+  return edit(root, uid, ({ node, parent }, next) => {
+    if (parent === null) return null;
+    const grandparent = locate(next, parent.uid);
+    // 親がルート。ここで入れ替えるとルート自体が変わる
+    if (grandparent === null || grandparent.parent === null) return null;
+
+    // 親の子から自分を外してから、祖父の下で親と席を入れ替える
+    parent.children.splice(parent.children.indexOf(node), 1);
+    grandparent.parent.children.splice(grandparent.index, 1, node);
+
+    // 親は自分の先頭の子になる。末尾に付けると、子が多い親では
+    // 入れ替えた相手が画面の外へ出てしまい、何が起きたのか分からない
+    node.children.unshift(parent);
+    return node.uid;
+  });
+}
+
 /** 兄弟間で順序を入れ替える。@param delta -1 で上、+1 で下 */
 export function moveSibling(root: MapNode, uid: string, delta: -1 | 1): EditResult {
   return edit(root, uid, ({ node, parent, index }) => {
@@ -199,22 +230,75 @@ export function moveSibling(root: MapNode, uid: string, delta: -1 | 1): EditResu
 }
 
 /**
- * 別のノードの配下へ移す（ドラッグ&ドロップ）。
- * 自分の子孫へは移せない（木が壊れるため）。
+ * 落とす位置（2.9-3）。行のどこで離したかに対応する。
+ * `inside` は相手の子に、`before` / `after` は相手の兄弟になる。
  */
-export function moveTo(root: MapNode, uid: string, newParentUid: string): EditResult {
-  return edit(root, uid, ({ node, parent, index }, next) => {
+export type DropPosition = "before" | "after" | "inside";
+
+/**
+ * その移動が成立するか。
+ *
+ * **落とす前に判定できることが要る。** 成立しない相手に印を出してしまうと、
+ * 利用者は落とせると思って離し、何も起きない理由が分からない。
+ */
+export function canDrop(
+  root: MapNode,
+  uid: string,
+  targetUid: string,
+  position: DropPosition,
+): boolean {
+  if (uid === targetUid) return false;
+
+  const from = locate(root, uid);
+  // ルートは動かせない。ルートのラベルはマップの題名である
+  if (from === null || from.parent === null) return false;
+
+  const to = locate(root, targetUid);
+  if (to === null) return false;
+  // ルートに兄弟は作れない
+  if (position !== "inside" && to.parent === null) return false;
+
+  // 自分の子孫の中へは入れない。木が輪になる
+  return !flatten(from.node).some((descendant) => descendant.uid === targetUid);
+}
+
+/**
+ * 相手を基準に位置を指定して移す（ドラッグ&ドロップ）。
+ * 成立しない移動は何もしない。判定は `canDrop` と同じものを使う。
+ */
+export function moveNode(
+  root: MapNode,
+  uid: string,
+  targetUid: string,
+  position: DropPosition,
+): EditResult {
+  if (!canDrop(root, uid, targetUid, position)) return unchanged(root, uid);
+
+  return edit(root, uid, ({ node, parent }, next) => {
     if (parent === null) return null;
-    // 自分自身と自分の子孫は移動先にできない
-    if (flatten(node).some((descendant) => descendant.uid === newParentUid)) return null;
+    parent.children.splice(parent.children.indexOf(node), 1);
 
-    const destination = locate(next, newParentUid);
-    if (destination === null) return null;
+    // **外してから相手の位置を取り直す。** 先に取った添字は、
+    // 自分を外した分だけずれていることがある
+    const to = locate(next, targetUid);
+    if (to === null) return null;
 
-    parent.children.splice(index, 1);
-    destination.node.children.push(node);
+    if (position === "inside") {
+      to.node.children.push(node);
+    } else {
+      if (to.parent === null) return null;
+      to.parent.children.splice(position === "after" ? to.index + 1 : to.index, 0, node);
+    }
     return node.uid;
   });
+}
+
+/**
+ * 別のノードの配下へ移す。キャンバスのドラッグ&ドロップが使う。
+ * 位置指定の無い `moveNode` であり、末尾へ足す。
+ */
+export function moveTo(root: MapNode, uid: string, newParentUid: string): EditResult {
+  return moveNode(root, uid, newParentUid, "inside");
 }
 
 /**

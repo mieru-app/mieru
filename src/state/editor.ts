@@ -10,16 +10,18 @@ import {
   indent,
   locate,
   moveSibling,
+  moveNode,
   moveTo,
   navigate,
   outdent,
+  swapWithParent,
   removeNode,
   setEmoji,
   setLabel,
   setNote,
   toggleCollapsed,
 } from "./tree.js";
-import type { Direction } from "./tree.js";
+import type { Direction, DropPosition } from "./tree.js";
 import type { EditorSnapshot, OpenMap, SaveStatus, ViewMode } from "./types.js";
 import { isEditableMode } from "./view-mode.js";
 
@@ -61,8 +63,12 @@ export interface EditorActions {
   addLink(target: string): void;
   outdent(): void;
   indent(): void;
+  /** 親子を反転する（2.9-2）。選択中のノードが親の位置へ上がる */
+  swapWithParent(): void;
   reorder(delta: -1 | 1): void;
   reparent(uid: string, newParentUid: string): void;
+  /** 掴んで落とした結果を反映する（2.9-3）。位置の意味は `tree.ts` の `DropPosition` */
+  dropNode(uid: string, targetUid: string, position: DropPosition): void;
   toggleCollapse(): void;
   /**
    * 木ごと差し替える。キャンバス（mind-elixir）側での編集を取り込むために使う。
@@ -286,11 +292,28 @@ export const useEditor = create<EditorState>((set, get) => {
     indent() {
       change((root, uid) => indent(root, uid));
     },
+    swapWithParent() {
+      change((root, uid) => swapWithParent(root, uid));
+    },
     reorder(delta) {
       change((root, uid) => moveSibling(root, uid, delta));
     },
     reparent(uid, newParentUid) {
       change((root) => moveTo(root, uid, newParentUid));
+    },
+    dropNode(uid, targetUid, position) {
+      const before = get().root;
+      change((root) => moveNode(root, uid, targetUid, position));
+      // 成立しない移動では木が変わらない。畳みにも触らない
+      if (get().root === before) return;
+
+      // **畳まれた枝の中へ落としたら開く。** そのままだと落とした行が
+      // 画面から消え、移動できなかったのか隠れたのかが区別できない
+      if (position === "inside" && get().collapsedUids.has(targetUid)) {
+        const opened = new Set(get().collapsedUids);
+        opened.delete(targetUid);
+        set({ collapsedUids: opened });
+      }
     },
 
     toggleCollapse() {

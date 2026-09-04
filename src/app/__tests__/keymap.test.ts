@@ -26,6 +26,7 @@ describe("設計書 7.4 の割り当て", () => {
     [stroke("ArrowRight"), "moveRight"],
     [stroke("ArrowUp", { ctrlKey: true }), "reorderUp"],
     [stroke("ArrowDown", { ctrlKey: true }), "reorderDown"],
+    [stroke("ArrowUp", { ctrlKey: true, shiftKey: true }), "swapWithParent"],
     [stroke("/", { ctrlKey: true }), "toggleCollapse"],
     [stroke("z", { ctrlKey: true }), "undo"],
     [stroke("z", { ctrlKey: true, shiftKey: true }), "redo"],

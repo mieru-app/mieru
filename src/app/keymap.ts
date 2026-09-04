@@ -20,6 +20,8 @@ export type Command =
   | "moveRight"
   | "reorderUp"
   | "reorderDown"
+  /** 親子を反転する（2.9-2、設計書 7.4）。選択ノードが親の位置へ上がる */
+  | "swapWithParent"
   | "toggleCollapse"
   | "undo"
   | "redo"
@@ -74,7 +76,8 @@ export function resolveShortcut(stroke: KeyStroke, editing: boolean): Command | 
     if (key === "k") return "openPalette";
     if (key === "c" && stroke.shiftKey) return "copyForAi";
     if (key === "/") return "toggleCollapse";
-    if (key === "arrowup") return "reorderUp";
+    // Shift の有無で分ける。見落とすと反転のつもりで並べ替えが起きる
+    if (key === "arrowup") return stroke.shiftKey ? "swapWithParent" : "reorderUp";
     if (key === "arrowdown") return "reorderDown";
     return null;
   }

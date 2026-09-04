@@ -131,6 +131,9 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
     case "reorderDown":
       editor.reorder(1);
       return;
+    case "swapWithParent":
+      editor.swapWithParent();
+      return;
     case "toggleCollapse":
       editor.toggleCollapse();
       return;

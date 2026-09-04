@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseMarkdown } from "../../core/parse.js";
+import type { MapNode } from "../../core/types.js";
 import { exportAs, exportForAi, runCommand } from "../commands.js";
 import { useEditor } from "../editor.js";
 import { flatten } from "../tree.js";
+import type { ViewMode } from "../view-mode.js";
 
 /**
  * キー操作の実体の検証。
@@ -276,5 +278,56 @@ describe("サイドバーと検索", () => {
     await expect(runCommand("focusSearch", noop)).resolves.toBeUndefined();
     await expect(runCommand("toggleExport", noop)).resolves.toBeUndefined();
     await expect(runCommand("openPalette", noop)).resolves.toBeUndefined();
+  });
+});
+
+describe("親子の反転（Ctrl+Shift+↑、2.9-2）", () => {
+  /** 木の形をラベルの入れ子で表す */
+  function shape(node: MapNode): unknown {
+    return node.children.length === 0 ? node.label : [node.label, node.children.map(shape)];
+  }
+
+  /** 指定した表示で反転を実行し、できた木の形を返す */
+  async function swapUnder(mode: ViewMode, label: string): Promise<unknown> {
+    useEditor.getState().close();
+    openSource();
+    useEditor.getState().setMode(mode);
+    useEditor.getState().select(uidOf(label));
+    await runCommand("swapWithParent", noop);
+    const root = useEditor.getState().root;
+    return root === null ? null : shape(root);
+  }
+
+  it("キャンバスとアウトラインで同じ結果になる（Phase 2.9 の完了条件）", async () => {
+    // **表示ごとに別の状態を持たせない**という規約（.claude/rules/ui.md「状態」）の検査。
+    // 判断は `src/state/tree.ts` にあり、描画層はそれを呼ぶだけなので一致するはずである
+    const onCanvas = await swapUnder("canvas", "TAM試算");
+    const onOutline = await swapUnder("outline", "TAM試算");
+    expect(onCanvas).toEqual(onOutline);
+    expect(onCanvas).toEqual(["論点整理", [["TAM試算", ["市場"]], "強み"]]);
+  });
+
+  it("取り消せる", async () => {
+    // 構造を大きく変える操作ほど、戻せることが効いてくる
+    openSource();
+    const before = shape(useEditor.getState().root as MapNode);
+    useEditor.getState().select(uidOf("TAM試算"));
+    await runCommand("swapWithParent", noop);
+    expect(shape(useEditor.getState().root as MapNode)).not.toEqual(before);
+
+    await runCommand("undo", noop);
+    expect(shape(useEditor.getState().root as MapNode)).toEqual(before);
+  });
+
+  it("親がルートのノードでは何も起きず、履歴も汚さない", async () => {
+    openSource();
+    useEditor.getState().select(uidOf("市場"));
+    const before = shape(useEditor.getState().root as MapNode);
+    await runCommand("swapWithParent", noop);
+
+    expect(shape(useEditor.getState().root as MapNode)).toEqual(before);
+    // 何も起きていないのに undo が1回分積まれると、
+    // 利用者は「押したのに戻らない」と感じる
+    expect(useEditor.getState().past).toHaveLength(0);
   });
 });

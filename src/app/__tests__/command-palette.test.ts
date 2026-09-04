@@ -28,7 +28,14 @@ const indexes = [
 ];
 
 /** 表示文字列を1つの打鍵に読み替える。記号キーは `KeyboardEvent.key` の名前に直す */
-const SPECIAL_KEYS: Record<string, string> = { Space: " " };
+const SPECIAL_KEYS: Record<string, string> = {
+  Space: " ",
+  // 矢印を落とすと、矢印を使う操作だけが検査を素通りする（2.9-2 で実際に起きた）
+  "↑": "ArrowUp",
+  "↓": "ArrowDown",
+  "←": "ArrowLeft",
+  "→": "ArrowRight",
+};
 
 describe("操作の一覧", () => {
   it("載せた操作のキー表示は実際の割り当てと一致する", () => {

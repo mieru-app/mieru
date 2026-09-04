@@ -6,11 +6,13 @@ import type { MapDoc, MapNode } from "../../core/types.js";
 import {
   addChild,
   addSibling,
+  canDrop,
   collapsedPathsToUids,
   collapsedUidsToPaths,
   flatten,
   indent,
   locate,
+  moveNode,
   moveSibling,
   moveTo,
   navigate,
@@ -19,6 +21,7 @@ import {
   setEmoji,
   setLabel,
   setNote,
+  swapWithParent,
   toggleCollapsed,
   visibleNodes,
 } from "../tree.js";
@@ -163,6 +166,47 @@ describe("階層の変更", () => {
   it("先頭の兄弟は下げられない", () => {
     const { root } = load();
     expect(shape(indent(root, uidOf(root, "A")).root)).toEqual(shape(root));
+  });
+
+  it("親子を反転すると、子が親の位置へ上がり親は先頭の子になる", () => {
+    const { root } = load();
+    const { root: next } = swapWithParent(root, uidOf(root, "A1"));
+    // A1 が A の席（第1階層の先頭）へ移り、A はその先頭の子として下がる。
+    // A の残りの子だった A2 は A に付いていく
+    expect(shape(next)).toEqual(["根", [["A1", [["A", ["A2"]]]], ["B", ["B1"]]]]);
+  });
+
+  it("反転しても兄弟の中の位置は変わらない", () => {
+    const { root } = load();
+    const { root: next } = swapWithParent(root, uidOf(root, "B1"));
+    // B は 2 番目だった。B1 が上がっても 2 番目のままでなければ、
+    // 反転のたびに無関係な並び順が動く
+    expect(next.children.map((child) => child.label)).toEqual(["A", "B1"]);
+  });
+
+  it("反転してもノードは1つも失われない", () => {
+    const { root } = load();
+    const before = flatten(root).map((node) => node.label).sort();
+    const { root: next } = swapWithParent(root, uidOf(root, "A1"));
+    expect(flatten(next).map((node) => node.label).sort()).toEqual(before);
+  });
+
+  it("反転した本人が選択されたままになる", () => {
+    const { root } = load();
+    const uid = uidOf(root, "A1");
+    expect(swapWithParent(root, uid).selectUid).toBe(uid);
+  });
+
+  it("親がルートのときは何もしない（題名が変わってしまうため）", () => {
+    const { root } = load();
+    // ルートのラベルはマップの題名である。ここで入れ替えると
+    // 構造を組み替えたつもりで題名が変わる
+    expect(shape(swapWithParent(root, uidOf(root, "A")).root)).toEqual(shape(root));
+  });
+
+  it("ルート自身は反転できない", () => {
+    const { root } = load();
+    expect(shape(swapWithParent(root, root.uid).root)).toEqual(shape(root));
   });
 });
 
@@ -354,5 +398,70 @@ describe("見つからない対象に対しては何もしない", () => {
     expect(addChild(root, "知らない").root).toBe(root);
     expect(locate(root, "知らない")).toBeNull();
     expect(toggleCollapsed(root, "知らない", new Set()).size).toBe(0);
+  });
+});
+
+describe("掴んで落とす（2.9-3）", () => {
+  it("前へ差し込むと相手の兄弟になる", () => {
+    const { root } = load();
+    const { root: next } = moveNode(root, uidOf(root, "B"), uidOf(root, "A"), "before");
+    expect(next.children.map((child) => child.label)).toEqual(["B", "A"]);
+  });
+
+  it("後ろへ差し込むと相手の次に入る", () => {
+    const { root } = load();
+    const { root: next } = moveNode(root, uidOf(root, "A1"), uidOf(root, "B"), "after");
+    expect(shape(next)).toEqual(["根", [["A", ["A2"]], ["B", ["B1"]], "A1"]]);
+  });
+
+  it("中へ落とすと相手の末子になる", () => {
+    const { root } = load();
+    const { root: next } = moveNode(root, uidOf(root, "A1"), uidOf(root, "B"), "inside");
+    expect(shape(next)).toEqual(["根", [["A", ["A2"]], ["B", ["B1", "A1"]]]]);
+  });
+
+  it("同じ親の中で動かしても添字がずれない", () => {
+    // 自分を外した分だけ相手の位置が前へ動く。外す前の添字を使うと1つずれる
+    const { root } = load();
+    const { root: next } = moveNode(root, uidOf(root, "A"), uidOf(root, "B"), "after");
+    expect(next.children.map((child) => child.label)).toEqual(["B", "A"]);
+  });
+
+  it("落とせない相手には落とさない", () => {
+    const { root } = load();
+    const a = uidOf(root, "A");
+    const cases: [string, string, "before" | "after" | "inside"][] = [
+      [a, a, "inside"], // 自分自身
+      [a, uidOf(root, "A1"), "inside"], // 自分の子孫。木が輪になる
+      [a, root.uid, "before"], // ルートに兄弟は作れない
+      [root.uid, a, "inside"], // ルートは動かせない
+    ];
+    for (const [uid, targetUid, position] of cases) {
+      expect(canDrop(root, uid, targetUid, position)).toBe(false);
+      expect(shape(moveNode(root, uid, targetUid, position).root)).toEqual(shape(root));
+    }
+  });
+
+  it("ルートの中へは落とせる（第1階層へ引き上げる操作になる）", () => {
+    const { root } = load();
+    expect(canDrop(root, uidOf(root, "A1"), root.uid, "inside")).toBe(true);
+    const { root: next } = moveNode(root, uidOf(root, "A1"), root.uid, "inside");
+    expect(shape(next)).toEqual(["根", [["A", ["A2"]], ["B", ["B1"]], "A1"]]);
+  });
+
+  it("どこへ落としてもノードは1つも失われない", () => {
+    const { root } = load();
+    const before = flatten(root).map((node) => node.label).sort();
+    for (const position of ["before", "after", "inside"] as const) {
+      const { root: next } = moveNode(root, uidOf(root, "A1"), uidOf(root, "B"), position);
+      expect(flatten(next).map((node) => node.label).sort()).toEqual(before);
+    }
+  });
+
+  it("moveTo は位置を指定しない moveNode である", () => {
+    const { root } = load();
+    const a1 = uidOf(root, "A1");
+    const b = uidOf(root, "B");
+    expect(shape(moveTo(root, a1, b).root)).toEqual(shape(moveNode(root, a1, b, "inside").root));
   });
 });
