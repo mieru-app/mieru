@@ -37,6 +37,33 @@ function clampScale(value: number): number {
   return Math.min(SCALE_MAX, Math.max(SCALE_MIN, Math.round(value * 100) / 100));
 }
 
+/**
+ * 描かれた位置を測って中央へ寄せる（2.11-2）。
+ *
+ * **`toCenter()` / `scaleFit()` の計算には頼らない。** どちらも
+ * `offsetTop` と `transform-origin` から位置を組み立てており、
+ * **拡大率が 1 でないときや、中心テーマが地図の縦中心にないときにずれる。**
+ * 実際「子を展開した大きなマップでは ⛶ を押しても中央に来ない」という形で出た。
+ *
+ * こちらは `getBoundingClientRect()` で**変換後の実際の位置**を読み、
+ * 足りない分を `move()` で詰める。式を信じずに結果を見るので、
+ * 向こうの計算がどう変わっても効き方が変わらない。
+ *
+ * @param target `root` は中心テーマを、`all` は地図全体を中央へ置く
+ */
+function centerMap(mind: MindElixirInstance, target: "root" | "all"): void {
+  const subject: Element | null =
+    target === "root" ? mind.map.querySelector("me-root") : mind.nodes;
+  if (subject === null) return;
+
+  const view = mind.container.getBoundingClientRect();
+  const box = subject.getBoundingClientRect();
+  mind.move(
+    (view.left + view.right) / 2 - (box.left + box.right) / 2,
+    (view.top + view.bottom) / 2 - (box.top + box.bottom) / 2,
+  );
+}
+
 /** 選択やインライン編集のために、描画済みのノード要素を引く */
 function topicElement(mind: MindElixirInstance, uid: string): Topic | null {
   return MindElixir.E.call(mind, uid) ?? null;
@@ -60,6 +87,10 @@ export function Canvas(): React.JSX.Element {
    * 画面が飛ぶのは、余白より困る。マップを開き直すと解除する。
    */
   const touched = useRef(false);
+  /** 自分で寄せている間の印。`move` の通知を利用者の操作と数えないために要る */
+  const centering = useRef(false);
+  /** 直前に描いていたマップ。切り替わったかを見るために持つ */
+  const shownMapId = useRef<string | null>(null);
 
   const mapId = useEditor((state) => state.map?.id ?? null);
   const root = useEditor((state) => state.root);
@@ -104,11 +135,11 @@ export function Canvas(): React.JSX.Element {
     };
 
     mind.bus.addListener("scale", (value: number) => {
-      touched.current = true;
+      if (!centering.current) touched.current = true;
       setScale(value);
     });
     mind.bus.addListener("move", () => {
-      touched.current = true;
+      if (!centering.current) touched.current = true;
     });
     mind.bus.addListener("operation", absorb);
     mind.bus.addListener("expandNode", absorb);
@@ -140,18 +171,18 @@ export function Canvas(): React.JSX.Element {
     const observer = new ResizeObserver(() => {
       const mind = instance.current;
       if (mind === null || touched.current) return;
-      mind.toCenter();
+      centering.current = true;
+      try {
+        centerMap(mind, "root");
+      } finally {
+        centering.current = false;
+      }
     });
     observer.observe(element);
     return () => {
       observer.disconnect();
     };
   }, []);
-
-  // 別のマップを開いたら、動かした印を解く。前のマップでの操作を引きずらない
-  useEffect(() => {
-    touched.current = false;
-  }, [mapId]);
 
   // ストア側の変更（Undo、アウトラインでの編集、外部変更の取り込み）を描画へ反映する
   useEffect(() => {
@@ -165,7 +196,29 @@ export function Canvas(): React.JSX.Element {
     } finally {
       applying.current = false;
     }
-  }, [root, collapsedUids, colors]);
+
+    /*
+     * **別のマップを開いたら中央へ寄せ直す**（2.11-2）。
+     *
+     * `mind-elixir` の `init()` は最後に中央寄せをするが、`refresh()` はしない。
+     * マップの切り替えは `refresh()` を通るため、**2つ目以降のマップは前のマップの
+     * 位置のまま描かれていた。** 木の形が違うので、ほぼ必ずずれる。
+     *
+     * **編集のたびには寄せない。** `root` は打鍵のたびに変わるので、
+     * 寄せると入力中に地図が飛ぶ。切り替わったときだけにする。
+     */
+    if (shownMapId.current !== mapId) {
+      shownMapId.current = mapId;
+      // 前のマップで動かした位置を、新しいマップへ引き継がない
+      touched.current = false;
+      centering.current = true;
+      try {
+        centerMap(mind, "root");
+      } finally {
+        centering.current = false;
+      }
+    }
+  }, [root, collapsedUids, colors, mapId]);
 
   // 選択を描画側へ伝える。アウトラインから切り替えても選択が保たれる（F-22）
   useEffect(() => {
@@ -198,18 +251,25 @@ export function Canvas(): React.JSX.Element {
     const element = container.current;
     if (mind === null || element === null) return;
 
-    mind.scaleFit();
     /*
-     * **`scaleFit()` は入れ物の scroll を戻さない。** `toCenter()` は
-     * `scrollTop = scrollLeft = 0` を明示しており、こちらだけ抜けている。
-     * scroll が付くのは内容が入れ物より大きいときだけなので、
-     * 「畳めば中央に来るのに、広げると来ない」という形で出る（2.11-2）。
+     * **拡大率だけ向こうに任せ、位置は測って自分で直す**（2.11-2）。
      *
-     * ここを揃えるのは、原因がこれだと確かめたからではなく、
-     * **揃っていない状態が正しいとは考えにくい**ためである。
+     * `scaleFit()` は縮尺を決めた後に自前の式で位置も動かすが、
+     * 子を展開した大きなマップでは中央に来なかった。式を追うのをやめ、
+     * 動かした結果を測って足りない分を詰める。
+     *
+     * `scaleFit()` は `toCenter()` と違って入れ物の scroll を戻さない。
+     * 測る前に揃えておかないと、その分だけずれたまま測ることになる。
      */
-    element.scrollTop = 0;
-    element.scrollLeft = 0;
+    centering.current = true;
+    try {
+      mind.scaleFit();
+      element.scrollTop = 0;
+      element.scrollLeft = 0;
+      centerMap(mind, "all");
+    } finally {
+      centering.current = false;
+    }
     setScale(mind.scaleVal);
   }, []);
 
