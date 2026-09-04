@@ -67,7 +67,22 @@ function centerMap(mind: MindElixirInstance, target: "root" | "all"): void {
 
 /** 選択やインライン編集のために、描画済みのノード要素を引く */
 function topicElement(mind: MindElixirInstance, uid: string): Topic | null {
-  return MindElixir.E.call(mind, uid) ?? null;
+  /*
+   * **IMPORTANT: `findEle` は見つからないと例外を投げる。** null は返さない
+   * （型も `=> Topic`）。以前ここは `?? null` で受けていたが、
+   * **投げられる例外には効かない死んだコードだった。**
+   *
+   * 畳んだ枝の中にあるノードは DOM から消えるため、これは普通に起きる。
+   * 実際、枝を編集してから親を `−` で畳むと、選択中のノードが消えた状態で
+   * この関数が呼ばれ、**例外が React の効果の中で投げられて画面が真っ白になっていた**
+   * （2026-09-04 の実利用で報告）。向こうのエラー文言自体が
+   * `maybe it's collapsed` と言っている。
+   */
+  try {
+    return MindElixir.E.call(mind, uid) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function Canvas(): React.JSX.Element {

@@ -6,7 +6,7 @@ import type { MapNode } from "../../../core/types.js";
 import { DEFAULT_PALETTE } from "../../../state/palette.js";
 import { flatten } from "../../../state/tree.js";
 import type { MindElixirData } from "../adapter.js";
-import { fromMindElixir, toArrows, toMindElixir } from "../adapter.js";
+import { fromMindElixir, hiddenUids, toArrows, toMindElixir } from "../adapter.js";
 
 /**
  * mind-elixir との相互変換の検証。
@@ -25,6 +25,30 @@ title: 根
   - TAM試算
     既存レポートでは1,200億円。
 - 規制動向 → [[市場]]
+`;
+
+/** 宛先が畳まれる側にあるマップ */
+const TARGET_INSIDE = `---
+title: 根
+---
+
+# 根
+
+- 親
+  - 的
+- 元 → [[的]]
+`;
+
+/** 矢印の元が畳まれる側にあるマップ */
+const SOURCE_INSIDE = `---
+title: 根
+---
+
+# 根
+
+- 親
+  - 元 → [[的]]
+- 的
 `;
 
 function load(): MapNode {
@@ -178,5 +202,57 @@ describe("mind-elixir → モデル", () => {
     const root: MapNode = { uid: "r", path: "", label: "", links: [], children: [] };
     const { root: back } = fromMindElixir(toMindElixir(root, new Set()), root);
     expect(back.label).toBe("");
+  });
+});
+
+describe("畳んだ枝と矢印（2026-09-04 の落ちる不具合）", () => {
+  it("畳んだ枝の中のノードを数え上げる。畳んだノード自身は含めない", () => {
+    const root = load();
+    const hidden = hiddenUids(root, new Set([uidOf(root, "市場")]));
+    expect(hidden.has(uidOf(root, "TAM試算"))).toBe(true);
+    expect(hidden.has(uidOf(root, "市場"))).toBe(false);
+    // `[[ ]]` はラベルに残るので、ラベルは行まるごとになる
+    expect(hidden.has(uidOf(root, "規制動向 → [[市場]]"))).toBe(false);
+  });
+
+  it("何も畳んでいなければ矢印はそのまま出る", () => {
+    const root = load();
+    expect(toMindElixir(root, new Set()).arrows).toHaveLength(1);
+  });
+
+  it("**畳んだ枝の中を指す矢印は渡さない**", () => {
+    /*
+     * `mind-elixir` は矢印の両端を `findEle` で引くが、**見つからないと例外を投げる**。
+     * 畳んだ枝の中を指す矢印を渡すと `refresh()` の中で落ちる。
+     * ここを緩めると、横断リンクのあるマップを畳んだ瞬間に画面が真っ白になる
+     */
+    const root = load();
+    const collapsed = new Set([uidOf(root, "市場")]);
+    // 「規制動向 → 市場」の矢印は、宛先の市場が畳まれても市場自体は見えているので残る
+    expect(toMindElixir(root, collapsed).arrows).toHaveLength(1);
+  });
+
+  it("宛先が畳まれた枝の中にあるときは矢印を落とす", () => {
+    const { doc } = parseMarkdown(TARGET_INSIDE);
+    const root = doc.root;
+    const collapsed = new Set([uidOf(root, "親")]);
+    expect(toMindElixir(root, new Set()).arrows).toHaveLength(1);
+    expect(toMindElixir(root, collapsed).arrows).toHaveLength(0);
+  });
+
+  it("矢印の元が畳まれた枝の中にあるときも落とす", () => {
+    const { doc } = parseMarkdown(SOURCE_INSIDE);
+    const root = doc.root;
+    expect(toMindElixir(root, new Set()).arrows).toHaveLength(1);
+    expect(toMindElixir(root, new Set([uidOf(root, "親")])).arrows).toHaveLength(0);
+  });
+
+  it("矢印を落としても木そのものは変わらない", () => {
+    // 表示の都合で内容を削ってはいけない
+    const doc = parseMarkdown(SOURCE).doc;
+    const root = doc.root;
+    const collapsed = new Set([uidOf(root, "市場")]);
+    const back = fromMindElixir(toMindElixir(root, collapsed), root);
+    expect(serializeMarkdown({ ...doc, root: back.root })).toBe(serializeMarkdown(doc));
   });
 });

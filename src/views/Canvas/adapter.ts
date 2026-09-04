@@ -51,7 +51,25 @@ const EMPTY_TOPIC = "　";
  * 同名が複数あれば最初の1つに繋ぐ。解決できないリンクは矢印を作らない
  * （書きかけの `[[` に矢印が出ると、書いている最中に画面が騒がしくなる）。
  */
-export function toArrows(root: MapNode): MindElixirArrow[] {
+/**
+ * 畳まれた枝の中にあって、画面に無いノード。
+ * 畳んだノード自身は見えているので含めない。
+ */
+export function hiddenUids(root: MapNode, collapsedUids: ReadonlySet<string>): Set<string> {
+  const hidden = new Set<string>();
+  const walk = (node: MapNode, under: boolean): void => {
+    if (under) hidden.add(node.uid);
+    const inside = under || collapsedUids.has(node.uid);
+    for (const child of node.children) walk(child, inside);
+  };
+  walk(root, false);
+  return hidden;
+}
+
+export function toArrows(
+  root: MapNode,
+  hidden: ReadonlySet<string> = new Set(),
+): MindElixirArrow[] {
   const nodes = flatten(root);
   const byLabel = new Map<string, string>();
   for (const node of nodes) {
@@ -64,6 +82,14 @@ export function toArrows(root: MapNode): MindElixirArrow[] {
       const to = byLabel.get(link);
       // 自分自身へのリンクは描かない
       if (to === undefined || to === node.uid) continue;
+      /*
+       * **IMPORTANT: 画面に無いノードへ矢印を渡さない。**
+       * `mind-elixir` は矢印の両端を `findEle` で引くが、
+       * **`findEle` は見つからないと例外を投げる**（`=> Topic` で null を返さない）。
+       * 向こうの `if (s && i)` という受けは、投げられる例外には効かない。
+       * 畳んだ枝の中を指す矢印を渡すと、`refresh()` の中で例外になり画面が落ちる。
+       */
+      if (hidden.has(node.uid) || hidden.has(to)) continue;
       arrows.push({ id: `${node.uid}->${to}`, label: "", from: node.uid, to });
     }
   }
@@ -94,7 +120,10 @@ export function toMindElixir(
     return converted;
   };
 
-  return { nodeData: convert(root, null), arrows: toArrows(root) };
+  return {
+    nodeData: convert(root, null),
+    arrows: toArrows(root, hiddenUids(root, collapsedUids)),
+  };
 }
 
 /**
