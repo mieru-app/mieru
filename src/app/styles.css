@@ -1824,3 +1824,41 @@ kbd {
   font-size: 0.85em;
   padding: 0.1rem 0.5rem;
 }
+
+/* 描画が止まったときの画面。**白いままにしない** */
+.crash {
+  padding: 1.5rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  color: var(--fg);
+}
+
+.crash-title {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.crash-lead {
+  margin: 0 0 1rem;
+  color: var(--fg-muted);
+}
+
+.crash-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.crash-detail {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  /* 長いスタックで頁ごと横に伸びないようにする */
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  user-select: text;
+}

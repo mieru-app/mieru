@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./app/App.js";
+import { ErrorScreen } from "./app/ErrorScreen.js";
 import "./app/styles.css";
 
 const container = document.getElementById("root");
@@ -9,7 +10,9 @@ if (container === null) throw new Error("#root が見つかりません");
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <ErrorScreen>
+      <App />
+    </ErrorScreen>
   </StrictMode>,
 );
 
