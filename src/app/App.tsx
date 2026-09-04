@@ -8,6 +8,8 @@ import { selectedNode, useEditor } from "../state/editor.js";
 import { IMPORT_PROMPT } from "../state/import-prompt.js";
 import type { Sheet } from "../state/layout.js";
 import { keepSidebarAfterOpen, resolveLayout } from "../state/layout.js";
+import type { Pane } from "../state/pane-size.js";
+import { PANE_KEYS, readPaneWidth } from "../state/pane-size.js";
 import { collectTags, queryIndex } from "../state/search.js";
 import { TEMPLATES, templateMarkdown } from "../state/templates.js";
 import type { Theme } from "../state/theme.js";
@@ -27,6 +29,7 @@ import { Banners } from "./Banners.js";
 import type { PaletteItem } from "./command-palette.js";
 import { CommandPalette } from "./CommandPalette.js";
 import { downloadText } from "./download.js";
+import { PaneResizer } from "./PaneResizer.js";
 import { EditBar } from "./EditBar.js";
 import { FirstBranchGuide } from "./Guide.js";
 import { HomeScreen } from "./HomeScreen.js";
@@ -89,6 +92,11 @@ export function App(): React.JSX.Element {
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [theme, setTheme] = useState<Theme>("system");
+  /** 一覧と欄の幅（rem）。端末ごとの好みなので localStorage に置く（`pane-size.ts`） */
+  const [paneWidth, setPaneWidth] = useState<Record<Pane, number>>(() => ({
+    sidebar: readPaneWidth("sidebar", null),
+    panel: readPaneWidth("panel", null),
+  }));
   const searchRef = useRef<HTMLInputElement>(null);
 
   /**
@@ -124,6 +132,29 @@ export function App(): React.JSX.Element {
   // 保存済みの配色を読む。壊れた値でも既定へ倒れる（`readTheme`）
   useEffect(() => {
     setTheme(readTheme(localStorage.getItem(THEME_KEY)));
+  }, []);
+
+  // 保存済みの幅を読む。こちらも壊れた値は既定へ倒れる（`readPaneWidth`）
+  useEffect(() => {
+    setPaneWidth({
+      sidebar: readPaneWidth("sidebar", localStorage.getItem(PANE_KEYS.sidebar)),
+      panel: readPaneWidth("panel", localStorage.getItem(PANE_KEYS.panel)),
+    });
+  }, []);
+
+  /*
+   * 幅を CSS へ渡す。**格子の列定義は `styles.css` が持ち、値だけをここから渡す。**
+   * 列の数と畳み方（2.7-1）は幅と別の判断なので、混ぜない
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--sidebar-width", `${String(paneWidth.sidebar)}rem`);
+    root.style.setProperty("--panel-width", `${String(paneWidth.panel)}rem`);
+  }, [paneWidth]);
+
+  const resizePaneTo = useCallback((pane: Pane, width: number) => {
+    setPaneWidth((current) => ({ ...current, [pane]: width }));
+    localStorage.setItem(PANE_KEYS[pane], String(width));
   }, []);
 
   useEffect(() => {
@@ -388,6 +419,27 @@ export function App(): React.JSX.Element {
       />
 
       <div className="workarea">
+        {/*
+         * 幅を掴んで変える境目（2026-09-04 の実利用要望）。
+         * **狭い画面には出さない。** あちらは列ではなく覆いなので、動かす幅が無い
+         */}
+        {!narrow && layout.sidebar && (
+          <PaneResizer
+            pane="sidebar"
+            width={paneWidth.sidebar}
+            onResize={(width) => resizePaneTo("sidebar", width)}
+            label="一覧の幅"
+          />
+        )}
+        {!narrow && layout.panel !== null && (
+          <PaneResizer
+            pane="panel"
+            width={paneWidth.panel}
+            onResize={(width) => resizePaneTo("panel", width)}
+            label="欄の幅"
+          />
+        )}
+
         {layout.sidebar && (
           <Sidebar
             hits={hits}

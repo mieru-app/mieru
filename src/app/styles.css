@@ -214,16 +214,25 @@ button.primary {
   color: #ffffff;
 }
 
+/*
+ * 一覧と欄の幅は利用者が変えられる（2026-09-04 の実利用要望）。
+ *
+ * **値だけを変数で受け取り、列の数と畳み方はここが持つ。**
+ * 幅と「何を出すか」は別の判断であり（`layout.ts`）、混ぜると
+ * 狭い画面の畳み方まで幅の都合で動くことになる。
+ * 変数は `App.tsx` が `:root` へ書く。未設定でも既定で成立させる。
+ */
 .workarea {
   display: grid;
   flex: 1;
-  grid-template-columns: 15rem 1fr;
+  position: relative;
+  grid-template-columns: var(--sidebar-width, 15rem) 1fr;
   min-height: 0;
 }
 
 .workarea:has(.notepanel),
 .workarea:has(.sheet) {
-  grid-template-columns: 15rem 1fr 20rem;
+  grid-template-columns: var(--sidebar-width, 15rem) 1fr var(--panel-width, 20rem);
 }
 
 /* サイドバーを畳んだときは要素ごと消えるため、列の定義も減らす */
@@ -233,7 +242,7 @@ button.primary {
 
 .is-sidebar-closed .workarea:has(.notepanel),
 .is-sidebar-closed .workarea:has(.sheet) {
-  grid-template-columns: 1fr 20rem;
+  grid-template-columns: 1fr var(--panel-width, 20rem);
 }
 
 /* ── サイドバー ─────────────────────────────────────────── */
@@ -384,6 +393,34 @@ button.primary {
   flex: none;
   margin: 0.5rem;
   border-style: dashed;
+}
+
+/*
+ * 幅を変える境目。**格子の列としてではなく、上に重ねて置く。**
+ * 列として挟むと `grid-template-columns` が4通りとも変わり、
+ * 狭い画面の畳み方（2.7-1）まで波及する。
+ */
+.pane-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0.5rem;
+  z-index: 3;
+  cursor: col-resize;
+  /* 掴む所は指1本ぶんの幅を取りたいが、線としては細く見せる */
+  background: transparent;
+  transform: translateX(-50%);
+}
+
+.pane-resizer.is-panel {
+  transform: translateX(50%);
+}
+
+.pane-resizer:hover,
+.pane-resizer:focus-visible {
+  background: var(--accent);
+  opacity: 0.5;
+  outline: none;
 }
 
 .main {
