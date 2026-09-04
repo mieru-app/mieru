@@ -451,3 +451,54 @@ describe("木ごとの差し替え（キャンバスからの取り込み）", (
     expect(useEditor.getState().root).toBeNull();
   });
 });
+
+describe("掴んで落とす（2.9-3）", () => {
+  /** いまの木を Markdown にして比べる。形と中身をまとめて見られる */
+  function serialize(): string {
+    const doc = useEditor.getState().buildDoc();
+    if (doc === null) throw new Error("マップが開かれていません");
+    return serializeMarkdown(doc);
+  }
+
+  beforeEach(() => {
+    useEditor.getState().close();
+    openSource();
+  });
+
+  it("落とした結果が木に反映される", () => {
+    useEditor.getState().dropNode(uidOf("A1"), uidOf("B"), "inside");
+    const b = locate(useEditor.getState().root as MapNode, uidOf("B"));
+    expect(b?.node.children.map((child) => child.label)).toEqual(["A1"]);
+  });
+
+  it("取り消せる", () => {
+    const before = serialize();
+    useEditor.getState().dropNode(uidOf("A1"), uidOf("B"), "inside");
+    expect(serialize()).not.toBe(before);
+    useEditor.getState().undo();
+    expect(serialize()).toBe(before);
+  });
+
+  it("畳まれた枝の中へ落とすと、その枝が開く", () => {
+    // 開かないと落とした行が画面から消え、
+    // 移動できなかったのか隠れただけなのかを利用者が区別できない
+    useEditor.getState().select(uidOf("B"));
+    useEditor.getState().toggleCollapse();
+    useEditor.getState().dropNode(uidOf("A1"), uidOf("B"), "inside");
+
+    expect(useEditor.getState().collapsedUids.has(uidOf("B"))).toBe(false);
+  });
+
+  it("成立しない移動では、畳んだ状態にも触らない", () => {
+    useEditor.getState().select(uidOf("A"));
+    useEditor.getState().toggleCollapse();
+    const before = serialize();
+
+    // 自分の子孫の中へは落とせない
+    useEditor.getState().dropNode(uidOf("A"), uidOf("A1"), "inside");
+
+    expect(serialize()).toBe(before);
+    expect(useEditor.getState().collapsedUids.has(uidOf("A"))).toBe(true);
+    expect(useEditor.getState().past).toHaveLength(0);
+  });
+});

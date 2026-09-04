@@ -566,6 +566,50 @@ button.primary {
   width: 1.4rem;
 }
 
+/*
+ * 掴み手（2.9-3）。**指で縦に送る操作と競合させないため、
+ * touch-action を切るのはこの範囲だけにする。** 行全体を掴む方式にすると
+ * 一覧をスクロールできなくなる。
+ */
+.outline-grip {
+  color: var(--fg-muted);
+  opacity: 0.45;
+  cursor: grab;
+  touch-action: none;
+  padding: 0 0.15rem;
+  /* 指で掴める大きさを確保する。字は小さいまま当たり判定だけ広げる */
+  min-width: 1.1rem;
+  line-height: 1.6;
+  user-select: none;
+}
+
+.outline-grip:hover {
+  opacity: 1;
+}
+
+.outline-row.is-dragging {
+  opacity: 0.4;
+}
+
+/*
+ * 落とし先の表示。**色だけで区別しない。** 履歴の差分で `+` / `-` を
+ * 常に出しているのと同じ理由である（設計書 8.8.3）。
+ * 兄弟として差し込むときは辺の線、子にするときは全周の枠と地色で示す。
+ */
+.outline-row.is-drop-before {
+  box-shadow: inset 0 2px 0 0 var(--accent);
+}
+
+.outline-row.is-drop-after {
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
+.outline-row.is-drop-inside {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
 .outline-empty {
   color: var(--fg-muted);
 }
