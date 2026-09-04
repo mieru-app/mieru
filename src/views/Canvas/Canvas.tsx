@@ -53,7 +53,15 @@ export function Canvas(): React.JSX.Element {
    * 入力中のノードからフォーカスが外れるため、その往復を止めるために覚えておく。
    */
   const absorbed = useRef<MapNode | null>(null);
+  /**
+   * 利用者が自分で動かしたか（2.11-2）。
+   *
+   * **動かした後は、こちらから位置を戻さない。** 見ていた場所へ戻る道が無いまま
+   * 画面が飛ぶのは、余白より困る。マップを開き直すと解除する。
+   */
+  const touched = useRef(false);
 
+  const mapId = useEditor((state) => state.map?.id ?? null);
   const root = useEditor((state) => state.root);
   const colors = useEditor((state) => state.map?.colors ?? "auto");
   const collapsedUids = useEditor((state) => state.collapsedUids);
@@ -95,7 +103,13 @@ export function Canvas(): React.JSX.Element {
       editor.replaceTree(nextRoot, nextCollapsed);
     };
 
-    mind.bus.addListener("scale", (value: number) => setScale(value));
+    mind.bus.addListener("scale", (value: number) => {
+      touched.current = true;
+      setScale(value);
+    });
+    mind.bus.addListener("move", () => {
+      touched.current = true;
+    });
     mind.bus.addListener("operation", absorb);
     mind.bus.addListener("expandNode", absorb);
     mind.bus.addListener("selectNodes", (nodes: NodeObj[]) => {
@@ -109,6 +123,35 @@ export function Canvas(): React.JSX.Element {
       instance.current = null;
     };
   }, []);
+
+  /*
+   * 入れ物の大きさが変わったら中央へ戻す（2.11-2）。
+   *
+   * **`init()` の中央寄せは、そのときの入れ物の大きさで決まる。** 起動直後は
+   * まだ最終的な高さになっておらず、地図が上へ寄ったまま残っていた。
+   * 一覧や欄を開閉したときも幅が変わるので、同じ理由で寄る。
+   *
+   * **ただし利用者が動かした後は戻さない。** 見ていた場所を奪う方が困る。
+   */
+  useEffect(() => {
+    const element = container.current;
+    if (element === null || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      const mind = instance.current;
+      if (mind === null || touched.current) return;
+      mind.toCenter();
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // 別のマップを開いたら、動かした印を解く。前のマップでの操作を引きずらない
+  useEffect(() => {
+    touched.current = false;
+  }, [mapId]);
 
   // ストア側の変更（Undo、アウトラインでの編集、外部変更の取り込み）を描画へ反映する
   useEffect(() => {
@@ -152,8 +195,21 @@ export function Canvas(): React.JSX.Element {
 
   const fit = useCallback(() => {
     const mind = instance.current;
-    if (mind === null) return;
+    const element = container.current;
+    if (mind === null || element === null) return;
+
     mind.scaleFit();
+    /*
+     * **`scaleFit()` は入れ物の scroll を戻さない。** `toCenter()` は
+     * `scrollTop = scrollLeft = 0` を明示しており、こちらだけ抜けている。
+     * scroll が付くのは内容が入れ物より大きいときだけなので、
+     * 「畳めば中央に来るのに、広げると来ない」という形で出る（2.11-2）。
+     *
+     * ここを揃えるのは、原因がこれだと確かめたからではなく、
+     * **揃っていない状態が正しいとは考えにくい**ためである。
+     */
+    element.scrollTop = 0;
+    element.scrollLeft = 0;
     setScale(mind.scaleVal);
   }, []);
 
