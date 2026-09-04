@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "mind-elixir/style";
 
 import type { MapNode } from "../../core/types.js";
+import { renderInlineHtml } from "../../core/inline.js";
 import { useEditor } from "../../state/editor.js";
 import type { MindElixirData } from "./adapter.js";
 import { fromMindElixir, toMindElixir } from "./adapter.js";
@@ -116,6 +117,17 @@ export function Canvas(): React.JSX.Element {
       keypress: false,
       // Undo も本ツール側で50段持つ（F-18）。二重に持たせない
       allowUndo: false,
+      /*
+       * 記法を見える形にする（2.10-2、設計書 F-26）。
+       *
+       * **戻り値はそのまま `innerHTML` に入る**（実測。`MindElixir.js` の
+       * ノード描画と編集確定の両方でそうしている）。**逃がしの責任は全てこちらにある**ので、
+       * 許可リスト方式の `renderInlineHtml()` 以外を渡してはいけない。
+       *
+       * 編集を始めると記号が戻るのは向こうの作りによる。編集用の要素へは
+       * `nodeObj.topic`（生の文字列）を `textContent` で入れている。
+       */
+      markdown: (topic: string) => renderInlineHtml(topic),
     });
 
     const current = useEditor.getState();

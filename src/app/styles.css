@@ -1714,3 +1714,31 @@ kbd {
 .editbar button.is-danger:not(:disabled) {
   color: var(--warn-fg);
 }
+
+/*
+ * 記法の見た目（2.10-2）。
+ *
+ * **`mind-elixir` の CSS は `.text a` のクリックを通すだけで、
+ * 強調やコードの見た目は持っていない**（実測）。ここで補う。
+ *
+ * 枝の色は階層ごとに変わるので、地色を決め打ちにしない。
+ * `currentColor` から作れば、どの枝の上でも読める濃さになる。
+ */
+.map-container .text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0 0.25em;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.map-container .text del {
+  opacity: 0.7;
+}
+
+.map-container .text a {
+  color: inherit;
+  text-decoration: underline;
+  /* 下線だけだと枝の色に埋もれる。太さで差を付ける */
+  text-underline-offset: 2px;
+}
