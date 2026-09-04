@@ -14,7 +14,7 @@ import { blobSha, FakeGitHub, memoryMetaCache, memoryQuarantine } from "./fake-g
  * GitHub を保存先とする実装の検証。
  *
  * 契約テストに加え、**実測で分かった GitHub 固有の癖**への対処を確かめる
- * （docs/github-api-verification.md）。とくに「削除済みを復活させない」は
+ * （docs/human-review/github-api-verification.md）。とくに「削除済みを復活させない」は
  * 黙ってデータを戻す事故に直結するため、防御と、防御が必要な理由の両方を検査する。
  */
 

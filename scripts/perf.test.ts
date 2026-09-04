@@ -12,10 +12,10 @@ import { addChild, collapsedUidsToPaths, flatten, removeNode } from "../src/stat
  *
  * **通常のテスト（`npm test`）には含めない。** 時間を測る検証は
  * 実行環境の負荷で結果が揺れ、稀に落ちるテストになる。
- * `npm run perf` で明示的に走らせ、結果を `docs/perf-report.md` に残す。
+ * `npm run perf` で明示的に走らせ、結果を `docs/human-review/perf-report.md` に残す。
  *
  * ここで測れるのは変換と編集ロジックだけである。描画（mind-elixir）と
- * ファイル入出力はブラウザでしか測れないため、`docs/perf-report.md` の
+ * ファイル入出力はブラウザでしか測れないため、`docs/human-review/perf-report.md` の
  * 「未測定」に残してある。
  */
 

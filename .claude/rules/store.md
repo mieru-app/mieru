@@ -5,7 +5,7 @@ paths:
 
 # 永続化層の規約
 
-`src/store/` は `MapStore` インターフェースとその実装を持つ。仕様の正本は `docs/design.md` の8章。
+`src/store/` は `MapStore` インターフェースとその実装を持つ。仕様の正本は `docs/design/persistence.md`（契約）と `docs/design/github-store.md`。
 
 ## インターフェースの安定性
 
@@ -14,7 +14,7 @@ paths:
 - **UI の都合でメソッドを追加しない。** 全実装（`MemoryStore` / `LocalFolderStore` / `GitHubStore`）で意味が通るものだけを置く
 - 保存先の制約に由来する値（`autosaveDelayMs` など）はここに置いてよい。UI の都合ではなく保存先の性質だからである
 - 特定の実装にしか存在しない機能は、`watch?()` のように任意メソッドとして定義し、未対応の実装は no-op を返す
-- インターフェースを変更する場合は、先に `docs/design.md` 8.1 を更新する
+- インターフェースを変更する場合は、先に `docs/design/persistence.md` を更新する
 
 ## データを失わない
 
@@ -36,7 +36,7 @@ paths:
 
 ## GitHub Contents API の落とし穴（実測。設計書 8.7.4〜8.7.7）
 
-事前検証の記録は `docs/github-api-verification.md`。**どれも実際に叩くまで分からなかった**ので、
+事前検証の記録は `docs/human-review/github-api-verification.md`。**どれも実際に叩くまで分からなかった**ので、
 `GitHubStore` を触るときは先にここを読むこと。
 
 - **存在しないパスへ `sha` 付きで PUT すると、無視して 201 で作られる。**

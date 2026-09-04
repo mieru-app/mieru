@@ -7,7 +7,7 @@ import type { QuarantineSink } from "../quarantine.js";
 /**
  * GitHub Contents API の偽物。
  *
- * **実測した挙動をそのまま写している**（docs/github-api-verification.md 3章）。
+ * **実測した挙動をそのまま写している**（docs/human-review/github-api-verification.md 3章）。
  * とくに「存在しないパスへ `sha` 付きで PUT すると `sha` を無視して 201 で作る」
  * という癖は、それが再現されていなければ `GitHubStore` の防御を検証できない。
  *

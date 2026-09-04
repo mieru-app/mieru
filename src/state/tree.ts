@@ -7,7 +7,7 @@ import type { MapNode } from "../core/types.js";
  * すべて純粋関数であり、React にも mind-elixir にも依存しない。
  * 編集ロジックをここへ集めているのは、UI を差し替えても、
  * あるいは UI を自動テストしなくても、操作の正しさを検証できるようにするためである
- * （docs/project-plan.md 7.1 の「UI は手動試験」という方針の裏返し）。
+ * （docs/design/testing.md の「UI は手動試験」という方針の裏返し）。
  *
  * 入力の木は変更しない。常に新しい木を返し、`path` を振り直す。
  */

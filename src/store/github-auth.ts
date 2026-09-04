@@ -11,7 +11,7 @@ import { idbDelete, idbGet, idbPut, STORE_SETTINGS } from "./idb.js";
  * 資格情報オブジェクトをそのまま `console.log` へ渡すとトークンが漏れる。
  *
  * 仕様の正本: docs/design.md 8.7
- * API の実測値: docs/github-api-verification.md
+ * API の実測値: docs/human-review/github-api-verification.md
  */
 
 /** 保管庫には常にこの1件だけを置く */
@@ -259,7 +259,7 @@ const NO_CONTENTS_MESSAGE =
  * 1 は 200 を返す**（2026-09-03 に実機で踏んだ）。そのまま通すと、
  * 接続は成功したのに最初の保存で初めて失敗する、という最も分かりにくい壊れ方をする。
  *
- * 応答コードの意味は実測で確かめてある（docs/github-api-verification.md）。
+ * 応答コードの意味は実測で確かめてある（docs/human-review/github-api-verification.md）。
  * とくに **404 は「無い」と「権限が無い」の両方**を指す。GitHub は権限の無い
  * リポジトリの存在を伏せるため、この2つを呼び出し側でも区別できない。
  */

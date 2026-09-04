@@ -23,7 +23,7 @@ import { idbPut, STORE_SETTINGS } from "../idb.js";
  *
  * ここは**利用者の鍵を預かる唯一の場所**であり、
  * 「漏らさない」「壊れた記録で起動を止めない」が守れているかを確かめる。
- * 応答コードの分岐は実測値に基づく（docs/github-api-verification.md 3章）。
+ * 応答コードの分岐は実測値に基づく（docs/human-review/github-api-verification.md 3章）。
  */
 
 const TOKEN = "github_pat_11ABCDEFG0123456789abcdefg";

@@ -2,12 +2,11 @@
 paths:
   - "src/views/**"
   - "src/app/**"
-  - "src/features/**"
 ---
 
 # UI 層の規約
 
-仕様の正本は `docs/design.md` の7章（機能設計）。
+仕様の正本は `docs/design/features.md`（機能とキー）と `docs/design/screens.md`（画面）。
 
 ## 依存の制約
 
@@ -27,7 +26,7 @@ paths:
 - **ツールバーは1本**。ボタンを増やす前に、キーボードショートカットで済まないかを検討する
 - **モーダルダイアログは削除確認を除いて使わない**
 - **保存ボタンを置かない。** 自動保存（入力停止から800ms）とし、状態はステータスバーに常時表示する
-- 全ての主要操作をキーボードだけで完結できること。ショートカット一覧は `docs/design.md` 7.4
+- 全ての主要操作をキーボードだけで完結できること。ショートカット一覧は `docs/design/features.md`
 
 ## 状態
 
@@ -107,7 +106,7 @@ paths:
 **先に実測値を取ること。** 開発者ツールの console で要素の
 `getBoundingClientRect()` と `getComputedStyle()` を読めば、
 「高さが足りないのか」「位置がずれているのか」は1往復で分かる。
-一式は `docs/project-plan.md` の Phase 2.11 に置いてある。
+一式は `docs/ideas/2026-09-04-canvas-centering.md` に置いてある。
 
 ## 例外を握り潰さない・白い画面にしない
 
@@ -133,9 +132,9 @@ props のコールバックは `onChange: (v: string) => void` の形で書く�
 
 ## テスト
 
-この層は自動テストを整備せず手動試験に委ねる（`docs/project-plan.md` 7.1）。
+この層は自動テストを整備せず手動試験に委ねる（`docs/design/testing.md`）。
 代わりに、変更したら `npm run dev` で実際に操作して確認すること。最低限、
-キーボードショートカット全項目（`docs/design.md` 7.4）と、
+キーボードショートカット全項目（`docs/design/features.md`）と、
 保存・外部変更・競合の3つの状態表示を通すこと。
 
 ただし mind-elixir との相互変換（`src/views/Canvas/adapter.ts`）は純粋関数であり、

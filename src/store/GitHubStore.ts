@@ -16,7 +16,7 @@ import { ConflictError, MapNotFoundError, SaveFailedError } from "./types.js";
  * 目的はスマートフォン対応である。File System Access API はデスクトップ版
  * Chromium にしか無く、保存先が無ければレスポンシブ対応だけしても使えない。
  *
- * **API の挙動は着手前に実測してある**（docs/github-api-verification.md）。
+ * **API の挙動は着手前に実測してある**（docs/human-review/github-api-verification.md）。
  * 数値と応答コードの根拠はそちらにあり、ここでは実装だけを書く。
  *
  * 仕様の正本: docs/design.md 8.7
