@@ -5,6 +5,7 @@ import { movedFar, resolveDropPosition } from "../../state/drag.js";
 import { useEditor } from "../../state/editor.js";
 import type { DropPosition } from "../../state/tree.js";
 import { canDrop, visibleNodes } from "../../state/tree.js";
+import { InlineText } from "../Inline/InlineText.js";
 
 /**
  * アウトライン表示。
@@ -131,7 +132,11 @@ function Row({
         />
       ) : (
         <span className="outline-label">
-          {node.label === "" ? <span className="outline-empty">（空）</span> : node.label}
+          {node.label === "" ? (
+            <span className="outline-empty">（空）</span>
+          ) : (
+            <InlineText text={node.label} />
+          )}
           {node.emoji !== undefined && <span className="outline-emoji"> {node.emoji}</span>}
           {node.note !== undefined && <span className="outline-hasnote" title="ノートあり" />}
         </span>

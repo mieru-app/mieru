@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { MapNode } from "../../core/types.js";
+import { InlineText } from "../Inline/InlineText.js";
 import { EMOJI_GROUPS } from "./emoji.js";
 
 /**
@@ -37,11 +38,27 @@ export function NotePanel({
 }: Props): React.JSX.Element {
   const [draft, setDraft] = useState(node.note ?? "");
   const [showEmoji, setShowEmoji] = useState(false);
+  /*
+   * 記法を整形して見るか、書いた文字のまま見るか（2.10-3、設計書 F-26）。
+   *
+   * **既定は「書く」にする。** この欄は書くために開くものであり、
+   * 読む状態を既定にすると編集のたびに1回多く押すことになる。
+   *
+   * **触ると編集に入る方式は採らない。** ノートの中のリンクを押す操作と
+   * 編集を始める操作が同じ動作になり、どちらが起きるか利用者に予測できない。
+   */
+  const [reading, setReading] = useState(false);
 
   // 選択が変わったら編集中の内容を選択先のものに入れ替える
   useEffect(() => {
     setDraft(node.note ?? "");
   }, [node.uid, node.note]);
+
+  // 別のノードを選んだら書く状態へ戻す。読む状態のまま次の枝へ移ると、
+  // 書こうとして開いた欄が読み取り専用に見える
+  useEffect(() => {
+    setReading(false);
+  }, [node.uid]);
 
   return (
     <aside className="notepanel">
@@ -49,6 +66,16 @@ export function NotePanel({
         <span className="notepanel-label">
           {node.label === "" ? "（無題のノード）" : node.label}
         </span>
+        <button
+          type="button"
+          className="notepanel-read-toggle"
+          aria-pressed={reading}
+          // 空のノートには読むものが無い
+          disabled={draft === ""}
+          onClick={() => setReading((on) => !on)}
+        >
+          {reading ? "書く" : "読む"}
+        </button>
         <button
           type="button"
           className="notepanel-emoji"
@@ -59,7 +86,12 @@ export function NotePanel({
           {node.emoji ?? "＋"}
         </button>
         {onClose !== undefined && (
-          <button type="button" className="notepanel-close" aria-label="ノートを閉じる" onClick={onClose}>
+          <button
+            type="button"
+            className="notepanel-close"
+            aria-label="ノートを閉じる"
+            onClick={onClose}
+          >
             ✕
           </button>
         )}
@@ -110,15 +142,29 @@ export function NotePanel({
       <label className="notepanel-hint notepanel-note-label" htmlFor="node-note">
         ノード説明
       </label>
-      <textarea
-        id="node-note"
-        className="notepanel-input"
-        value={draft}
-        onChange={(event) => {
-          setDraft(event.target.value);
-          onChange(event.target.value);
-        }}
-      />
+      {reading ? (
+        /*
+         * **段落と表はまだ扱わない**（2.10-4）。いまは行ごとにインライン記法だけを描く。
+         * 空行は段落の切れ目として、見た目の高さだけ残す
+         */
+        <div className="notepanel-read" id="node-note">
+          {draft.split("\n").map((line, index) => (
+            <p key={String(index)} className={line === "" ? "is-blank" : ""}>
+              <InlineText text={line} />
+            </p>
+          ))}
+        </div>
+      ) : (
+        <textarea
+          id="node-note"
+          className="notepanel-input"
+          value={draft}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            onChange(event.target.value);
+          }}
+        />
+      )}
 
       <div className="notepanel-links">
         <label className="notepanel-hint" htmlFor="link-target">
