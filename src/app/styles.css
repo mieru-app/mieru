@@ -1773,7 +1773,6 @@ kbd {
   border: 1px solid transparent;
   border-radius: 4px;
   background: color-mix(in srgb, currentColor 5%, transparent);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -1781,9 +1780,44 @@ kbd {
   margin: 0;
 }
 
-/* 空行は段落の切れ目。高さだけ残す */
-.notepanel-read p.is-blank {
-  height: 0.6em;
+/* 段落と表（2.10-4） */
+.notepanel-read .note-paragraph {
+  margin: 0 0 0.7em;
+}
+
+.notepanel-read .note-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* 空行を挟まない改行は書いたとおりに折り返す */
+.notepanel-read .note-line {
+  display: block;
+}
+
+/*
+ * **表だけを横に送れるようにする。** 桁が多い表で欄ごと横に伸びると、
+ * 主表示まで押し出される（規約 `.claude/rules/ui.md`）
+ */
+.notepanel-read .note-table-wrap {
+  overflow-x: auto;
+  margin: 0 0 0.7em;
+}
+
+.notepanel-read .note-table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.notepanel-read .note-table th,
+.notepanel-read .note-table td {
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
+
+.notepanel-read .note-table th {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-weight: 600;
 }
 
 .notepanel-read-toggle {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { MapNode } from "../../core/types.js";
-import { InlineText } from "../Inline/InlineText.js";
+import { NoteBlocks } from "../Inline/NoteBlocks.js";
 import { EMOJI_GROUPS } from "./emoji.js";
 
 /**
@@ -143,16 +143,8 @@ export function NotePanel({
         ノード説明
       </label>
       {reading ? (
-        /*
-         * **段落と表はまだ扱わない**（2.10-4）。いまは行ごとにインライン記法だけを描く。
-         * 空行は段落の切れ目として、見た目の高さだけ残す
-         */
         <div className="notepanel-read" id="node-note">
-          {draft.split("\n").map((line, index) => (
-            <p key={String(index)} className={line === "" ? "is-blank" : ""}>
-              <InlineText text={line} />
-            </p>
-          ))}
+          <NoteBlocks text={draft} />
         </div>
       ) : (
         <textarea
