@@ -165,6 +165,21 @@ describe("性質", () => {
          */
         const marker = (text: string): string =>
           text.replace(/^>[ \t]?/, "").replace(/^(`{3,}|~{3,}).*$/, "");
+        /*
+         * **表は見出しより多い桁を捨てる**（`block.ts` の `toTable`。GFM と同じ）。
+         * 捨てるのが仕様なので、桁があふれる行は対象から外す。
+         * ここを外さないと、稀にしか当たらない反例で落ちる（2026-09-05 に遭遇）。
+         */
+        const widest = Math.max(
+          0,
+          ...parseBlocks(note).map((block) => (block.kind === "table" ? block.header.length : 0)),
+        );
+        const cells = (line: string): number =>
+          line.includes("|")
+            ? line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").length
+            : 1;
+        if (widest > 0 && lines.some((line) => cells(line) > widest)) return;
+
         for (const line of lines) {
           const content = bare(marker(line));
           if (content !== "" && !isRule(line)) expect(seen).toContain(content);
