@@ -221,4 +221,5 @@ Use it, change it and redistribute it freely, commercially or otherwise.
 Bugs and ideas go to [Issues](https://github.com/mieru-app/mieru/issues).
 
 **Please do not report security problems in a public issue.**
-Use the Security tab on this repository, or write to krikri1008@gmail.com.
+See [SECURITY.md](./SECURITY.md) for how to report privately, what is in scope,
+and what is already known and accepted.
