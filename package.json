@@ -1,9 +1,30 @@
 {
   "name": "mieru",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
+  "description": "Organize your thoughts in a mind map that saves as plain Markdown, ready to hand to an AI.",
+  "author": "Kyri <krikri1008@gmail.com>",
+  "homepage": "https://mieru-app.github.io/mieru/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mieru-app/mieru.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mieru-app/mieru/issues"
+  },
+  "keywords": [
+    "mindmap",
+    "mind-map",
+    "markdown",
+    "outliner",
+    "pwa",
+    "note-taking",
+    "obsidian",
+    "ai",
+    "llm",
+    "local-first"
+  ],
   "type": "module",
-  "description": "考えを整理し、そのまま AI に渡せるマインドマップツール",
   "engines": {
     "node": ">=20.19.0"
   },

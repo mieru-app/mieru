@@ -1,7 +1,17 @@
-# OSS ライセンスの選択（2026-09-05・提案）
+# OSS ライセンスの選択（2026-09-05）
 
-**種別: アイディアドキュメント（提案）。まだ決定していない。**
-決めたら `LICENSE` を作り、`package.json` を直し、この文書に結論を追記する。
+**種別: アイディアドキュメント（記録）。**
+
+## 決定（2026-09-05）
+
+**MIT を採用した。** 著作権表示は `Copyright (c) 2026 Kyri and contributors`、
+問い合わせ先は krikri1008@gmail.com。
+
+`LICENSE` を置き、`package.json` から `"private": true` を外して
+`license` `author` `homepage` `repository` `bugs` `keywords` を足した。
+README の記述もそれに合わせた。
+
+**以下は決定に至るまでの調査と比較である。**
 
 ---
 
