@@ -2,7 +2,9 @@
 
 Mieru への貢献を歓迎します。不具合の報告、使ってみた感想、コードの改善、どれも助かります。
 
-利用者向けの説明は [README](./README.md) にあります。
+**この文書と `docs/` は日本語です。** 利用者向けの説明は
+[README（英語）](./README.md) と [README（日本語）](./README.ja.md) にあります。
+英語での Issue と Pull Request も歓迎します。
 
 ---
 
@@ -120,8 +122,8 @@ CSP で強制済みで、通信先は `api.github.com` だけです。
 ## 脆弱性を見つけたら
 
 **公開の Issue には書かないでください。**
-このリポジトリの Security タブから非公開で報告できます
-（受け口の整備は[ロードマップ](./docs/human-review/roadmap.md)の作業中です）。
+このリポジトリの Security タブから非公開で報告するか、
+krikri1008@gmail.com へ直接お知らせください。
 
 ---
 
