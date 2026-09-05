@@ -158,3 +158,32 @@ describe("findNodeByPath", () => {
     expect(findNodeByPath(doc.root, "abc")).toBeUndefined();
   });
 });
+
+/**
+ * 空のラベルは実際に存在する（枝を作って名前を付ける前の状態）。
+ * **書き出したときに行ごと消えると、木の形が変わって見える。**
+ */
+describe("ラベルが空のノード", () => {
+  const empty = parseMarkdown("# 根\n\n-\n\n  - 子\n").doc;
+
+  it("見出し形式では記号だけの見出しとして残す", () => {
+    const output = exportMarkdown(empty, "heading");
+    expect(output).toContain("\n##\n");
+  });
+
+  it("箇条書き形式では記号だけの行として残す", () => {
+    const output = exportMarkdown(empty, "bullet");
+    expect(output).toContain("\n-\n");
+  });
+
+  it("絵文字だけを持つなら絵文字を出す", () => {
+    const withEmoji = parseMarkdown("# 根\n\n- 🌏\n").doc;
+    expect(exportMarkdown(withEmoji, "bullet")).toContain("- 🌏");
+  });
+
+  it("第4階層以降の箇条書きでも記号だけの行になる", () => {
+    // 見出しは第3階層までで、そこから先は箇条書きに落ちる
+    const deep = parseMarkdown("# 根\n\n- a\n  - b\n    - c\n\n      -\n").doc;
+    expect(exportMarkdown(deep, "heading")).toContain("#### c\n\n-\n");
+  });
+});
