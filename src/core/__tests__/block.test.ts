@@ -34,6 +34,12 @@ describe("表として読む", () => {
     expect(blocks[0]).toMatchObject({ header: ["a", "b"], rows: [["1", "2"]] });
   });
 
+  it("区切り行の桁数が足りなければ残りは左寄せにする", () => {
+    // 見出しより区切りが短い表は現実に書かれる。**桁の指定が1つずれると描画がずれる**
+    const blocks = parseBlocks("| a | b | c |\n|:--|\n| 1 | 2 | 3 |");
+    expect(blocks[0]).toMatchObject({ align: ["left", "left", "left"] });
+  });
+
   it("桁数が合わない行は見出しに合わせる", () => {
     const blocks = parseBlocks("| a | b |\n|---|---|\n| 1 |\n| 1 | 2 | 3 |");
     expect(blocks[0]).toMatchObject({

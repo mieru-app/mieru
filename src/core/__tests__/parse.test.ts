@@ -78,6 +78,12 @@ describe("基本構造", () => {
     expect(doc.root.children[0]?.label).toBe("規制動向 → [[市場]] と [[競合]]");
   });
 
+  it("中身が空白だけの横断リンクは宛先にしない", () => {
+    // **宛先が空のリンクを作ると、繋ぎ先の一覧に無名の項目が並ぶ**
+    const { doc } = parseMarkdown("# R\n\n- a [[   ]] b\n");
+    expect(doc.root.children[0]?.links).toEqual([]);
+  });
+
   it("インライン記法を解釈せず逐語的に保持する", () => {
     const { doc } = parseMarkdown("# R\n\n- **太字** と `コード` と [リンク](url)\n");
     expect(doc.root.children[0]?.label).toBe("**太字** と `コード` と [リンク](url)");
