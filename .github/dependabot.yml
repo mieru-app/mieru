@@ -20,12 +20,31 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: chore
+    # **通らない Pull Request を作らせない。** 毎週同じものが立ち直すと、
+    # 積み上がった赤を見慣れてしまい、門そのものが無視されるようになる。
     ignore:
       # **`mind-elixir` は 5.15.1 に固定する**（CLAUDE.md）。
       # npm の `latest` タグが prerelease（6.0.0-next）を指しているため、
       # Dependabot の提案に乗ると prerelease へ上がる。
       # 6.0 の安定版が出たら、この行を外して計画的に移行する
       - dependency-name: mind-elixir
+
+      # **TypeScript のメジャーは自動で上げない**（2026-09-05、PR #1 で判明）。
+      # `typescript-eslint@8.69.0` の peer が `>=4.8.4 <6.1.0` であり、
+      # TypeScript 7 を入れると `npm ci` が解決できずに落ちる。
+      # 5.x の中の更新は通す。メジャーは `typescript-eslint` が追随してから、
+      # 計画的に上げる作業にする
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+
+      # **`@types/node` は 20 系に留める**（同上）。
+      # `package.json` の `engines` が `>=20.19.0` なので、
+      # 新しいメジャーを入れると**実行環境に無い API が型として通ってしまう。**
+      # 型検査が本番より甘くなる方向の食い違いであり、気づきにくい
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
 
   # --- GitHub Actions ---------------------------------------------------
   # ワークフローが使う action も供給経路である。
