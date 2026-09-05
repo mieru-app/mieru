@@ -36,18 +36,23 @@ and every other tool can still read it.**
 
 **1. Open it.** Just the link above. No account, no sign-up.
 
-**2. Pick where files are saved.** Two options, switchable at any time.
+**2. Just start.** “Try guest mode” lets you write without choosing storage first.
+**Nothing is saved anywhere** until you pick a place — and when you do, what you wrote comes with you.
+
+**3. Pick where files are saved.** Two options, switchable at any time.
 
 | Storage | What lands there | Where it works |
 |---|---|---|
-| **A folder on this computer** | `.md` files directly in the folder you pick | Desktop Edge / Chrome |
+| **A local folder** | `.md` files directly in the folder you pick | Desktop Edge / Chrome |
 | **A GitHub repository** | `.md` files in the repo you name (each save is a commit) | Any device |
 
-**3. Write.** `Tab` adds a child, `Enter` adds a sibling. That is enough to get a shape.
+If you pick a folder, Mieru only ever touches **the `.md` files directly inside it**.
+
+**4. Write.** `Tab` adds a child, `Enter` adds a sibling. That is enough to get a shape.
 Press `?` for the full key list. On a phone, the buttons at the bottom do the same things.
 **There is no save button.** It saves when you stop typing.
 
-**4. Hand it to an AI.** `Ctrl+Shift+C` copies your map as prose an AI reads well.
+**5. Hand it to an AI.** `Ctrl+Shift+C` copies your map as prose an AI reads well.
 Select a branch first and only that part is copied.
 
 Here is what you actually get on disk:
@@ -117,6 +122,7 @@ and you pick it up on your computer later.
 | Go back to an earlier version | Every 5 minutes locally; every commit on GitHub |
 | Render tables, blockquotes, code blocks, bold and links | Inside notes. Blockquotes and code blocks are kept byte-for-byte |
 | Full-text search and tag filters | `Ctrl+F` |
+| Switch the interface between English and Japanese | First row of the settings; defaults to your browser language |
 | Work offline | Installable as a PWA |
 | Edit from a phone | When GitHub is the storage |
 
