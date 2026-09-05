@@ -2,9 +2,9 @@ import type { List, ListItem, Node, RootContent } from "mdast";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 
-import { unescapeMarkdown } from "./escape.js";
+import { unescapeInlineText, unguardHeadingClose } from "./escape.js";
 import { parseFrontmatter, splitFrontmatter } from "./frontmatter.js";
-import { normalizeNoteText } from "./normalize.js";
+import { normalizeNoteText, splitEmoji } from "./normalize.js";
 import type { MapDoc, MapNode, ParseResult, ParseWarning } from "./types.js";
 
 /**
@@ -18,9 +18,6 @@ import type { MapDoc, MapNode, ParseResult, ParseWarning } from "./types.js";
  */
 
 const processor = unified().use(remarkParse);
-
-/** ラベル末尾の絵文字（異体字セレクタ・ZWJ 連結を含む）を捉える */
-const TRAILING_EMOJI = /[ \t]+(\p{Extended_Pictographic}️?(?:‍\p{Extended_Pictographic}️?)*)$/u;
 
 /** 横断リンク `[[対象]]` */
 const CROSS_LINK = /\[\[([^\]\n]+)\]\]/g;
@@ -48,13 +45,6 @@ function rawBlockText(body: string, node: Node): string {
     .join("\n");
 }
 
-/** ラベルから末尾の絵文字を分離する */
-function splitEmoji(label: string): { label: string; emoji?: string } {
-  const match = TRAILING_EMOJI.exec(label);
-  if (match?.[1] === undefined) return { label };
-  return { label: label.slice(0, match.index).trimEnd(), emoji: match[1] };
-}
-
 /** ラベルから横断リンクを収集する。ラベル文字列からは除去しない（可逆性のため） */
 export function collectLinks(label: string): string[] {
   const links: string[] = [];
@@ -66,7 +56,13 @@ export function collectLinks(label: string): string[] {
 }
 
 function createNode(rawLabel: string, note?: string): MapNode {
-  const { label, emoji } = splitEmoji(unescapeMarkdown(rawLabel.trim()));
+  // **絵文字を外してからアンエスケープする。** 出力側は
+  // 「ラベルをエスケープしてから絵文字を足す」順なので（`serialize.ts` の `labelLine`）、
+  // 逆順にすると対にならない。`--- 🌏` のように、絵文字が付くと
+  // エスケープ条件そのものが変わる並びがある（プロパティテストが見つけた）
+  const split = splitEmoji(rawLabel.trim());
+  const label = unescapeInlineText(split.label);
+  const emoji = split.emoji;
   return {
     uid: crypto.randomUUID(),
     path: "",
@@ -91,13 +87,17 @@ export function assignPaths(root: MapNode): void {
 
 /**
  * 見出しの元ソースから `#` 記号を取り除く。
- * アンエスケープは createNode 側で行うため、ここでは記号の除去だけを担う。
+ * 行頭のアンエスケープは createNode 側で行う。ここは見出し行に固有の処理だけを担う。
  */
 function headingText(body: string, node: Node): string {
-  return rawBlockText(body, node)
+  const line = rawBlockText(body, node)
     .replace(/^#{1,6}[ \t]*/, "")
+    // CommonMark は閉じシーケンス（`# a #` の末尾）を取り除く。ここも合わせる
     .replace(/[ \t]+#+[ \t]*$/, "")
     .trim();
+  // **自前で足した `\#` を外すのは、上の除去より後でなければならない。**
+  // 先に外すと、守ったはずの `#` が閉じシーケンスとして消える
+  return unguardHeadingClose(line);
 }
 
 function unsupported(node: RootContent | Node, what: string): ParseWarning {
@@ -110,10 +110,15 @@ function unsupported(node: RootContent | Node, what: string): ParseWarning {
 
 /**
  * 元ソースのノート断片をモデル上のノートへ変換する。
- * アンエスケープしてから正規化する。順序を逆にするとエスケープ記号が残る。
+ *
+ * **正規化してから行ごとにアンエスケープする。** 出力側は正規化済みの各行へ
+ * `escapeInlineText()` を掛けるため（`serialize.ts` の `pushNoteLines`）、
+ * 逆順にすると対にならない。行頭の空白が残ったままでは足した `\` を見つけられない。
  */
 function toNote(raw: string): string | undefined {
-  return normalizeNoteText(unescapeMarkdown(raw));
+  const normalized = normalizeNoteText(raw);
+  if (normalized === undefined) return undefined;
+  return normalized.split("\n").map(unescapeInlineText).join("\n");
 }
 
 /** 箇条書き項目1つをノードへ変換する */

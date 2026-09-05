@@ -1,6 +1,6 @@
 import { escapeInlineText, guardHeadingClose } from "./escape.js";
 import { serializeFrontmatter } from "./frontmatter.js";
-import { normalizeNoteText } from "./normalize.js";
+import { normalizeNoteText, splitEmoji } from "./normalize.js";
 import type { MapDoc, MapNode } from "./types.js";
 
 /**
@@ -16,11 +16,23 @@ import type { MapDoc, MapNode } from "./types.js";
 /** 1階層あたりのインデント */
 const INDENT = "  ";
 
-/** ラベル行を組み立てる。ラベル内の改行は空白に潰す（1行に収める必要があるため） */
+/**
+ * ラベル行を組み立てる。ラベル内の改行は空白に潰す（1行に収める必要があるため）。
+ *
+ * **ラベル自身が末尾に絵文字を含む場合、ここでも分ける。**
+ * 解析側は必ず分けるので、出力側が逐語のまま出すと
+ * `0  ⁉`（空白2つ）が読み戻しで `0 ⁉` に詰まり、冪等性が崩れる
+ * （2026-09-05、プロパティテストを 25 万件へ上げて発見）。
+ */
 function labelLine(node: MapNode): string {
-  const label = escapeInlineText(node.label.replace(/[\r\n]+/g, " ").trim());
-  if (node.emoji === undefined || node.emoji === "") return label;
-  return label === "" ? node.emoji : `${label} ${node.emoji}`;
+  const flat = node.label.replace(/[\r\n]+/g, " ").trim();
+  const hasEmoji = node.emoji !== undefined && node.emoji !== "";
+  const split = hasEmoji ? { label: flat, emoji: node.emoji } : splitEmoji(flat);
+
+  const label = escapeInlineText(split.label);
+  const emoji = split.emoji;
+  if (emoji === undefined || emoji === "") return label;
+  return label === "" ? emoji : `${label} ${emoji}`;
 }
 
 /**
