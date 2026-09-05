@@ -1,6 +1,7 @@
 import { escapeInlineText, guardHeadingClose } from "./escape.js";
 import { serializeFrontmatter } from "./frontmatter.js";
 import { normalizeNoteText, splitEmoji } from "./normalize.js";
+import { classifyNoteLines, escapeNote, startsWithIndentedCode } from "./note.js";
 import type { MapDoc, MapNode } from "./types.js";
 
 /**
@@ -38,10 +39,14 @@ function labelLine(node: MapNode): string {
 /**
  * ノートの行を出力する。空行はインデントを付けない（行末空白を残さないため）。
  * 渡す文字列は正規化済みであること。
+ *
+ * **エスケープは `escapeNote()` を通す。** 引用・柵の中・インデントコードは
+ * 逐語で出さなければならず、行ごとに `escapeInlineText()` を掛けると
+ * `> q` が `\> q` になって引用が消える（`note.ts`）。
  */
 function pushNoteLines(out: string[], note: string, indent: string): void {
-  for (const line of note.split("\n")) {
-    out.push(line === "" ? "" : indent + escapeInlineText(line));
+  for (const line of escapeNote(note.split("\n"))) {
+    out.push(line === "" ? "" : indent + line);
   }
 }
 
@@ -54,7 +59,15 @@ function emitNode(out: string[], node: MapNode, depth: number): void {
   // 空の箇条書き `-` の次行は継続行ではなく新しい段落として解析され、
   // 読み込み時にラベルへ昇格してしまうため。
   // ここでノートの1行目をラベルへ繰り上げ、出力を解析結果と一致させる。
-  if (label === "" && note !== undefined) {
+  //
+  // **1行目が逐語行のときは繰り上げない。** 引用やコードをラベルへ上げると
+  // `- \> q` になり、引用がラベルの文字へ変わってしまう。
+  // 空の箇条書きの後ろに空行を挟めば、独立したブロックとして読み戻せる
+  if (
+    label === "" &&
+    note !== undefined &&
+    classifyNoteLines(note.split("\n"))[0]?.kind === "text"
+  ) {
     const newlineAt = note.indexOf("\n");
     label = escapeInlineText(newlineAt === -1 ? note : note.slice(0, newlineAt));
     note = newlineAt === -1 ? undefined : normalizeNoteText(note.slice(newlineAt + 1));
@@ -71,6 +84,10 @@ function emitNode(out: string[], node: MapNode, depth: number): void {
   }
 
   if (note !== undefined) {
+    // **インデントコードは段落を中断できない。**
+    // ラベル行の直後に置くと遅延継続行として吸われるので、空行で切る
+    // （引用と柵は中断できるので要らない。2026-09-05 に実測）
+    if (label !== "" && startsWithIndentedCode(note)) out.push("");
     // 箇条書きの内容列（= インデント + 2）に揃えると遅延継続行として
     // 同じ段落に取り込まれ、解析時にノートとして復元できる
     pushNoteLines(out, note, indent + INDENT);
@@ -110,7 +127,10 @@ export function serializeBody(root: MapNode): string {
     }
   }
 
-  return out.join("\n").replace(/[ \t]+$/gm, "");
+  // **行末空白の一括除去はしない。** コードブロックの中の空白まで削ってしまい、
+  // 他人が書いたファイルのバイト列が動く。ラベルとノートの本文行は
+  // 組み立てる時点で既に trim してあるので、ここで削る必要が無い
+  return out.join("\n");
 }
 
 /**
