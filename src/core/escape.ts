@@ -51,6 +51,13 @@ function escapeLineStart(line: string, keepQuote = false): string {
   if (/^<[!/?a-zA-Z]/.test(line)) return `\\${line}`;
   // リンク参照定義 `[foo]: /url`。`[[横断リンク]]` は該当しないので余計な記号は付かない
   if (/^\[[^\]\n]*\]:/.test(line)) return `\\${line}`;
+  /*
+   * **定義の見出しは行をまたげる。** `[` で開いて閉じないまま行が終わると、
+   * 次の行の `]:` と繋がって定義になり、**枝が丸ごと消える**
+   * （ラベル `[` ＋ノート `!]:` で再現。2026-09-05、25万件で発見）。
+   * 閉じ括弧が同じ行にあれば定義にならないので、無いときだけ足す
+   */
+  if (/^\[[^\]]*$/.test(line)) return `\\${line}`;
   // 番号付き箇条書き
   const ordered = /^(\d{1,9})[.)]([ \t]|$)/.exec(line);
   if (ordered?.[1] !== undefined) {
