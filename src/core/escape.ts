@@ -1,31 +1,36 @@
 /**
  * Markdown のエスケープ処理。
  *
- * ラベル・ノートは元ソースを逐語的に切り出して保持するため（docs/design.md 6.3）、
+ * ラベル・ノートは元ソースを逐語的に切り出して保持するため
+ * （`docs/design/data-format.md` 6.3「インライン記法はそのまま保持し、解釈しない」）、
  * 出力時のエスケープと解析時のアンエスケープが厳密に対になっていないと
  * 往復でバイト列が変わってしまう。この対称性が冪等性の前提であり、
  * 片方だけを変更してはいけない。
+ *
+ * **IMPORTANT: 足すのは行頭と見出し末尾だけである。**
+ * かつては解析側が `\` + ASCII 記号を全て解除していたが、出力側は行頭しか
+ * 足していなかったため対になっておらず、**他人が書いた `.md` の `\*` が
+ * 強調記号に化けていた**（2026-09-05 に修正）。
+ * 足す規則を増やすときは、必ず `unescapeLineStart()` に対の解除を書くこと。
  */
-
-/** CommonMark がエスケープ可能とする ASCII 記号 */
-const ESCAPABLE = /\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g;
-
-/**
- * `\` + ASCII 記号 のエスケープを解除する。
- * 元ソースをそのまま切り出しているため、この処理を挟まないと
- * 利用者から見たラベルにバックスラッシュが残る。
- */
-export function unescapeMarkdown(text: string): string {
-  return text.replace(ESCAPABLE, "$1");
-}
 
 /**
  * 行頭に置くとブロック要素として解釈される文字をエスケープする。
  *
- * 過剰にエスケープしても冪等性は保たれる（アンエスケープで必ず元に戻るため）。
- * 取りこぼしのほうが危険なので、判定は広めに取っている。
+ * 取りこぼすと構造が壊れるので、判定は広めに取っている。
+ * 過剰に足しても、`unescapeLineStart()` が必ず元へ戻す。
  */
 function escapeLineStart(line: string): string {
+  /*
+   * **`\` で始まる行には何も足さない。**
+   * その行は Markdown 上ですでにエスケープされており、ブロック要素として
+   * 解釈されない。ここで足すと、他人が書いた `\*star\*` が
+   * `\\*star\*` に増える（2026-09-05 に実測して外した）。
+   *
+   * 代償として、モデル上の `\- foo` は読み戻すと `- foo` になる。
+   * **どちらもファイル上は同じ `\- foo` であり、バイト列は動かない。**
+   * model → md → model ではなく md → model → md を守るのが強保証である。
+   */
   // 見出し
   if (/^#{1,6}([ \t]|$)/.test(line)) return `\\${line}`;
   // 箇条書き
@@ -50,13 +55,41 @@ function escapeLineStart(line: string): string {
 }
 
 /**
+ * `escapeLineStart()` が足した `\` だけを取り除く。
+ *
+ * **判定は「外してからもう一度エスケープすると元に戻るか」で行う。**
+ * 位置と条件を二重に書くと、片方を直したときに黙ってずれる。
+ * この形なら、`escapeLineStart()` に規則を足しても対が自動的に保たれる。
+ *
+ * 行の途中の `\*` には触れないので、**利用者が書いた「文字としての星」は
+ * そのまま残る。** これが 2026-09-05 に直した本体である。
+ */
+function unescapeLineStart(line: string): string {
+  // 番号付き箇条書き。`1\. foo` の `\` は数字の後ろにある
+  const ordered = /^(\d{1,9})\\[.)]/.exec(line);
+  if (ordered?.[1] !== undefined) {
+    const bare = ordered[1] + line.slice(ordered[1].length + 1);
+    if (escapeLineStart(bare) === line) return bare;
+  }
+  if (line.startsWith("\\")) {
+    const bare = line.slice(1);
+    if (escapeLineStart(bare) === line) return bare;
+  }
+  return line;
+}
+
+/**
  * テキストを Markdown の1行として安全に出力できる形にする。
  *
- * IMPORTANT: バックスラッシュのエスケープを先に行うこと。
- * 順序を逆にすると、行頭エスケープで足した `\` まで二重化されてしまう。
+ * ここで足した `\` は `unescapeInlineText()` が必ず取り除く。
  */
 export function escapeInlineText(text: string): string {
-  return escapeLineStart(text.replace(/\\/g, "\\\\"));
+  return escapeLineStart(text);
+}
+
+/** `escapeInlineText()` の逆。解析側で使う */
+export function unescapeInlineText(text: string): string {
+  return unescapeLineStart(text);
 }
 
 /**
@@ -66,9 +99,18 @@ export function escapeInlineText(text: string): string {
  * そのままではラベル `! #` が `!` に変わってしまうため、
  * 空白に続く末尾の `#` の直前にエスケープを入れて無効化する。
  *
- * 引数は escapeInlineText 済みの文字列であること。
- * ここで足す `\` は読み込み時のアンエスケープで元に戻る。
+ * 引数は `escapeInlineText()` 済みの文字列であること。
  */
 export function guardHeadingClose(escapedLine: string): string {
-  return escapedLine.replace(/([ \t])(#+)([ \t]*)$/, "$1\\$2$3");
+  // **すでにある `\` の前へ1つ足す。** ラベルが `a \#` のように
+  // バックスラッシュを含む場合、単に1つ足すだけだと `a #` と出力が衝突し、
+  // 読み戻したときにどちらだったか決められなくなる（本数で区別する）
+  return escapedLine.replace(/([ \t])(\\*)(#+)([ \t]*)$/, "$1\\$2$3$4");
+}
+
+/** `guardHeadingClose()` の逆。見出し行の解析で使う */
+export function unguardHeadingClose(line: string): string {
+  // 本数を1つ減らし、「足し直すと元に戻るか」で確かめる
+  const bare = line.replace(/([ \t])\\(\\*#+[ \t]*)$/, "$1$2");
+  return guardHeadingClose(bare) === line ? bare : line;
 }

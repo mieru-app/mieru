@@ -105,7 +105,7 @@ and you pick it up on your computer later.
 | **Presenting and print layout** | The goal is thinking, not producing a deliverable |
 | **AI that draws the map for you** | Left out on purpose. Doing the thinking is the point |
 | **Blockquotes and fenced code blocks** | **They are dropped on save today.** Known issue |
-| **Backslash escapes** | An escaped asterisk does not survive a round trip. [Known issue](./docs/ideas/2026-09-04-escape-roundtrip.md) |
+| **Nested empty bullets** | A line whose only content is another bullet marker loses one level of nesting on first save. [Known issue](./docs/ideas/2026-09-05-empty-label-nesting.md) |
 
 ### It can
 
@@ -188,9 +188,11 @@ Any browser, if you use GitHub as the storage.
 Using a folder on your computer needs Edge or Chrome (it uses the File System Access API).
 
 **Can I open `.md` files written elsewhere?**
-Yes, but **saving reformats them into Mieru's style.**
-The two known issues above (blockquotes and code blocks, backslash escapes)
-**take effect the moment you open and save. Keep a copy of anything you care about.**
+Yes. **Backslash escapes, bold, code spans and links all survive verbatim.**
+Saving does reformat the document into Mieru's style: bullets become `-`, indentation
+becomes two spaces, and frontmatter keys get a fixed order.
+The known issues above **take effect the moment you open and save,
+so keep a copy of anything you care about.**
 
 **Can I use it alongside Obsidian or VS Code?**
 Yes. Point it at a folder in your vault or repository and both open the same `.md`.

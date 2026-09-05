@@ -161,7 +161,17 @@ describe("ルートラベル（見出し行）の個別ケース", () => {
 });
 
 describe("往復を壊しやすい個別ケース", () => {
-  const cases: { name: string; label: string }[] = [
+  /**
+   * `restored` は、読み戻したときのモデル上のラベル。
+   * **省略したら `label` と同じ**であることを期待する。
+   *
+   * 食い違うのは、**同じ意味を持つ綴りが2つある**場合だけである。
+   * ラベルは Markdown の元ソースを逐語で持つので（設計 6.3）、
+   * `\# x` と `# x` は「行頭の井桁を文字として出す」という同じ意味になる。
+   * 正規化して片方に寄せるが、**ファイル上のバイト列は動かない**
+   * （`assertIdempotent` が同じケースで確かめている）。
+   */
+  const cases: { name: string; label: string; restored?: string }[] = [
     { name: "行頭の見出し記号", label: "# 見出しに見える" },
     { name: "行頭の箇条書き記号", label: "- 箇条書きに見える" },
     { name: "行頭の引用記号", label: "> 引用に見える" },
@@ -169,14 +179,19 @@ describe("往復を壊しやすい個別ケース", () => {
     { name: "水平線", label: "---" },
     { name: "コードフェンス", label: "```js" },
     { name: "バックスラッシュ単体", label: "\\" },
-    { name: "エスケープ済みの見出し記号", label: "\\# すでにエスケープ済み" },
+    {
+      name: "エスケープ済みの見出し記号",
+      label: "\\# すでにエスケープ済み",
+      // 出力はどちらも `- \# すでにエスケープ済み`。モデル上は片方へ寄せる
+      restored: "# すでにエスケープ済み",
+    },
     { name: "バックスラッシュとアスタリスク", label: "a\\*b" },
     { name: "強調記法", label: "**太字のまま保持**" },
     { name: "横断リンク", label: "規制動向 → [[市場]]" },
     { name: "空文字列", label: "" },
   ];
 
-  for (const { name, label } of cases) {
+  for (const { name, label, restored: expected } of cases) {
     it(name, () => {
       const md = serializeMarkdown({
         meta: { id: "", title: "T", tags: [], created: "", updated: "", version: "" },
@@ -200,7 +215,7 @@ describe("往復を壊しやすい個別ケース", () => {
 
       // ラベルが意味的にも復元されること（エスケープが利用者に見えてはいけない）
       const restored = parseMarkdown(withLabel).doc.root.children[0];
-      expect(restored?.label).toBe(label.trim());
+      expect(restored?.label).toBe(expected ?? label.trim());
     });
   }
 });
