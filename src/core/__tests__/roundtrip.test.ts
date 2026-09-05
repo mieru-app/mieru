@@ -82,10 +82,22 @@ describe("ラウンドトリップの強保証", () => {
   });
 
   it("行末に空白を残さない", () => {
+    /*
+     * **コードブロックの中の空白は残す**（設計 6.4。2026-09-05 に一括除去をやめた）。
+     * 他人が書いたコードの行末空白を削ると、ファイルのバイト列が動く。
+     *
+     * よってノート自身が行末空白を持つ場合は対象から外し、
+     * **こちらが足してしまう空白だけを見る。**
+     * この除外を入れる前は、稀にしか当たらない反例で落ちていた。
+     */
+    const notesOf = (node: MapNode): string[] => [
+      ...(node.note === undefined ? [] : [node.note]),
+      ...node.children.flatMap(notesOf),
+    ];
     fc.assert(
       fc.property(docArb, (doc) => {
-        const md = serializeMarkdown(doc);
-        expect(md).not.toMatch(/[ \t]+$/m);
+        if (notesOf(doc.root).some((note) => /[ \t]$/m.test(note))) return;
+        expect(serializeMarkdown(doc)).not.toMatch(/[ \t]+$/m);
       }),
       { numRuns: 1_000 },
     );

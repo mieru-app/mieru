@@ -1,6 +1,7 @@
 import type { MapIndex } from "../state/search.js";
 import { queryIndex, splitTerms } from "../state/search.js";
 import { TEMPLATES } from "../state/templates.js";
+import type { Strings } from "../state/strings/ja.js";
 import type { Command } from "./keymap.js";
 import { filterCommands } from "./shortcuts.js";
 
@@ -22,13 +23,17 @@ export type PaletteItem =
 /** 一覧に出すマップの上限。多すぎると操作や下敷きが画面の外へ押し出される */
 const MAX_MAPS = 8;
 
-export function buildPaletteItems(query: string, indexes: readonly MapIndex[]): PaletteItem[] {
+export function buildPaletteItems(
+  query: string,
+  indexes: readonly MapIndex[],
+  s: Strings,
+): PaletteItem[] {
   const terms = splitTerms(query);
 
-  const commands: PaletteItem[] = filterCommands(query).map((item) => ({
+  const commands: PaletteItem[] = filterCommands(query, s).map((item) => ({
     kind: "command",
     key: `command:${item.command}`,
-    group: "操作",
+    group: s.keys.paletteGroupCommand,
     title: item.title,
     hint: item.keys,
     command: item.command,
@@ -39,7 +44,7 @@ export function buildPaletteItems(query: string, indexes: readonly MapIndex[]): 
     .map((hit) => ({
       kind: "map",
       key: `map:${hit.id}`,
-      group: "マップを開く",
+      group: s.keys.paletteGroupMap,
       title: hit.title,
       hint: hit.excerpt,
       id: hit.id,
@@ -55,7 +60,7 @@ export function buildPaletteItems(query: string, indexes: readonly MapIndex[]): 
         ).map((template) => ({
           kind: "template",
           key: `template:${template.id}`,
-          group: "この下敷きで新規作成",
+          group: s.keys.paletteGroupTemplate,
           title: template.name,
           hint: template.description,
           id: template.id,

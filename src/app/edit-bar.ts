@@ -1,3 +1,4 @@
+import type { Strings } from "../state/strings/ja.js";
 import type { Command } from "./keymap.js";
 
 /**
@@ -17,9 +18,10 @@ import type { Command } from "./keymap.js";
 export interface EditBarItem {
   command: Command;
   /** 押しボタンの字。5つ並ぶので短く保つ */
-  label: string;
+  /** 言語で変わるので、字ではなく引き方を持つ */
+  label: (s: Strings) => string;
   /** 読み上げと吹き出しに使う説明 */
-  title: string;
+  title: (s: Strings) => string;
   /**
    * 選択中のノードを要するか。
    * 取り消しだけは選択と関係なく効く（消した直後は選択が消えている）
@@ -35,22 +37,32 @@ export interface EditBarItem {
 }
 
 export const EDIT_BAR_ITEMS: readonly EditBarItem[] = [
-  { command: "addChild", label: "＋子", title: "子を追加する", needsSelection: true },
-  { command: "addSibling", label: "＋兄弟", title: "兄弟を追加する", needsSelection: true },
+  {
+    command: "addChild",
+    label: (s) => s.editBar.addChild,
+    title: (s) => s.keys.addChild,
+    needsSelection: true,
+  },
+  {
+    command: "addSibling",
+    label: (s) => s.editBar.addSibling,
+    title: (s) => s.keys.addSibling,
+    needsSelection: true,
+  },
   {
     command: "beginEdit",
-    label: "名前",
-    title: "選択中のノードを書き換える",
+    label: (s) => s.editBar.rename,
+    title: (s) => s.keys.beginEdit,
     needsSelection: true,
   },
   {
     command: "remove",
-    label: "削除",
-    title: "部分木ごと削除する",
+    label: (s) => s.editBar.remove,
+    title: (s) => s.keys.remove,
     needsSelection: true,
     danger: true,
   },
-  { command: "undo", label: "↶", title: "元に戻す", needsSelection: false },
+  { command: "undo", label: () => "↶", title: (s) => s.keys.undo, needsSelection: false },
 ];
 
 /** その押しボタンを今押せるか */

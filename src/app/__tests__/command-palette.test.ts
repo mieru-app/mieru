@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { JA } from "../../state/strings/ja.js";
+
 import type { MapMeta } from "../../core/types.js";
 import { buildMapIndex } from "../../state/search.js";
 import { TEMPLATES, templateMarkdown } from "../../state/templates.js";
 import { buildPaletteItems } from "../command-palette.js";
 import { resolveShortcut } from "../keymap.js";
-import { COMMAND_ITEMS, filterCommands, keysFor } from "../shortcuts.js";
+import { commandItems, filterCommands, keysFor } from "../shortcuts.js";
 
 /**
  * コマンドパレット（`Ctrl+K`）の検証。
@@ -39,7 +41,7 @@ const SPECIAL_KEYS: Record<string, string> = {
 
 describe("操作の一覧", () => {
   it("載せた操作のキー表示は実際の割り当てと一致する", () => {
-    for (const item of COMMAND_ITEMS) {
+    for (const item of commandItems(JA)) {
       if (item.keys === "") continue;
       const parts = item.keys.split("+").map((part) => part.trim());
       const label = parts[parts.length - 1] ?? "";
@@ -55,12 +57,12 @@ describe("操作の一覧", () => {
   });
 
   it("キー割り当ての無い操作も載せる。パレットが唯一の入口になる", () => {
-    const exportItem = COMMAND_ITEMS.find((item) => item.command === "toggleExport");
+    const exportItem = commandItems(JA).find((item) => item.command === "toggleExport");
     expect(exportItem?.keys).toBe("");
   });
 
   it("方向キーの移動は載せない", () => {
-    const commands = COMMAND_ITEMS.map((item) => item.command);
+    const commands = commandItems(JA).map((item) => item.command);
     expect(commands).not.toContain("moveUp");
     expect(commands).not.toContain("reorderUp");
   });
@@ -73,22 +75,22 @@ describe("操作の一覧", () => {
 
 describe("絞り込み", () => {
   it("入力が無ければ全件", () => {
-    expect(filterCommands("  ")).toEqual(COMMAND_ITEMS);
+    expect(filterCommands("  ", JA)).toEqual(commandItems(JA));
   });
 
   it("説明でもキーでも当たる", () => {
-    expect(filterCommands("元に戻す").map((item) => item.command)).toEqual(["undo"]);
-    expect(filterCommands("ctrl + z").map((item) => item.command)).toContain("undo");
+    expect(filterCommands("元に戻す", JA).map((item) => item.command)).toEqual(["undo"]);
+    expect(filterCommands("ctrl + z", JA).map((item) => item.command)).toContain("undo");
   });
 
   it("全角で打っても当たる", () => {
-    expect(filterCommands("ＡＩ").map((item) => item.command)).toContain("copyForAi");
+    expect(filterCommands("ＡＩ", JA).map((item) => item.command)).toContain("copyForAi");
   });
 });
 
 describe("パレットの項目", () => {
   it("入力が無ければ操作とマップだけを出す", () => {
-    const items = buildPaletteItems("", indexes);
+    const items = buildPaletteItems("", indexes, JA);
     const groups = new Set(items.map((item) => item.group));
 
     expect(groups).toEqual(new Set(["操作", "マップを開く"]));
@@ -97,25 +99,25 @@ describe("パレットの項目", () => {
   });
 
   it("マップは新しい順に並ぶ", () => {
-    const maps = buildPaletteItems("", indexes).filter((item) => item.kind === "map");
+    const maps = buildPaletteItems("", indexes, JA).filter((item) => item.kind === "map");
     expect(maps.map((item) => item.title)).toEqual(["論点整理", "読書メモ"]);
   });
 
   it("操作・マップ・下敷きを1つの入力で引ける", () => {
-    const items = buildPaletteItems("整理", indexes);
+    const items = buildPaletteItems("整理", indexes, JA);
     expect(items.some((item) => item.kind === "map" && item.title === "論点整理")).toBe(true);
 
-    const withTemplate = buildPaletteItems("振返り", indexes);
+    const withTemplate = buildPaletteItems("振返り", indexes, JA);
     expect(withTemplate.some((item) => item.kind === "template")).toBe(true);
   });
 
   it("項目の鍵は重ならない。上下キーの位置がずれないため", () => {
-    const keys = buildPaletteItems("", indexes).map((item) => item.key);
+    const keys = buildPaletteItems("", indexes, JA).map((item) => item.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
 
   it("一致が無ければ空", () => {
-    expect(buildPaletteItems("該当しない語", indexes)).toEqual([]);
+    expect(buildPaletteItems("該当しない語", indexes, JA)).toEqual([]);
   });
 });
 

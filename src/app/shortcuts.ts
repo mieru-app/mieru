@@ -1,4 +1,5 @@
 import { normalizeForSearch, splitTerms } from "../state/search.js";
+import type { Strings } from "../state/strings/ja.js";
 import type { Command } from "./keymap.js";
 
 /**
@@ -18,100 +19,105 @@ export interface ShortcutEntry {
   keys: string[];
   /** keys と同じ並びの操作 */
   commands: Command[];
-  description: string;
+  /** 言語で変わるので、字ではなく引き方を持つ */
+  description: (s: Strings) => string;
 }
 
 export interface ShortcutGroup {
-  title: string;
+  title: (s: Strings) => string;
   entries: ShortcutEntry[];
 }
 
 export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
-    title: "枝を作る",
+    title: (s) => s.keys.groupCreate,
     entries: [
-      { keys: ["Tab"], commands: ["addChild"], description: "子を追加する" },
-      { keys: ["Enter"], commands: ["addSibling"], description: "兄弟を追加する" },
-      { keys: ["Shift + Tab"], commands: ["outdent"], description: "階層を1つ上げる" },
+      { keys: ["Tab"], commands: ["addChild"], description: (s) => s.keys.addChild },
+      { keys: ["Enter"], commands: ["addSibling"], description: (s) => s.keys.addSibling },
+      { keys: ["Shift + Tab"], commands: ["outdent"], description: (s) => s.keys.outdent },
       {
         keys: ["Space", "F2"],
         commands: ["beginEdit", "beginEdit"],
-        description: "選択中のノードを書き換える",
+        description: (s) => s.keys.beginEdit,
       },
-      { keys: ["Delete"], commands: ["remove"], description: "部分木ごと削除する" },
+      { keys: ["Delete"], commands: ["remove"], description: (s) => s.keys.remove },
     ],
   },
   {
-    title: "動かす・選ぶ",
+    title: (s) => s.keys.groupMove,
     entries: [
       {
         keys: ["↑", "↓"],
         commands: ["moveUp", "moveDown"],
-        description: "前後のノードへ移動する",
+        description: (s) => s.keys.moveUpDown,
       },
       {
         keys: ["←", "→"],
         commands: ["moveLeft", "moveRight"],
-        description: "親・最初の子へ移動する",
+        description: (s) => s.keys.moveLeftRight,
       },
       {
         keys: ["Ctrl + ↑", "Ctrl + ↓"],
         commands: ["reorderUp", "reorderDown"],
-        description: "兄弟の順序を入れ替える",
+        description: (s) => s.keys.reorder,
       },
       {
         keys: ["Ctrl + Shift + ↑"],
         commands: ["swapWithParent"],
-        description: "親子を反転する（選択中のノードを親の位置へ）",
+        description: (s) => s.keys.swapWithParent,
       },
-      { keys: ["Ctrl + /"], commands: ["toggleCollapse"], description: "折り畳む・展開する" },
+      {
+        keys: ["Ctrl + /"],
+        commands: ["toggleCollapse"],
+        description: (s) => s.keys.toggleCollapse,
+      },
     ],
   },
   {
-    title: "元に戻す・表示",
+    title: (s) => s.keys.groupUndo,
     entries: [
-      { keys: ["Ctrl + Z"], commands: ["undo"], description: "元に戻す" },
-      { keys: ["Ctrl + Shift + Z"], commands: ["redo"], description: "やり直す" },
+      { keys: ["Ctrl + Z"], commands: ["undo"], description: (s) => s.keys.undo },
+      { keys: ["Ctrl + Shift + Z"], commands: ["redo"], description: (s) => s.keys.redo },
       {
         keys: ["Ctrl + E"],
         commands: ["toggleMode"],
-        description: "表示を順に切り替える（キャンバス → アウトライン → Markdown）",
+        description: (s) => s.keys.toggleMode,
       },
     ],
   },
   {
-    title: "マップを探す",
+    title: (s) => s.keys.groupFind,
     entries: [
-      { keys: ["Ctrl + B"], commands: ["toggleSidebar"], description: "サイドバーを開閉する" },
+      { keys: ["Ctrl + B"], commands: ["toggleSidebar"], description: (s) => s.keys.toggleSidebar },
       {
         keys: ["Ctrl + F"],
         commands: ["focusSearch"],
-        description: "全マップを横断して検索する",
+        description: (s) => s.keys.focusSearchLong,
       },
       {
         keys: ["Ctrl + K"],
         commands: ["openPalette"],
-        description: "コマンドパレット（操作とマップを名前で呼ぶ）",
+        description: (s) => s.keys.palette,
       },
     ],
   },
   {
-    title: "AI へ渡す・保存",
+    title: (s) => s.keys.groupShare,
     entries: [
       {
         keys: ["Ctrl + Shift + C"],
         commands: ["copyForAi"],
-        description: "テキストをコピー（枝を選ぶとその部分だけ）",
+        description: (s) => s.keys.copyForAiLong,
       },
       {
         keys: ["Ctrl + S"],
         commands: ["saveNow"],
-        description: "すぐ保存する（通常は自動保存）",
+        description: (s) => s.keys.saveNowLong,
       },
       {
         keys: ["?", "F1"],
         commands: ["toggleHelp", "toggleHelp"],
-        description: "この一覧を開閉する",
+        description: (s) => s.keys.toggleHelpLong,
       },
     ],
   },
@@ -130,24 +136,24 @@ export interface CommandItem {
   keys: string;
 }
 
-const PALETTE_COMMANDS: { command: Command; title: string }[] = [
-  { command: "addChild", title: "子を追加する" },
-  { command: "addSibling", title: "兄弟を追加する" },
-  { command: "outdent", title: "階層を1つ上げる" },
-  { command: "swapWithParent", title: "親子を反転する（選択中のノードを親の位置へ）" },
-  { command: "beginEdit", title: "選択中のノードを書き換える" },
-  { command: "remove", title: "部分木ごと削除する" },
-  { command: "toggleCollapse", title: "折り畳む・展開する" },
-  { command: "undo", title: "元に戻す" },
-  { command: "redo", title: "やり直す" },
-  { command: "toggleMode", title: "表示を順に切り替える（キャンバス → アウトライン → Markdown）" },
-  { command: "copyForAi", title: "テキストをコピーする（見出し形式）" },
-  { command: "toggleExport", title: "テキスト出力を開く（形式と範囲を選ぶ）" },
-  { command: "toggleHistory", title: "履歴を開く（過去の版を見て戻す）" },
-  { command: "saveNow", title: "すぐ保存する" },
-  { command: "toggleSidebar", title: "サイドバーを開閉する" },
-  { command: "focusSearch", title: "全マップを検索する" },
-  { command: "toggleHelp", title: "キー操作の一覧を開く" },
+const PALETTE_COMMANDS: { command: Command; title: (s: Strings) => string }[] = [
+  { command: "addChild", title: (s) => s.keys.addChild },
+  { command: "addSibling", title: (s) => s.keys.addSibling },
+  { command: "outdent", title: (s) => s.keys.outdent },
+  { command: "swapWithParent", title: (s) => s.keys.swapWithParent },
+  { command: "beginEdit", title: (s) => s.keys.beginEdit },
+  { command: "remove", title: (s) => s.keys.remove },
+  { command: "toggleCollapse", title: (s) => s.keys.toggleCollapse },
+  { command: "undo", title: (s) => s.keys.undo },
+  { command: "redo", title: (s) => s.keys.redo },
+  { command: "toggleMode", title: (s) => s.keys.toggleMode },
+  { command: "copyForAi", title: (s) => s.keys.copyForAi },
+  { command: "toggleExport", title: (s) => s.keys.toggleExport },
+  { command: "toggleHistory", title: (s) => s.keys.toggleHistory },
+  { command: "saveNow", title: (s) => s.keys.saveNow },
+  { command: "toggleSidebar", title: (s) => s.keys.toggleSidebar },
+  { command: "focusSearch", title: (s) => s.keys.focusSearch },
+  { command: "toggleHelp", title: (s) => s.keys.toggleHelp },
 ];
 
 /** その操作に割り当てられたキーの表示。一覧と食い違わないよう同じ表から引く */
@@ -161,11 +167,14 @@ export function keysFor(command: Command): string {
   return "";
 }
 
-export const COMMAND_ITEMS: CommandItem[] = PALETTE_COMMANDS.map(({ command, title }) => ({
-  command,
-  title,
-  keys: keysFor(command),
-}));
+/** いまの言語での一覧。**言語が変わると字も変わるので、その場で組み立てる** */
+export function commandItems(s: Strings): CommandItem[] {
+  return PALETTE_COMMANDS.map(({ command, title }) => ({
+    command,
+    title: title(s),
+    keys: keysFor(command),
+  }));
+}
 
 /**
  * 入力で操作を絞り込む。
@@ -173,11 +182,12 @@ export const COMMAND_ITEMS: CommandItem[] = PALETTE_COMMANDS.map(({ command, tit
  * 正規化と語の分け方は全マップ検索と同じ関数を使う。2か所で当たり方が違うと、
  * 利用者が使い分けを覚える羽目になる。
  */
-export function filterCommands(query: string): CommandItem[] {
+export function filterCommands(query: string, s: Strings): CommandItem[] {
+  const items = commandItems(s);
   const terms = splitTerms(query);
-  if (terms.length === 0) return COMMAND_ITEMS;
+  if (terms.length === 0) return items;
 
-  return COMMAND_ITEMS.filter((item) => {
+  return items.filter((item) => {
     const haystack = normalizeForSearch(`${item.title} ${item.keys} ${item.command}`);
     return terms.every((term) => haystack.includes(term));
   });

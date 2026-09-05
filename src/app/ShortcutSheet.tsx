@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import { SHORTCUT_GROUPS } from "./shortcuts.js";
 
 /**
@@ -12,19 +13,20 @@ interface Props {
 }
 
 export function ShortcutSheet({ onClose }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   return (
-    <aside className="sheet" aria-label="キー操作一覧">
+    <aside className="sheet" aria-label={s.toolbar.shortcuts}>
       <div className="sheet-head">
-        <strong>キー操作</strong>
-        <button type="button" onClick={onClose} aria-label="閉じる">
+        <strong>{s.toolbar.shortcuts}</strong>
+        <button type="button" onClick={onClose} aria-label={s.settings.close}>
           ✕
         </button>
       </div>
 
       <div className="sheet-body">
         {SHORTCUT_GROUPS.map((group) => (
-          <section key={group.title}>
-            <h2 className="sheet-group">{group.title}</h2>
+          <section key={group.title(s)}>
+            <h2 className="sheet-group">{group.title(s)}</h2>
             <dl className="sheet-list">
               {group.entries.map((entry) => (
                 <div className="sheet-item" key={entry.keys.join("/")}>
@@ -36,7 +38,7 @@ export function ShortcutSheet({ onClose }: Props): React.JSX.Element {
                       </span>
                     ))}
                   </dt>
-                  <dd>{entry.description}</dd>
+                  <dd>{entry.description(s)}</dd>
                 </div>
               ))}
             </dl>

@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import type { Command } from "./keymap.js";
 import { EDIT_BAR_ITEMS, isEnabled } from "./edit-bar.js";
 
@@ -18,19 +19,20 @@ interface Props {
 }
 
 export function EditBar({ hasSelection, canUndo, onRun }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   return (
-    <div className="editbar" role="toolbar" aria-label="編集">
+    <div className="editbar" role="toolbar" aria-label={s.editBar.title}>
       {EDIT_BAR_ITEMS.map((item) => (
         <button
           key={item.command}
           type="button"
           className={item.danger === true ? "is-danger" : undefined}
-          title={item.title}
-          aria-label={item.title}
+          title={item.title(s)}
+          aria-label={item.title(s)}
           disabled={!isEnabled(item, { hasSelection, canUndo })}
           onClick={() => onRun(item.command)}
         >
-          {item.label}
+          {item.label(s)}
         </button>
       ))}
     </div>
