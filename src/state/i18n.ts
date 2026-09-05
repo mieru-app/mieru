@@ -29,16 +29,15 @@ const TABLES: Record<Language, Strings> = { ja: JA, en: EN };
 /**
  * 表示言語を決める。
  *
- * 1. 利用者が設定していればそれに従う
- * 2. していなければブラウザの言語を見る
- * 3. **既定は英語。** 公開先は世界であり、日本語話者だけが読みに来るわけではない
+ * **既定は英語で、ブラウザの言語は見ない。** 公開先は世界であり、
+ * 日本語は選べる選択肢のひとつという位置づけにする。
+ * 端末ごとに一度選べば記憶される（`theme.ts` と同じ扱い）。
  *
  * 知らない値は既定へ倒す。`localStorage` は利用者や他のツールが書き換えられる場所で、
- * 壊れた値で画面が真っ白になってはいけない（`theme.ts` と同じ考え方）。
+ * 壊れた値で画面が真っ白になってはいけない。
  */
-export function readLanguage(stored: string | null, preferred: readonly string[] = []): Language {
-  if (stored === "ja" || stored === "en") return stored;
-  return preferred.some((tag) => tag.toLowerCase().startsWith("ja")) ? "ja" : "en";
+export function readLanguage(stored: string | null): Language {
+  return stored === "ja" || stored === "en" ? stored : "en";
 }
 
 interface LanguageState {

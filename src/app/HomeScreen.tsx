@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import { useEffect, useRef, useState } from "react";
 
 import type { Template } from "../state/templates.js";
@@ -44,6 +45,7 @@ function CreateForm({
   | "onCreate"
   | "onCopyImportPrompt"
 >): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const [title, setTitle] = useState(DEFAULT_TITLE);
   const ref = useRef<HTMLInputElement>(null);
 
@@ -66,10 +68,10 @@ function CreateForm({
         if (event.key === "Escape") onCancelCreating();
       }}
     >
-      <h2>新規作成</h2>
+      <h2>{s.home.create}</h2>
 
       <label className="home-field">
-        <span className="home-field-label">ファイル名</span>
+        <span className="home-field-label">{s.home.fileName}</span>
         {/* 拡張子は付け外しできないので、入力欄の外に添えて既成事実として見せる */}
         <span className="home-input-row">
           <input
@@ -82,8 +84,8 @@ function CreateForm({
         </span>
       </label>
 
-      <div className="home-field" role="radiogroup" aria-label="テンプレート">
-        <span className="home-field-label">テンプレート</span>
+      <div className="home-field" role="radiogroup" aria-label={s.home.template}>
+        <span className="home-field-label">{s.home.template}</span>
         <div className="home-templates">
           {templates.map((template) => (
             <button
@@ -94,7 +96,7 @@ function CreateForm({
               className="home-template"
               onClick={() => onTemplateChange(template.id)}
             >
-              <span className="home-template-name">{template.name}</span>
+              <span className="home-template-name">{template.name(s)}</span>
             </button>
           ))}
         </div>
@@ -106,7 +108,7 @@ function CreateForm({
          * 一覧から別のマップを選んでも抜けられる（`App.tsx`）
          */}
         <button type="submit" className="primary">
-          作成
+          {s.home.submit}
         </button>
       </div>
 
@@ -118,7 +120,7 @@ function CreateForm({
       <div className="home-aside">
         <div className="home-actions">
           <button type="button" onClick={onCopyImportPrompt}>
-            既存の AI セッションの取り込みフォーマット
+            {s.home.importPrompt}
           </button>
         </div>
       </div>
@@ -136,6 +138,7 @@ export function HomeScreen({
   onCreate,
   onCopyImportPrompt,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   if (creating) {
     return (
       <div className="home">
@@ -162,7 +165,7 @@ export function HomeScreen({
 
       <div className="home-actions">
         <button type="button" className="primary" onClick={onStartCreating}>
-          新規作成
+          {s.home.create}
         </button>
       </div>
 
@@ -173,7 +176,7 @@ export function HomeScreen({
        */}
       <div className="home-actions">
         <button type="button" onClick={onCopyImportPrompt}>
-          既存の AI セッションの取り込みフォーマット
+          {s.home.importPrompt}
         </button>
       </div>
     </div>

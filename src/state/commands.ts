@@ -3,6 +3,7 @@ import { exportMarkdown } from "../core/export.js";
 import type { Command } from "../app/keymap.js";
 import { toFileNameBase } from "../store/file-name.js";
 import { useEditor } from "./editor.js";
+import { useLanguage } from "./i18n.js";
 import { locate } from "./tree.js";
 import { nextViewMode } from "./view-mode.js";
 import { useWorkspace } from "./workspace.js";
@@ -44,7 +45,12 @@ export type ExportScope = "whole" | "selection";
 /** 出力の結果。何を出したのかが利用者に分かる形で返す */
 export interface ExportResult {
   md: string;
-  /** 「全体」または起点ノードのラベル。通知とファイル名に使う */
+  /**
+   * 地図全体か。**字面で比べない。**
+   * 「全体」は言語で綴りが変わるので、判定に使うと訳した瞬間に壊れる
+   */
+  whole: boolean;
+  /** 画面に出す範囲の名前。通知とファイル名に使う */
   scope: string;
   /** `.md` として保存するときの既定のファイル名 */
   fileName: string;
@@ -60,7 +66,8 @@ export function exportAs(format: ExportFormat, scope: ExportScope = "whole"): Ex
   const doc = state.buildDoc();
   if (doc === null) return null;
 
-  const title = doc.meta.title === "" ? "無題" : doc.meta.title;
+  const s = useLanguage.getState().s;
+  const title = doc.meta.title === "" ? s.scope.untitled : doc.meta.title;
   const selected =
     state.selectedUid === null ? null : (locate(doc.root, state.selectedUid)?.node ?? null);
 
@@ -69,14 +76,16 @@ export function exportAs(format: ExportFormat, scope: ExportScope = "whole"): Ex
   if (scope !== "selection" || selected === null || selected.path === "") {
     return {
       md: exportMarkdown(doc, format),
-      scope: "全体",
+      whole: true,
+      scope: s.scope.whole,
       fileName: `${toFileNameBase(title)}.md`,
     };
   }
 
-  const label = selected.label === "" ? "無題の枝" : selected.label;
+  const label = selected.label === "" ? s.scope.untitledBranch : selected.label;
   return {
     md: exportMarkdown(doc, format, { fromPath: selected.path }),
+    whole: false,
     scope: label,
     fileName: `${toFileNameBase(`${title} - ${label}`)}.md`,
   };
@@ -153,11 +162,11 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
       if (result === null) return;
       try {
         await deps.copyText(result.md);
-        const what = result.scope === "全体" ? "全体" : `「${result.scope}」`;
-        deps.notify?.(`${what}を Markdown でコピーしました`);
+        const texts = useLanguage.getState().s;
+        deps.notify?.(texts.scope.copied(result.scope));
       } catch {
         // クリップボードは権限やフォーカスの都合で失敗しうる。黙って失わせない
-        deps.notify?.("クリップボードへコピーできませんでした");
+        deps.notify?.(useLanguage.getState().s.toast.copyFailed);
       }
       return;
     }

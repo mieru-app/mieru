@@ -1,10 +1,7 @@
+import { useLanguage } from "../state/i18n.js";
 import { useState } from "react";
 
-import {
-  GITHUB_STORAGE_NOTE,
-  GITHUB_TOKEN_STEPS,
-  GITHUB_TOKEN_URL,
-} from "../state/github-guide.js";
+import { storageNote, GITHUB_TOKEN_STEPS, GITHUB_TOKEN_URL } from "../state/github-guide.js";
 import type { GitHubConnectResult } from "../state/workspace.js";
 
 /**
@@ -24,6 +21,7 @@ interface Props {
 }
 
 export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const [token, setToken] = useState("");
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
@@ -53,18 +51,18 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
 
   return (
     <form className="ghconnect" onSubmit={submit}>
-      <label htmlFor="gh-repo">リポジトリ</label>
+      <label htmlFor="gh-repo">{s.github.repo}</label>
       <input
         id="gh-repo"
         value={repo}
         onChange={(event) => setRepo(event.target.value)}
-        placeholder="owner/repo または https://github.com/owner/repo"
+        placeholder={s.github.repoPlaceholder}
         autoComplete="off"
         spellCheck={false}
       />
       {errorFor("repo") !== null && <p className="ghconnect-error">{errorFor("repo")}</p>}
 
-      <label htmlFor="gh-token">アクセストークン</label>
+      <label htmlFor="gh-token">{s.github.token}</label>
       <input
         id="gh-token"
         type="password"
@@ -82,20 +80,20 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
         aria-expanded={showSteps}
         onClick={() => setShowSteps(!showSteps)}
       >
-        {showSteps ? "▾" : "▸"} トークンの作り方
+        {showSteps ? "▾" : "▸"} {s.github.howTo}
       </button>
       {showSteps && (
         <div className="ghconnect-steps">
           <p>
             <a href={GITHUB_TOKEN_URL} target="_blank" rel="noreferrer noopener">
-              GitHub のトークン作成画面を開く
+              {s.github.openTokenPage}
             </a>
           </p>
           <ol>
             {GITHUB_TOKEN_STEPS.map((step) => (
-              <li key={step.title}>
-                <strong>{step.title}</strong>
-                <span>{step.detail}</span>
+              <li key={step.title(s)}>
+                <strong>{step.title(s)}</strong>
+                <span>{step.detail(s)}</span>
               </li>
             ))}
           </ol>
@@ -103,13 +101,13 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
       )}
 
       <details className="ghconnect-advanced">
-        <summary>置き場所を指定（省略可）</summary>
-        <label htmlFor="gh-directory">リポジトリ内のフォルダ</label>
+        <summary>{s.github.advanced}</summary>
+        <label htmlFor="gh-directory">{s.github.directory}</label>
         <input
           id="gh-directory"
           value={directory}
           onChange={(event) => setDirectory(event.target.value)}
-          placeholder="空ならリポジトリ直下"
+          placeholder={s.github.directoryPlaceholder}
           autoComplete="off"
           spellCheck={false}
         />
@@ -117,12 +115,12 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
           <p className="ghconnect-error">{errorFor("directory")}</p>
         )}
 
-        <label htmlFor="gh-branch">ブランチ</label>
+        <label htmlFor="gh-branch">{s.github.branch}</label>
         <input
           id="gh-branch"
           value={branch}
           onChange={(event) => setBranch(event.target.value)}
-          placeholder="空なら既定のブランチ"
+          placeholder={s.github.branchPlaceholder}
           autoComplete="off"
           spellCheck={false}
         />
@@ -135,9 +133,9 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
           checked={remember}
           onChange={(event) => setRemember(event.target.checked)}
         />
-        この端末に記憶する
+        {s.github.remember}
       </label>
-      <p className="ghconnect-note">{GITHUB_STORAGE_NOTE}</p>
+      <p className="ghconnect-note">{storageNote(s)}</p>
 
       {failure !== undefined && failure.field === undefined && (
         <p className="ghconnect-error" role="alert">
@@ -147,11 +145,11 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
 
       <div className="ghconnect-actions">
         <button type="submit" className="primary" disabled={busy}>
-          {busy ? "確認しています…" : "接続する"}
+          {busy ? s.github.verifying : s.github.connect}
         </button>
         {onCancel !== undefined && (
           <button type="button" onClick={onCancel} disabled={busy}>
-            やめる
+            {s.github.cancel}
           </button>
         )}
       </div>

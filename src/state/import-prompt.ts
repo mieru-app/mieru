@@ -1,3 +1,5 @@
+import type { Strings } from "./strings/ja.js";
+
 /**
  * AI に「Mieru へ取り込める形式で出して」と頼むための指示文（F-36）。
  *
@@ -10,6 +12,9 @@
  * 指示文だけが古くなるという食い違いが構造的に起きない。
  * 変換規則を変えたら `__tests__/import-prompt.test.ts` が落ちる。
  *
+ * **指示文も言語に従う**（2.12）。英語で作業している人に日本語の指示を
+ * 貼らせると、AI の返事も日本語に寄る。
+ *
  * 仕様の正本: docs/design.md 7.3「逆方向」
  */
 
@@ -19,30 +24,20 @@
  * 指示の各項目を1つずつ実演している（見出し・階層・ノート）。
  * テストはこれを実際にパーサへ通し、警告が出ないことを確かめる。
  */
-export const IMPORT_EXAMPLE = `# 新規事業の論点整理
-
-- 市場
-  - TAM試算
-    既存レポートでは1,200億円。ただし定義が広すぎる疑いがある。
-  - 競合の空白地帯
-- リスク
-  - 規制動向
-`;
+export function importExample(s: Strings): string {
+  return s.importPrompt.example;
+}
 
 /** クリップボードへ入れる指示文の全体 */
-export const IMPORT_PROMPT = `以下の形式で Markdown を出力してください。マインドマップツールにそのまま取り込みます。
+export function importPrompt(s: Strings): string {
+  const rules = s.importPrompt.rules.map((rule) => `- ${rule}`).join("\n");
+  return `${s.importPrompt.lead}
 
-- 1行目は \`# \` で始まる中心テーマ。1つだけ
-- 枝は \`- \` の箇条書き。半角スペース2つのインデントで1階層深くする
-- 枝のラベルは1〜3語の短いキーワードにする。説明はラベルに書かない
-- 説明を付けたい枝は、次の行に半角スペース2つぶん右へ寄せて文を書く
-- 絵文字を付けるなら行末に半角スペース1つを空けて1文字だけ
-- 引用・コードブロック・表は説明の中でだけ使う（枝には分かれず説明文の一部になる）
-- 水平線（\`---\`）は使わない（取り込めずに失われる）
-- frontmatter は不要
+${rules}
 
-例:
+${s.importPrompt.exampleLabel}
 
 \`\`\`markdown
-${IMPORT_EXAMPLE}\`\`\`
+${importExample(s)}\`\`\`
 `;
+}

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { parseMarkdown } from "../../core/parse.js";
 import { serializeMarkdown } from "../../core/serialize.js";
-import { IMPORT_EXAMPLE, IMPORT_PROMPT } from "../import-prompt.js";
+import { importExample, importPrompt } from "../import-prompt.js";
+import type { Strings } from "../strings/ja.js";
+import { EN } from "../strings/en.js";
+import { JA } from "../strings/ja.js";
 import { flatten } from "../tree.js";
 
 /**
@@ -13,8 +16,14 @@ import { flatten } from "../tree.js";
  * 文書ではなくコードに置いてあるのはこのためである。
  */
 
+/** **両方の言語で確かめる。** 例文も指示文も訳すので、片方だけ崩れうる */
+const TABLES: [string, Strings][] = [
+  ["ja", JA],
+  ["en", EN],
+];
+
 describe("例文がそのまま取り込める", () => {
-  const { doc, warnings } = parseMarkdown(IMPORT_EXAMPLE, { id: "取り込み.md" });
+  const { doc, warnings } = parseMarkdown(importExample(JA), { id: "取り込み.md" });
 
   it("警告が1件も出ない", () => {
     // 警告が出るなら、指示に従った出力が欠けるということである
@@ -45,7 +54,7 @@ describe("例文がそのまま取り込める", () => {
 });
 
 describe("例文が指示に違反していない", () => {
-  const lines = IMPORT_EXAMPLE.split("\n");
+  const lines = importExample(JA).split("\n");
 
   it("`# ` の見出しは1つだけ", () => {
     expect(lines.filter((line) => line.startsWith("# "))).toHaveLength(1);
@@ -61,20 +70,33 @@ describe("例文が指示に違反していない", () => {
 
   it("取り込めない要素を例に出していない", () => {
     for (const forbidden of ["|", "```", "> ", "---"]) {
-      expect(IMPORT_EXAMPLE).not.toContain(forbidden);
+      expect(importExample(JA)).not.toContain(forbidden);
     }
   });
 });
 
 describe("指示文", () => {
-  it("例文を含んでいる", () => {
-    expect(IMPORT_PROMPT).toContain(IMPORT_EXAMPLE);
-  });
+  for (const [name, table] of TABLES) {
+    it(`${name}: 例文を含んでいる`, () => {
+      expect(importPrompt(table)).toContain(importExample(table));
+    });
 
-  it("貼り付けて使える長さに収まっている", () => {
-    // 長い指示は読まれずに削られる。1画面に収まる範囲を保つ
-    expect(IMPORT_PROMPT.split("\n").length).toBeLessThan(30);
-  });
+    it(`${name}: 貼り付けて使える長さに収まっている`, () => {
+      // 長い指示は読まれずに削られる。1画面に収まる範囲を保つ
+      expect(importPrompt(table).split("\n").length).toBeLessThan(30);
+    });
+
+    /**
+     * **例文は両方の言語で取り込めなければならない。**
+     * 英語の例文だけ形が崩れると、英語で使う人の取り込みが黙って壊れる。
+     */
+    it(`${name}: 例文がそのまま取り込め、警告も出ない`, () => {
+      const result = parseMarkdown(importExample(table), { id: "x.md" });
+      expect(result.warnings).toEqual([]);
+      const saved = serializeMarkdown(result.doc);
+      expect(serializeMarkdown(parseMarkdown(saved).doc)).toBe(saved);
+    });
+  }
 });
 
 /**

@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MapIndex } from "../state/search.js";
@@ -24,7 +25,8 @@ export function CommandPalette({ indexes, onClose, onPick }: Props): React.JSX.E
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
 
-  const items = useMemo(() => buildPaletteItems(query, indexes), [query, indexes]);
+  const s = useLanguage((state) => state.s);
+  const items = useMemo(() => buildPaletteItems(query, indexes, s), [query, indexes, s]);
 
   useEffect(() => {
     input.current?.focus();
@@ -47,15 +49,15 @@ export function CommandPalette({ indexes, onClose, onPick }: Props): React.JSX.E
       <div
         className="palette"
         role="dialog"
-        aria-label="コマンドパレット"
+        aria-label={s.palette.title}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <input
           ref={input}
           className="palette-input"
           value={query}
-          placeholder="操作かマップの名前を入力"
-          aria-label="操作かマップの名前を入力"
+          placeholder={s.palette.placeholder}
+          aria-label={s.palette.placeholder}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape") onClose();
@@ -75,7 +77,7 @@ export function CommandPalette({ indexes, onClose, onPick }: Props): React.JSX.E
         />
 
         <div className="palette-list">
-          {items.length === 0 && <p className="palette-empty">一致するものがありません。</p>}
+          {items.length === 0 && <p className="palette-empty">{s.palette.empty}</p>}
           {items.map((item, index) => {
             const heading = item.group === lastGroup ? null : item.group;
             lastGroup = item.group;

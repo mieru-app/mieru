@@ -11,6 +11,7 @@ import { IdbHistoryStore } from "../../store/IdbHistoryStore.js";
 import { idbDelete, STORE_HISTORY } from "../../store/idb.js";
 import { FakeGitHub } from "../../store/__tests__/fake-github.js";
 import { useEditor } from "../editor.js";
+import { useLanguage } from "../i18n.js";
 import { useWorkspace } from "../workspace.js";
 
 /**
@@ -77,7 +78,16 @@ function reset(): FakeDirectory {
   return dir;
 }
 
-beforeEach(reset);
+beforeEach(() => {
+  /*
+   * **エラー文の言語を固定する。** 既定は英語だが、ここで確かめたいのは
+   * 「失敗を状態として残すこと」であって字面ではない。
+   * 言語を固定しないと、既定を変えるたびにこの一式が落ちる。
+   * 文言表そのものの完全性は `i18n.test.ts` が見ている
+   */
+  useLanguage.getState().setLanguage("ja");
+  return reset();
+});
 
 describe("起動時のフォルダ復帰", () => {
   it("File System Access API が無くても行き止まりにしない", async () => {

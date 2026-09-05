@@ -38,22 +38,16 @@ function allStrings(value: unknown): string[] {
 
 describe("readLanguage", () => {
   it("設定されていればそれに従う", () => {
-    expect(readLanguage("ja", ["en-US"])).toBe("ja");
-    expect(readLanguage("en", ["ja-JP"])).toBe("en");
-  });
-
-  it("設定が無ければブラウザの言語を見る", () => {
-    expect(readLanguage(null, ["ja-JP", "en-US"])).toBe("ja");
-    expect(readLanguage(null, ["ja"])).toBe("ja");
-    expect(readLanguage(null, ["fr-FR"])).toBe("en");
+    expect(readLanguage("ja")).toBe("ja");
+    expect(readLanguage("en")).toBe("en");
   });
 
   /**
-   * **既定は英語。** 公開先は世界であり、
-   * 日本語話者だけが読みに来るわけではない。
+   * **既定は英語。ブラウザの言語は見ない。**
+   * 公開先は世界であり、日本語は選べる選択肢のひとつという位置づけである。
    */
-  it("手掛かりが何も無ければ英語", () => {
-    expect(readLanguage(null, [])).toBe("en");
+  it("設定が無ければ英語", () => {
+    expect(readLanguage(null)).toBe("en");
   });
 
   /**
@@ -62,7 +56,7 @@ describe("readLanguage", () => {
    */
   it("知らない値は既定へ倒す", () => {
     for (const broken of ["", "JA", "ja-JP", "{}", "null"]) {
-      expect(readLanguage(broken, [])).toBe("en");
+      expect(readLanguage(broken)).toBe("en");
     }
   });
 });

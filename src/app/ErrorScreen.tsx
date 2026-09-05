@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import { Component } from "react";
 
 import { serializeMarkdown } from "../core/serialize.js";
@@ -39,7 +40,7 @@ function describe(error: Error): string {
   return [
     `${error.name}: ${error.message}`,
     "",
-    error.stack ?? "(スタックなし)",
+    error.stack ?? useLanguage.getState().s.crash.noStack,
     "",
     `URL: ${location.href}`,
     `UA: ${navigator.userAgent}`,
@@ -71,26 +72,29 @@ export class ErrorScreen extends Component<{ children: React.ReactNode }, State>
 
     const md = currentMarkdown();
     const report = describe(error);
+    /*
+     * **フックではなくストアを直に読む。** ここはクラス部品であり、
+     * かつ例外の後に描かれる。**フックの規則に依存しない方が安全である**
+     */
+    const s = useLanguage.getState().s;
 
     return (
       <div className="crash">
-        <h1 className="crash-title">画面の描画が止まりました</h1>
+        <h1 className="crash-title">{s.crash.title}</h1>
         <p className="crash-lead">
-          保存済みの内容は失われていません。
-          {md === null
-            ? "書きかけを取り出すことはできませんでした。"
-            : "下の「書きかけを写す」で、いま開いているマップを取り出せます。"}
+          {s.crash.safe}
+          {md === null ? s.crash.lost : s.crash.recoverable}
         </p>
 
         <div className="crash-actions">
           <button type="button" onClick={() => location.reload()}>
-            読み込み直す
+            {s.crash.reload}
           </button>
           <button type="button" disabled={md === null} onClick={() => this.copy("md", md ?? "")}>
-            {copied === "md" ? "写しました" : "書きかけを写す"}
+            {copied === "md" ? s.crash.copied : s.crash.copyDraft}
           </button>
           <button type="button" onClick={() => this.copy("error", report)}>
-            {copied === "error" ? "写しました" : "エラーを写す"}
+            {copied === "error" ? s.crash.copied : s.crash.copyError}
           </button>
         </div>
 

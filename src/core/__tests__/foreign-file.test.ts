@@ -163,14 +163,12 @@ describe("性質", () => {
         const label = raw.replace(/[\r\n]/g, " ");
         const first = openAndSave(fileWith(label));
         /*
-         * **既知の別件を除く（2026-09-05 に発見。今回の修正とは無関係）。**
-         * `- *` `- -` `- +` のように「空のラベルの下に空のラベル」が来ると、
-         * 出力 `-\n\n  -\n` が兄弟2つとして読み戻され、2周目で形が変わる。
-         * 空ラベルの前に空行を入れる規則（設計 6.4）が、入れ子の親子関係を切るため。
-         * **変更前のコードでも同じように揺れることを確かめてある。**
-         * 記録は `docs/ideas/2026-09-05-empty-label-nesting.md`。
+         * **空ラベルの入れ子の除外は 2026-09-05 に外した。**
+         * `-` の下の `  -` が兄弟2つとして読み戻る不具合を直したため
+         * （`serialize.ts` の空行の条件。記録は
+         * `docs/ideas/2026-09-05-empty-label-nesting.md`）。
+         * 除外を外したまま25万件を通している。
          */
-        if (/^-$/m.test(first)) return;
         expect(openAndSave(first)).toBe(first);
       }),
       { numRuns: 20_000 },

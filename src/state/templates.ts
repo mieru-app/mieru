@@ -10,42 +10,50 @@
  * 作成時に利用者の入力へ差し替わるので、ここでは仮の見出しを置いておけばよい。
  */
 
+import type { Strings } from "./strings/ja.js";
+
 export interface Template {
   id: string;
-  name: string;
-  description: string;
-  /** null は「空のマップ」。`createMap` に下敷きを渡さない */
-  markdown: string | null;
+  /** 言語で変わるので、字ではなく引き方を持つ */
+  name: (s: Strings) => string;
+  description: (s: Strings) => string;
+  /**
+   * 下敷きの本文。**中身も言語に従う。**
+   * 英語で使う人が SWOT を選んで日本語の枝が出るのは、下敷きとして役に立たない。
+   * null は「空のマップ」で、`createMap` に下敷きを渡さない
+   */
+  markdown: ((s: Strings) => string) | null;
 }
 
 export const TEMPLATES: Template[] = [
   {
     id: "blank",
-    name: "デフォルト",
-    description: "中心テーマだけ",
+    name: (s) => s.template.blank,
+    description: (s) => s.template.blankHint,
     markdown: null,
   },
   {
     id: "swot",
-    name: "SWOT",
-    description: "強み・弱み・機会・脅威",
-    markdown: "# ひな形\n\n- 強み\n- 弱み\n- 機会\n- 脅威\n",
+    name: (s) => s.template.swot,
+    description: (s) => s.template.swotHint,
+    markdown: (s) => s.template.swotBody,
   },
   {
     id: "minutes",
-    name: "議事録",
-    description: "決まったこと・宿題・論点",
-    markdown: "# ひな形\n\n- 決まったこと\n- 宿題\n- 論点\n- 次回\n",
+    name: (s) => s.template.minutes,
+    description: (s) => s.template.minutesHint,
+    markdown: (s) => s.template.minutesBody,
   },
   {
     id: "weekly",
-    name: "週次振返り",
-    description: "やったこと・気づき・次の一手",
-    markdown: "# ひな形\n\n- やったこと\n- 気づき\n- うまくいかなかったこと\n- 次の一手\n",
+    name: (s) => s.template.weekly,
+    description: (s) => s.template.weeklyHint,
+    markdown: (s) => s.template.weeklyBody,
   },
 ];
 
 /** id から下敷きの Markdown を引く。見つからなければ空のマップとして扱う */
-export function templateMarkdown(id: string): string | undefined {
-  return TEMPLATES.find((template) => template.id === id)?.markdown ?? undefined;
+export function templateMarkdown(id: string, s: Strings): string | undefined {
+  const found = TEMPLATES.find((template) => template.id === id)?.markdown;
+  return found === null || found === undefined ? undefined : found(s);
 }

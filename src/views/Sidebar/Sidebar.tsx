@@ -1,3 +1,5 @@
+import { useLanguage } from "../../state/i18n.js";
+import type { Strings } from "../../state/strings/ja.js";
 import { useEffect, useRef, useState } from "react";
 
 import type { SearchHit } from "../../state/search.js";
@@ -16,10 +18,10 @@ import type { SearchHit } from "../../state/search.js";
  */
 
 /** 一致した場所の種類。なぜ引っ掛かったのかを一言で示す */
-const KIND_LABEL: Record<SearchHit["kind"], string> = {
-  title: "表題",
-  label: "ノード",
-  note: "ノート",
+const KIND_LABEL: Record<SearchHit["kind"], (s: Strings) => string> = {
+  title: (s) => s.sidebar.hitTitle,
+  label: (s) => s.sidebar.hitLabel,
+  note: (s) => s.sidebar.hitNote,
 };
 
 interface RowInputProps {
@@ -93,25 +95,26 @@ export function Sidebar({
   onRename,
   onDelete,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   /** 改名中のマップ。null なら改名していない */
   const [renaming, setRenaming] = useState<string | null>(null);
 
   return (
-    <nav className="sidebar" aria-label="マップ">
+    <nav className="sidebar" aria-label={s.sidebar.maps}>
       <div className="sidebar-search">
         <input
           ref={searchRef}
           type="search"
           className="sidebar-input"
           value={query}
-          placeholder="全マップを検索"
-          aria-label="全マップを検索"
+          placeholder={s.sidebar.search}
+          aria-label={s.sidebar.search}
           onChange={(event) => onQueryChange(event.target.value)}
         />
       </div>
 
       {tags.length > 0 && (
-        <div className="sidebar-tags" role="group" aria-label="タグで絞り込む">
+        <div className="sidebar-tags" role="group" aria-label={s.sidebar.filterByTag}>
           {tags.map(({ tag, count }) => (
             <button
               type="button"
@@ -129,9 +132,7 @@ export function Sidebar({
 
       <div className="sidebar-list">
         {hits.length === 0 && (
-          <p className="sidebar-empty">
-            {empty ? "まだマップがありません。" : "条件に合うマップはありません。"}
-          </p>
+          <p className="sidebar-empty">{empty ? s.sidebar.noMaps : s.sidebar.noHits}</p>
         )}
 
         {hits.map((hit) =>
@@ -139,7 +140,7 @@ export function Sidebar({
             <RowInput
               key={hit.id}
               initial={hit.title}
-              placeholder="新しい表題"
+              placeholder={s.sidebar.newTitle}
               onCommit={(value) => {
                 setRenaming(null);
                 onRename(hit.id, value);
@@ -152,13 +153,13 @@ export function Sidebar({
                 <span className="sidebar-title">{hit.title}</span>
                 {searching && hit.excerpt !== "" ? (
                   <span className="sidebar-excerpt">
-                    <span className="sidebar-kind">{KIND_LABEL[hit.kind]}</span>
+                    <span className="sidebar-kind">{KIND_LABEL[hit.kind](s)}</span>
                     {hit.excerpt}
                   </span>
                 ) : (
                   hit.updated !== "" && (
                     <span className="sidebar-date">
-                      {new Date(hit.updated).toLocaleDateString("ja-JP")}
+                      {new Date(hit.updated).toLocaleDateString(s.locale)}
                     </span>
                   )
                 )}
@@ -166,16 +167,16 @@ export function Sidebar({
               <span className="sidebar-actions">
                 <button
                   type="button"
-                  title="名前を変える"
-                  aria-label={`${hit.title} の名前を変える`}
+                  title={s.sidebar.rename}
+                  aria-label={s.sidebar.renameOf(hit.title)}
                   onClick={() => setRenaming(hit.id)}
                 >
                   ✎
                 </button>
                 <button
                   type="button"
-                  title="削除する"
-                  aria-label={`${hit.title} を削除する`}
+                  title={s.sidebar.remove}
+                  aria-label={s.sidebar.removeOf(hit.title)}
                   onClick={() => onDelete(hit.id, hit.title)}
                 >
                   ✕
@@ -187,7 +188,7 @@ export function Sidebar({
       </div>
 
       <button type="button" className="sidebar-new" onClick={onNewMap}>
-        ＋ 新規作成
+        {s.sidebar.newMap}
       </button>
     </nav>
   );

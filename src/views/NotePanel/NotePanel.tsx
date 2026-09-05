@@ -1,3 +1,4 @@
+import { useLanguage } from "../../state/i18n.js";
 import { useEffect, useState } from "react";
 
 import type { MapNode } from "../../core/types.js";
@@ -36,6 +37,7 @@ export function NotePanel({
   onAddLink,
   onClose,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const [draft, setDraft] = useState(node.note ?? "");
   const [showEmoji, setShowEmoji] = useState(false);
   /*
@@ -63,9 +65,7 @@ export function NotePanel({
   return (
     <aside className="notepanel">
       <div className="notepanel-head">
-        <span className="notepanel-label">
-          {node.label === "" ? "（無題のノード）" : node.label}
-        </span>
+        <span className="notepanel-label">{node.label === "" ? s.note.untitled : node.label}</span>
         <button
           type="button"
           className="notepanel-read-toggle"
@@ -74,13 +74,13 @@ export function NotePanel({
           disabled={draft === ""}
           onClick={() => setReading((on) => !on)}
         >
-          {reading ? "書く" : "Preview"}
+          {reading ? s.note.write : s.note.read}
         </button>
         <button
           type="button"
           className="notepanel-emoji"
           aria-pressed={showEmoji}
-          aria-label="絵文字を選ぶ"
+          aria-label={s.note.pickEmoji}
           onClick={() => setShowEmoji((open) => !open)}
         >
           {node.emoji ?? "＋"}
@@ -89,7 +89,7 @@ export function NotePanel({
           <button
             type="button"
             className="notepanel-close"
-            aria-label="ノートを閉じる"
+            aria-label={s.note.close}
             onClick={onClose}
           >
             ✕
@@ -128,7 +128,7 @@ export function NotePanel({
               setShowEmoji(false);
             }}
           >
-            絵文字を外す
+            {s.note.clearEmoji}
           </button>
         </div>
       )}
@@ -140,7 +140,7 @@ export function NotePanel({
        * 動きの説明であって、書く前に読んで役立つものではなかった
        */}
       <label className="notepanel-hint notepanel-note-label" htmlFor="node-note">
-        ノード説明
+        {s.note.body}
       </label>
       {reading ? (
         <div className="notepanel-read" id="node-note">
@@ -160,14 +160,16 @@ export function NotePanel({
 
       <div className="notepanel-links">
         <label className="notepanel-hint" htmlFor="link-target">
-          横断リンク
+          {s.note.links}
         </label>
         {node.links.length > 0 && (
           <ul className="link-list">
             {node.links.map((link) => (
               <li key={link} className={linkCandidates.includes(link) ? "" : "is-unresolved"}>
                 [[{link}]]
-                {!linkCandidates.includes(link) && <span className="link-note">宛先なし</span>}
+                {!linkCandidates.includes(link) && (
+                  <span className="link-note">{s.note.unresolved}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -181,7 +183,7 @@ export function NotePanel({
             if (event.target.value !== "") onAddLink(event.target.value);
           }}
         >
-          <option value="">つなぐノードを選ぶ…</option>
+          <option value="">{s.note.pickLink}</option>
           {linkCandidates.map((label) => (
             <option key={label} value={label}>
               {label}

@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import { useState } from "react";
 
 import type { BackendState, GitHubConnectResult } from "../state/workspace.js";
@@ -30,24 +31,25 @@ export function StartScreen({
   onGrant,
   onConnect,
 }: Props): React.JSX.Element | null {
+  const s = useLanguage((state) => state.s);
   const [connecting, setConnecting] = useState(false);
 
   if (backend.kind === "ready") return null;
 
   if (backend.kind === "loading") {
-    return <div className="startscreen">読み込み中…</div>;
+    return <div className="startscreen">{s.start.loading}</div>;
   }
 
   if (backend.kind === "needsPermission") {
     return (
       <div className="startscreen">
-        <h1>フォルダへのアクセスを許可してください</h1>
-        <p>「{backend.folderName}」を開くには、ブラウザの制約でもう一度だけ許可が要ります。</p>
+        <h1>{s.start.permissionTitle}</h1>
+        <p>{s.start.permissionBody(backend.folderName)}</p>
         <button type="button" className="primary" onClick={onGrant}>
-          アクセスを許可する
+          {s.start.grant}
         </button>
         <button type="button" onClick={onChoose}>
-          別のフォルダを選ぶ
+          {s.start.pickAnother}
         </button>
       </div>
     );
@@ -56,8 +58,8 @@ export function StartScreen({
   if (connecting) {
     return (
       <div className="startscreen">
-        <h1>GitHub に接続</h1>
-        <p>あなたのリポジトリの Markdown として保存されます。</p>
+        <h1>{s.start.connectTitle}</h1>
+        <p>{s.start.connectBody}</p>
         <GitHubConnect
           onConnect={onConnect}
           onCancel={() => {
@@ -74,7 +76,7 @@ export function StartScreen({
         {/* 見出しの中身がロゴなので、読み上げ名はロゴ側が持つ */}
         <Wordmark />
       </h1>
-      <p className="startscreen-tagline">マインドマップで広げた考えが、そのまま Markdown。</p>
+      <p className="startscreen-tagline">{s.start.tagline}</p>
 
       {/*
        * **保存先を決めずに入れる道を先に出す**（2.12）。
@@ -83,16 +85,16 @@ export function StartScreen({
        */}
       <div className="startscreen-guest">
         <button type="button" className="primary" onClick={onStartGuest}>
-          ゲストモードで試す
+          {s.start.guest}
         </button>
-        <p className="startscreen-note">保存されません。あとから保存先を選べます。</p>
+        <p className="startscreen-note">{s.start.guestNote}</p>
       </div>
 
-      <p className="startscreen-lead">保存先</p>
+      <p className="startscreen-lead">{s.start.storage}</p>
 
       <div className="startscreen-choices">
         <section>
-          <h2>ローカルフォルダ</h2>
+          <h2>{s.start.localFolder}</h2>
           {backend.localAvailable ? (
             <>
               {/*
@@ -102,23 +104,19 @@ export function StartScreen({
                * 実装は `LocalFolderStore` が直下の `.md` だけを列挙しており、
                * 下位フォルダには入らない。**書ける以上の範囲を名乗らない**
                */}
-              <p className="startscreen-scope">
-                選んだフォルダの直下にある <code>.md</code> だけを読み書きします
-              </p>
+              <p className="startscreen-scope">{s.start.localScope}</p>
               <button type="button" onClick={onChoose}>
-                フォルダを選ぶ
+                {s.start.pickFolder}
               </button>
             </>
           ) : (
-            <p className="startscreen-note">
-              <strong>デスクトップ版の Chrome か Edge</strong> が要ります。
-            </p>
+            <p className="startscreen-note">{s.start.localUnsupported}</p>
           )}
         </section>
 
         <section>
-          <h2>GitHub リポジトリ</h2>
-          <p>トークンが必要です</p>
+          <h2>{s.start.githubRepo}</h2>
+          <p>{s.start.githubNeedsToken}</p>
           <button
             type="button"
 
@@ -126,7 +124,7 @@ export function StartScreen({
               setConnecting(true);
             }}
           >
-            接続する
+            {s.start.connect}
           </button>
         </section>
       </div>

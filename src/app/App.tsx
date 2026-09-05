@@ -5,7 +5,7 @@ import { serializeMarkdown } from "../core/serialize.js";
 import type { ExportScope } from "../state/commands.js";
 import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
-import { IMPORT_PROMPT } from "../state/import-prompt.js";
+import { importPrompt } from "../state/import-prompt.js";
 import type { Sheet } from "../state/layout.js";
 import { keepSidebarAfterOpen, resolveLayout } from "../state/layout.js";
 import type { Pane } from "../state/pane-size.js";
@@ -95,6 +95,7 @@ export function App(): React.JSX.Element {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [theme, setTheme] = useState<Theme>("system");
   const language = useLanguage((state) => state.language);
+  const s = useLanguage((state) => state.s);
   /** 一覧と欄の幅（rem）。端末ごとの好みなので localStorage に置く（`pane-size.ts`） */
   const [paneWidth, setPaneWidth] = useState<Record<Pane, number>>(() => ({
     sidebar: readPaneWidth("sidebar", null),
@@ -138,11 +139,11 @@ export function App(): React.JSX.Element {
   }, []);
 
   /*
-   * 表示言語を決める（2.12）。設定が無ければブラウザの言語を見る。
+   * 表示言語を決める（2.12）。**既定は英語。**
    * **`<html lang>` にも入れる。** 読み上げと自動翻訳がこれを見る
    */
   useEffect(() => {
-    const language = readLanguage(localStorage.getItem(LANGUAGE_KEY), navigator.languages);
+    const language = readLanguage(localStorage.getItem(LANGUAGE_KEY));
     useLanguage.getState().setLanguage(language);
     applyLanguage(language);
   }, []);
@@ -218,7 +219,7 @@ export function App(): React.JSX.Element {
         .restoreVersion(entryId)
         .then(() => {
           // 保存先へは書き戻していない。取り消せることをその場で伝える（設計書 8.8.3）
-          notify("この版に戻しました。Ctrl+Z で取り消せます");
+          notify(useLanguage.getState().s.toast.restored);
           toggleHistory();
         });
     },
@@ -377,9 +378,9 @@ export function App(): React.JSX.Element {
 
   /** 取り込み指示をクリップボードへ入れる（F-36） */
   const copyImportPrompt = useCallback(() => {
-    void copyText(IMPORT_PROMPT).then(
-      () => notify("取り込み指示をコピーしました"),
-      () => notify("クリップボードへコピーできませんでした"),
+    void copyText(importPrompt(useLanguage.getState().s)).then(
+      () => notify(useLanguage.getState().s.toast.promptCopied),
+      () => notify(useLanguage.getState().s.toast.copyFailed),
     );
   }, [notify]);
 
@@ -411,7 +412,7 @@ export function App(): React.JSX.Element {
   // 削除だけはモーダルで確認する（設計書 7.2 の唯一の例外）。
   // 消したファイルは Undo で戻せないため、ここは省かない
   const confirmDelete = (id: string, title: string): void => {
-    if (!window.confirm(`「${title}」を削除します。元に戻せません。`)) return;
+    if (!window.confirm(useLanguage.getState().s.toast.confirmDelete(title))) return;
     void useWorkspace.getState().deleteMap(id);
   };
 
@@ -458,7 +459,7 @@ export function App(): React.JSX.Element {
             pane="sidebar"
             width={paneWidth.sidebar}
             onResize={(width) => resizePaneTo("sidebar", width)}
-            label="一覧の幅"
+            label={s.toast.sidebarWidth}
           />
         )}
         {!narrow && layout.panel !== null && (
@@ -466,7 +467,7 @@ export function App(): React.JSX.Element {
             pane="panel"
             width={paneWidth.panel}
             onResize={(width) => resizePaneTo("panel", width)}
-            label="欄の幅"
+            label={s.toast.panelWidth}
           />
         )}
 
@@ -510,7 +511,7 @@ export function App(): React.JSX.Element {
               onCancelCreating={() => setCreating(false)}
               onCreate={(title) => {
                 setCreating(false);
-                void useWorkspace.getState().createMap(title, templateMarkdown(templateId));
+                void useWorkspace.getState().createMap(title, templateMarkdown(templateId, s));
               }}
               onCopyImportPrompt={copyImportPrompt}
             />
@@ -536,8 +537,8 @@ export function App(): React.JSX.Element {
             onCopy={() => {
               if (exported === null) return;
               void copyText(exported.md).then(
-                () => notify("Markdown をコピーしました"),
-                () => notify("クリップボードへコピーできませんでした"),
+                () => notify(useLanguage.getState().s.toast.markdownCopied),
+                () => notify(useLanguage.getState().s.toast.copyFailed),
               );
             }}
             onDownload={() => {

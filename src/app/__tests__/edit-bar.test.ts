@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { EDIT_BAR_ITEMS, isEnabled } from "../edit-bar.js";
-import { COMMAND_ITEMS } from "../shortcuts.js";
+import { JA } from "../../state/strings/ja.js";
+import { EN } from "../../state/strings/en.js";
+import { commandItems } from "../shortcuts.js";
 
 describe("EDIT_BAR_ITEMS", () => {
   it("6つを超えない", () => {
@@ -17,20 +19,28 @@ describe("EDIT_BAR_ITEMS", () => {
   it("すべて実在する操作である", () => {
     // 綴りを間違えた操作を並べると、押しても何も起きないボタンになる。
     // 狭い画面ではそれが唯一の入口なので、操作そのものが失われる
-    const known = new Set(COMMAND_ITEMS.map((item) => item.command));
+    const known = new Set(commandItems(JA).map((item) => item.command));
     for (const item of EDIT_BAR_ITEMS) expect(known).toContain(item.command);
   });
 
   it("説明はコマンドパレットと同じ言い回しを使う", () => {
-    // 同じ操作が場所によって違う名前で呼ばれると、一覧が案内にならない
-    for (const item of EDIT_BAR_ITEMS) {
-      const inPalette = COMMAND_ITEMS.find((other) => other.command === item.command);
-      expect(inPalette?.title).toBe(item.title);
+    // 同じ操作が場所によって違う名前で呼ばれると、一覧が案内にならない。
+    // **両方の言語で確かめる。** 片方だけずれるのが最も見つけにくい
+    for (const table of [JA, EN]) {
+      for (const item of EDIT_BAR_ITEMS) {
+        const inPalette = commandItems(table).find((other) => other.command === item.command);
+        expect(inPalette?.title).toBe(item.title(table));
+      }
     }
   });
 
   it("字は短い", () => {
-    for (const item of EDIT_BAR_ITEMS) expect(item.label.length).toBeLessThanOrEqual(3);
+    // 全角を2、半角を1として数える。**英語の6文字は日本語の3文字より狭い**
+    const width = (text: string): number =>
+      [...text].reduce((sum, ch) => sum + (/[ -ÿ]/.test(ch) ? 1 : 2), 0);
+    for (const table of [JA, EN]) {
+      for (const item of EDIT_BAR_ITEMS) expect(width(item.label(table))).toBeLessThanOrEqual(8);
+    }
   });
 
   it("構造編集の一式が揃っている", () => {

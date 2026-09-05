@@ -1,3 +1,4 @@
+import { useLanguage } from "../../state/i18n.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { MapNode } from "../../core/types.js";
@@ -65,6 +66,7 @@ function Row({
   onToggleCollapse,
   onGrab,
 }: RowProps): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ function Row({
         // 中心テーマは動かせない。掴めない物に掴み手を出さない
         hidden={depthOf(node) === 0}
         aria-hidden="true"
-        title="掴んで階層を変える"
+        title={s.outline.drag}
         onPointerDown={onGrab}
         onClick={(event) => event.stopPropagation()}
       >
@@ -104,7 +106,7 @@ function Row({
       <button
         type="button"
         className="outline-twisty"
-        aria-label={collapsed ? "展開" : "折り畳み"}
+        aria-label={collapsed ? s.outline.expand : s.outline.collapse}
         disabled={node.children.length === 0}
         onClick={(event) => {
           event.stopPropagation();
@@ -133,12 +135,14 @@ function Row({
       ) : (
         <span className="outline-label">
           {node.label === "" ? (
-            <span className="outline-empty">（空）</span>
+            <span className="outline-empty">{s.outline.emptyLabel}</span>
           ) : (
             <InlineText text={node.label} />
           )}
           {node.emoji !== undefined && <span className="outline-emoji"> {node.emoji}</span>}
-          {node.note !== undefined && <span className="outline-hasnote" title="ノートあり" />}
+          {node.note !== undefined && (
+            <span className="outline-hasnote" title={s.outline.hasNote} />
+          )}
         </span>
       )}
     </div>
@@ -146,6 +150,7 @@ function Row({
 }
 
 export function Outline(): React.JSX.Element | null {
+  const s = useLanguage((state) => state.s);
   const root = useEditor((state) => state.root);
   const collapsedUids = useEditor((state) => state.collapsedUids);
   const selectedUid = useEditor((state) => state.selectedUid);
@@ -209,7 +214,7 @@ export function Outline(): React.JSX.Element | null {
     <div
       className="outline"
       role="tree"
-      aria-label="アウトライン"
+      aria-label={s.outline.title}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}

@@ -110,7 +110,6 @@ and you pick it up on your computer later.
 | **Presenting and print layout** | The goal is thinking, not producing a deliverable |
 | **AI that draws the map for you** | Left out on purpose. Doing the thinking is the point |
 | **Horizontal rules and raw HTML** | `---` and `<div>` are dropped on save. You get a warning, but the line is gone. [Known issue](./docs/ideas/2026-09-05-blockquote-code.md) |
-| **Nested empty bullets** | A line whose only content is another bullet marker loses one level of nesting on first save. [Known issue](./docs/ideas/2026-09-05-empty-label-nesting.md) |
 
 ### It can
 
