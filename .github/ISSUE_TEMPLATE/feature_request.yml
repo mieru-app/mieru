@@ -1,0 +1,53 @@
+name: Idea or request
+description: Something you want to do that Mieru does not let you do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        日本語で書いていただいて構いません。
+
+        **Please describe the problem before the solution.** Mieru keeps a short
+        list of things it deliberately will not do, and a request framed as a
+        problem often has an answer that is already possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: |
+        The situation, not the feature. What were you doing when this got in your way?
+      placeholder: |
+        I keep meeting notes in the same vault. I want to jump from a node
+        straight to the note file, and right now I retype the filename.
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do about it today
+      description: The workaround, if you have one, and why it is not enough.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you had in mind
+      description: |
+        Optional. If you already have a shape in mind, describe it.
+        **It is fine to leave this empty** and let the problem speak for itself.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Before you send this
+      description: |
+        The list of things Mieru will not do is in
+        [README.md](https://github.com/mieru-app/mieru/blob/main/README.md#what-it-can-and-cannot-do).
+        Images, free-form placement, real-time collaboration, presenting and
+        AI-generated maps are all deliberate omissions rather than missing work.
+      options:
+        - label: I checked that this is not on the "cannot do" list, or I think the reasoning there does not apply to my case
+          required: true

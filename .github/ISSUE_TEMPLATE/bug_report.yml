@@ -1,0 +1,76 @@
+name: Bug report
+description: Something behaves in a way it should not
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        日本語で書いていただいて構いません。
+
+        **If this is a security problem, stop here** and follow
+        [SECURITY.md](https://github.com/mieru-app/mieru/blob/main/SECURITY.md) instead.
+        Anything involving your GitHub token belongs there, not in a public issue.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+      placeholder: |
+        Collapsing a branch after editing it turns the screen white.
+        I expected the branch to fold.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: |
+        The smallest sequence that shows the problem.
+        **If the map matters, paste the `.md` below rather than describing it.**
+      placeholder: |
+        1. Open a map with two levels of children
+        2. Rename any child
+        3. Press the minus button on its parent
+    validations:
+      required: true
+
+  - type: dropdown
+    id: storage
+    attributes:
+      label: Where are your maps saved
+      description: Several bugs only appear with one of these.
+      options:
+        - A folder on this computer
+        - A GitHub repository
+        - Not saved yet / does not apply
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      placeholder: Chrome 141 on Windows 11 / Safari on iPhone 15
+    validations:
+      required: true
+
+  - type: textarea
+    id: markdown
+    attributes:
+      label: The map, if it is involved
+      description: |
+        Paste the `.md` file, or the part of it that matters.
+        **Remove anything private first.** Markdown is the save format, so this is
+        usually the fastest way to reproduce a problem exactly.
+      render: markdown
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error text
+      description: |
+        If the screen went white, the crash view has a **Copy the error** button.
+        Otherwise, the browser console may have something.
+      render: text

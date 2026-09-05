@@ -199,6 +199,7 @@ GitHub を保存先にするならブラウザは問いません。
 
 不具合の報告・提案・コードの改善を歓迎します。
 手元での動かし方、構成、自分でホストする方法は **[CONTRIBUTING.md](./CONTRIBUTING.md)** にあります。
+参加にあたっては [行動規範](./CODE_OF_CONDUCT.md) に従ってください。
 
 設計の考え方を知りたい場合は
 [アーキテクチャ解説](./docs/human-review/architecture.md) と
