@@ -173,7 +173,13 @@ describe("階層の変更", () => {
     const { root: next } = swapWithParent(root, uidOf(root, "A1"));
     // A1 が A の席（第1階層の先頭）へ移り、A はその先頭の子として下がる。
     // A の残りの子だった A2 は A に付いていく
-    expect(shape(next)).toEqual(["根", [["A1", [["A", ["A2"]]]], ["B", ["B1"]]]]);
+    expect(shape(next)).toEqual([
+      "根",
+      [
+        ["A1", [["A", ["A2"]]]],
+        ["B", ["B1"]],
+      ],
+    ]);
   });
 
   it("反転しても兄弟の中の位置は変わらない", () => {
@@ -186,9 +192,15 @@ describe("階層の変更", () => {
 
   it("反転してもノードは1つも失われない", () => {
     const { root } = load();
-    const before = flatten(root).map((node) => node.label).sort();
+    const before = flatten(root)
+      .map((node) => node.label)
+      .sort();
     const { root: next } = swapWithParent(root, uidOf(root, "A1"));
-    expect(flatten(next).map((node) => node.label).sort()).toEqual(before);
+    expect(
+      flatten(next)
+        .map((node) => node.label)
+        .sort(),
+    ).toEqual(before);
   });
 
   it("反転した本人が選択されたままになる", () => {
@@ -417,7 +429,13 @@ describe("掴んで落とす（2.9-3）", () => {
   it("中へ落とすと相手の末子になる", () => {
     const { root } = load();
     const { root: next } = moveNode(root, uidOf(root, "A1"), uidOf(root, "B"), "inside");
-    expect(shape(next)).toEqual(["根", [["A", ["A2"]], ["B", ["B1", "A1"]]]]);
+    expect(shape(next)).toEqual([
+      "根",
+      [
+        ["A", ["A2"]],
+        ["B", ["B1", "A1"]],
+      ],
+    ]);
   });
 
   it("同じ親の中で動かしても添字がずれない", () => {
@@ -451,10 +469,16 @@ describe("掴んで落とす（2.9-3）", () => {
 
   it("どこへ落としてもノードは1つも失われない", () => {
     const { root } = load();
-    const before = flatten(root).map((node) => node.label).sort();
+    const before = flatten(root)
+      .map((node) => node.label)
+      .sort();
     for (const position of ["before", "after", "inside"] as const) {
       const { root: next } = moveNode(root, uidOf(root, "A1"), uidOf(root, "B"), position);
-      expect(flatten(next).map((node) => node.label).sort()).toEqual(before);
+      expect(
+        flatten(next)
+          .map((node) => node.label)
+          .sort(),
+      ).toEqual(before);
     }
   });
 

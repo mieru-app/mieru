@@ -118,8 +118,8 @@ function CreateForm({
       <div className="home-aside">
         <span className="home-field-label">AI で整理したものを取り込むなら</span>
         <p className="home-note">
-          Mieru が読める Markdown を書かせる指示文をコピーします。
-          AI の返事をそのまま .md として置けば、このアプリで開けます。
+          Mieru が読める Markdown を書かせる指示文をコピーします。 AI の返事をそのまま .md
+          として置けば、このアプリで開けます。
         </p>
         <div className="home-actions">
           <button type="button" onClick={onCopyImportPrompt}>
@@ -200,8 +200,8 @@ export function HomeScreen({
       <section className="home-section">
         <h2>AI で整理したものを取り込む</h2>
         <p className="home-note">
-          Mieru が読める Markdown を書かせるための指示文をコピーします。
-          AI の返事をそのまま .md として置けば、このアプリで開けます。
+          Mieru が読める Markdown を書かせるための指示文をコピーします。 AI の返事をそのまま .md
+          として置けば、このアプリで開けます。
         </p>
         <div className="home-actions">
           <button type="button" onClick={onCopyImportPrompt}>

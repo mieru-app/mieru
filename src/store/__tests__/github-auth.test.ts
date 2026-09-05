@@ -57,9 +57,10 @@ function fakeFetch(response: Partial<HttpResponseLike> & { status: number; body?
 }
 
 /** 呼ばれた順に応答を返す偽の fetch。`verifyCredential` は2回投げる */
-function fakeSequence(
-  responses: { status: number; body?: unknown }[],
-): { fetchImpl: FetchLike; urls: string[] } {
+function fakeSequence(responses: { status: number; body?: unknown }[]): {
+  fetchImpl: FetchLike;
+  urls: string[];
+} {
   const urls: string[] = [];
   let index = 0;
   const fetchImpl: FetchLike = (url) => {

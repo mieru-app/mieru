@@ -29,8 +29,7 @@ export const GITHUB_TOKEN_STEPS: readonly GuideStep[] = [
   },
   {
     title: "Repository access を「Only select repositories」にし、上のリポジトリだけを選ぶ",
-    detail:
-      "ここが最も重要です。この指定が、事故が起きたときに被害の届く範囲そのものになります。",
+    detail: "ここが最も重要です。この指定が、事故が起きたときに被害の届く範囲そのものになります。",
   },
   {
     title: "Permissions → Repository permissions の Contents を「Read and write」にする",

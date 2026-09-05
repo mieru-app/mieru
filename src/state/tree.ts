@@ -185,7 +185,6 @@ export function indent(root: MapNode, uid: string): EditResult {
   });
 }
 
-
 /**
  * 親子を反転する（`Ctrl+Shift+↑`、設計書 7.4）。
  * 選択したノードが親のいた位置へ上がり、親はその先頭の子として下がる。

@@ -826,7 +826,7 @@ describe("履歴（Phase 2.8）", () => {
     await clearBackend();
     const api = new FakeGitHub();
     api.files.set("maps/既存のマップ.md", MD);
-    vi.stubGlobal("fetch", ((url: string, init: GitHubRequestInit) => {
+    vi.stubGlobal("fetch", (url: string, init: GitHubRequestInit) => {
       // 到達確認だけがリポジトリそのものを見る。内容とコミットは偽の API へ回す
       if (!url.includes("/contents") && !url.includes("/commits")) {
         return Promise.resolve({
@@ -837,7 +837,7 @@ describe("履歴（Phase 2.8）", () => {
         });
       }
       return api.fetchImpl(url, init);
-    }));
+    });
 
     await useWorkspace.getState().connectGitHub(
       {

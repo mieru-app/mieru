@@ -79,7 +79,8 @@ export function normalizeDirectory(input: string): string | null {
 
   const segments = trimmed.split("/");
   // 空区切り（`a//b`）と相対指定はパスを組み立てるときに壊れるので受けない
-  if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) return null;
+  if (segments.some((segment) => segment === "" || segment === "." || segment === ".."))
+    return null;
   return segments.join("/");
 }
 
@@ -189,12 +190,7 @@ export type FetchLike = (url: string, init: GitHubRequestInit) => Promise<HttpRe
 export const browserFetch: FetchLike = (url, init) => fetch(url, init);
 
 export type VerifyFailure =
-  | "unauthorized"
-  | "not-found"
-  | "no-write"
-  | "rate-limited"
-  | "unexpected"
-  | "network";
+  "unauthorized" | "not-found" | "no-write" | "rate-limited" | "unexpected" | "network";
 
 export type VerifyResult =
   | {
