@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readTheme, THEME_LABELS } from "../theme.js";
+import { readTheme, THEMES } from "../theme.js";
 
 /**
  * 配色の設定（2-12）の検証。
@@ -28,13 +28,13 @@ describe("保存された配色の読み取り", () => {
 
 describe("選択肢", () => {
   it("読み取れる値と表示の選択肢が一致する", () => {
-    for (const choice of THEME_LABELS) {
-      expect(readTheme(choice.theme)).toBe(choice.theme);
-      expect(choice.label.length).toBeGreaterThan(0);
-    }
+    // 押しボタンに出ているのに読み戻せない値があると、選んだ設定が消える
+    for (const choice of THEMES) expect(readTheme(choice)).toBe(choice);
   });
 
   it("既定を先頭に置く", () => {
-    expect(THEME_LABELS[0]?.theme).toBe("system");
+    expect(THEMES[0]).toBe("system");
   });
+
+  // 押しボタンの字は言語ごとに変わるため、確かめるのは `i18n.test.ts`
 });

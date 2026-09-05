@@ -22,8 +22,8 @@ export function readTheme(stored: string | null): Theme {
   return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
 }
 
-export const THEME_LABELS: { theme: Theme; label: string }[] = [
-  { theme: "system", label: "OS に従う" },
-  { theme: "light", label: "明るい" },
-  { theme: "dark", label: "暗い" },
-];
+/**
+ * 押しボタンに並べる順。**言葉は文言表が持つ**（`strings/ja.ts` の `settings`）。
+ * ここが持つのは順序だけである。
+ */
+export const THEMES: Theme[] = ["system", "light", "dark"];
