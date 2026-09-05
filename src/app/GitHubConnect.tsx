@@ -1,11 +1,7 @@
 import { useLanguage } from "../state/i18n.js";
 import { useState } from "react";
 
-import {
-  GITHUB_STORAGE_NOTE,
-  GITHUB_TOKEN_STEPS,
-  GITHUB_TOKEN_URL,
-} from "../state/github-guide.js";
+import { storageNote, GITHUB_TOKEN_STEPS, GITHUB_TOKEN_URL } from "../state/github-guide.js";
 import type { GitHubConnectResult } from "../state/workspace.js";
 
 /**
@@ -95,9 +91,9 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
           </p>
           <ol>
             {GITHUB_TOKEN_STEPS.map((step) => (
-              <li key={step.title}>
-                <strong>{step.title}</strong>
-                <span>{step.detail}</span>
+              <li key={step.title(s)}>
+                <strong>{step.title(s)}</strong>
+                <span>{step.detail(s)}</span>
               </li>
             ))}
           </ol>
@@ -139,7 +135,7 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
         />
         {s.github.remember}
       </label>
-      <p className="ghconnect-note">{GITHUB_STORAGE_NOTE}</p>
+      <p className="ghconnect-note">{storageNote(s)}</p>
 
       {failure !== undefined && failure.field === undefined && (
         <p className="ghconnect-error" role="alert">

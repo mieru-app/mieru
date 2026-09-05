@@ -375,7 +375,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       useEditor.getState().close();
       teardown();
       store = new MemoryStore();
-      await attach("guest", "ゲストモード", null);
+      await attach("guest", texts().start.guest, null);
     },
 
     async connectGitHub(input, remember) {

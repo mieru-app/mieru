@@ -4,6 +4,7 @@ import { parseMarkdown } from "../../core/parse.js";
 import type { MapNode } from "../../core/types.js";
 import { exportAs, exportForAi, runCommand } from "../commands.js";
 import { useEditor } from "../editor.js";
+import { useLanguage } from "../i18n.js";
 import { flatten } from "../tree.js";
 import type { ViewMode } from "../view-mode.js";
 
@@ -41,6 +42,13 @@ function uidOf(label: string): string {
 const noop = { copyText: () => Promise.resolve() };
 
 beforeEach(() => {
+  /*
+   * **通知の言語を固定する**（2.12）。既定は英語だが、ここで確かめたいのは
+   * 「何を出したかを利用者へ伝えること」であって字面ではない。
+   * 固定しないと、既定を変えるたびにこの一式が落ちる。
+   * 文言表そのものの完全性は `i18n.test.ts` が見ている
+   */
+  useLanguage.getState().setLanguage("ja");
   useEditor.getState().close();
   openSource();
 });

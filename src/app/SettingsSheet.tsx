@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { GITHUB_DISCONNECT_NOTE } from "../state/github-guide.js";
+import { disconnectNote } from "../state/github-guide.js";
 import { LANGUAGE_LABELS, useLanguage } from "../state/i18n.js";
 import type { Language } from "../state/i18n.js";
 import type { Strings } from "../state/strings/ja.js";
@@ -108,7 +108,7 @@ export function SettingsSheet({
             <button type="button" onClick={onDisconnectGitHub}>
               {s.settings.disconnect}
             </button>
-            <p className="sheet-note">{GITHUB_DISCONNECT_NOTE}</p>
+            <p className="sheet-note">{disconnectNote(s)}</p>
           </>
         ) : (
           <>

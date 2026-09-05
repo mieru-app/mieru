@@ -330,6 +330,42 @@ export const JA = {
     copied: (what: string) => `${what}を Markdown でコピーしました`,
   },
 
+  githubGuide: {
+    repoTitle: "マップ置き場にするリポジトリを用意する",
+    repoDetail:
+      "Mieru 専用の新しいリポジトリを勧めます。非公開で構いません。既存のリポジトリを使うと、トークンの届く範囲がそのぶん広くなります。",
+    expiryTitle: "Expiration（有効期限）を短めにする",
+    expiryDetail: "切れたら入れ直すだけです。期限があること自体が、漏れたときの被害を区切ります。",
+    accessTitle: "Repository access を「Only select repositories」にし、上のリポジトリだけを選ぶ",
+    accessDetail:
+      "ここが最も重要です。この指定が、事故が起きたときに被害の届く範囲そのものになります。",
+    contentsTitle: "Permissions → Repository permissions の Contents を「Read and write」にする",
+    contentsDetail:
+      "他の項目は触らないでください。Metadata が自動で Read-only になりますが、これは GitHub が必須にしているもので、そのままで構いません。",
+    generateTitle: "Generate token を押し、表示された文字列をここに貼る",
+    generateDetail: "この文字列は一度しか表示されません。画面を離れる前に貼ってください。",
+    storageNote:
+      "トークンはこの端末のブラウザ（IndexedDB）に平文で保存されます。どこかのサーバへ送られることはありません。共用の端末では「この端末に記憶する」を外してください。外すと、閉じた時点で消えます。",
+    disconnectNote: "この端末からトークンを消します。リポジトリのマップは消えません。",
+  },
+
+  importPrompt: {
+    lead: "以下の形式で Markdown を出力してください。マインドマップツールにそのまま取り込みます。",
+    rules: [
+      "1行目は `# ` で始まる中心テーマ。1つだけ",
+      "枝は `- ` の箇条書き。半角スペース2つのインデントで1階層深くする",
+      "枝のラベルは1〜3語の短いキーワードにする。説明はラベルに書かない",
+      "説明を付けたい枝は、次の行に半角スペース2つぶん右へ寄せて文を書く",
+      "絵文字を付けるなら行末に半角スペース1つを空けて1文字だけ",
+      "引用・コードブロック・表は説明の中でだけ使う（枝には分かれず説明文の一部になる）",
+      "水平線（`---`）は使わない（取り込めずに失われる）",
+      "frontmatter は不要",
+    ],
+    exampleLabel: "例:",
+    example:
+      "# 新規事業の論点整理\n\n- 市場\n  - TAM試算\n    既存レポートでは1,200億円。ただし定義が広すぎる疑いがある。\n  - 競合の空白地帯\n- リスク\n  - 規制動向\n",
+  },
+
   banner: {
     guest: "ゲストモード。まだどこにも保存されていません。",
     chooseStorage: "保存先を選ぶ",

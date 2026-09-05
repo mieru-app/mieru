@@ -323,6 +323,45 @@ export const EN: Strings = {
     copied: (what: string) => `Copied ${what} as Markdown`,
   },
 
+  githubGuide: {
+    repoTitle: "Make a repository for your maps",
+    repoDetail:
+      "A new repository just for Mieru is best, and private is fine. Using an existing one widens what the token can reach.",
+    // **GitHub の画面の字はそのまま出す。** 訳すと探す先のボタンと違う名前になる
+    expiryTitle: "Set a short Expiration",
+    expiryDetail:
+      "When it expires you just paste a new one. Having an expiry is what limits the damage if the token leaks.",
+    accessTitle: "Set Repository access to “Only select repositories” and pick that one repository",
+    accessDetail:
+      "This is the important one. It is exactly how far the damage can reach if something goes wrong.",
+    contentsTitle: "Under Permissions → Repository permissions, set Contents to “Read and write”",
+    contentsDetail:
+      "Leave everything else alone. Metadata turns itself into Read-only; GitHub requires that, and it is fine as it is.",
+    generateTitle: "Press Generate token and paste the string here",
+    generateDetail: "GitHub shows it once only. Paste it before you leave that page.",
+    storageNote:
+      "The token is stored in this browser (IndexedDB) as plain text. It is never sent to any server of ours. On a shared machine, untick “Remember on this device” and it is gone when you close the tab.",
+    disconnectNote:
+      "This removes the token from this device. The maps in your repository stay where they are.",
+  },
+
+  importPrompt: {
+    lead: "Write Markdown in the shape below. It goes straight into a mind map tool.",
+    rules: [
+      "One centre only, on the first line, starting with `# `",
+      "Branches are `- ` bullets. Two spaces of indent means one level deeper",
+      "Keep branch labels to one to three words. Explanations do not go in the label",
+      "To explain a branch, write the sentence on the next line, indented two more spaces",
+      "For an emoji, put one at the end of the line after a single space",
+      "Quotes, code blocks and tables belong inside an explanation, not as branches",
+      "No horizontal rules (`---`); they are dropped on import",
+      "No frontmatter",
+    ],
+    exampleLabel: "Example:",
+    example:
+      "# Should we self-host our docs?\n\n- Options\n  - Stay on the SaaS\n    Cheapest in effort. We keep paying for a search nobody trusts.\n  - Markdown in the repo\n- What decides it\n  - How often the docs change\n",
+  },
+
   banner: {
     guest: "Guest mode. Nothing is saved anywhere yet.",
     chooseStorage: "Choose where to save",

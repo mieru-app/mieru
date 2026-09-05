@@ -5,7 +5,7 @@ import { serializeMarkdown } from "../core/serialize.js";
 import type { ExportScope } from "../state/commands.js";
 import { exportAs, runCommand } from "../state/commands.js";
 import { selectedNode, useEditor } from "../state/editor.js";
-import { IMPORT_PROMPT } from "../state/import-prompt.js";
+import { importPrompt } from "../state/import-prompt.js";
 import type { Sheet } from "../state/layout.js";
 import { keepSidebarAfterOpen, resolveLayout } from "../state/layout.js";
 import type { Pane } from "../state/pane-size.js";
@@ -378,7 +378,7 @@ export function App(): React.JSX.Element {
 
   /** 取り込み指示をクリップボードへ入れる（F-36） */
   const copyImportPrompt = useCallback(() => {
-    void copyText(IMPORT_PROMPT).then(
+    void copyText(importPrompt(useLanguage.getState().s)).then(
       () => notify(useLanguage.getState().s.toast.promptCopied),
       () => notify(useLanguage.getState().s.toast.copyFailed),
     );
