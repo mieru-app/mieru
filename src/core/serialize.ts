@@ -74,10 +74,18 @@ function emitNode(out: string[], node: MapNode, depth: number): void {
   }
 
   if (label === "") {
-    // 空の箇条書きは段落を中断できない（CommonMark）。直前の行に続けて書くと
-    // 兄弟・子ではなく親の段落の遅延継続行として吸収されてしまうため、
-    // 空行で区切って独立したブロックにする。
-    if (out[out.length - 1] !== "") out.push("");
+    /*
+     * 空の箇条書きは段落を中断できない（CommonMark）。直前の**段落**に続けて書くと
+     * 兄弟・子ではなく遅延継続行として吸収され、**そのノードごと消える。**
+     * だから段落の後ろでは空行で区切って独立したブロックにする。
+     *
+     * **ただし直前も空の箇条書きなら、空行を入れてはいけない**（2026-09-05）。
+     * 続ける先の段落が無いので区切る必要が無く、逆に空行が入れ子を切ってしまう。
+     * `-` の下に `  -` を置く形が、読み戻すと兄弟2つになっていた
+     * （`docs/ideas/2026-09-05-empty-label-nesting.md`）。
+     */
+    const previous = out[out.length - 1] ?? "";
+    if (previous !== "" && !/^\s*-$/.test(previous)) out.push("");
     out.push(`${indent}-`);
   } else {
     out.push(`${indent}- ${label}`);
