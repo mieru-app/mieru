@@ -295,6 +295,41 @@ export const JA = {
     empty: "一致するものがありません。",
   },
 
+  error: {
+    guestAdopt: (why: string) => `ゲストの内容を引き継げませんでした: ${why}`,
+    noGitHub: "GitHub の接続情報がありません。",
+    folderDenied: "フォルダへのアクセスが許可されませんでした。",
+    listMaps: (why: string) => `マップ一覧を読めませんでした: ${why}`,
+    openMap: (why: string) => `マップを開けませんでした: ${why}`,
+    createMap: (why: string) => `マップを作成できませんでした: ${why}`,
+    renameMap: (why: string) => `マップの名前を変えられませんでした: ${why}`,
+    deleteMap: (why: string) => `マップを削除できませんでした: ${why}`,
+    loadHistory: (why: string) => `履歴を読み込めませんでした: ${why}`,
+    loadVersion: (why: string) => `この版を読み込めませんでした: ${why}`,
+    fileRemoved: "保存先のファイルが外部で削除されました。編集を続けると作り直します。",
+  },
+
+  template: {
+    blank: "デフォルト",
+    blankHint: "中心テーマだけ",
+    swot: "SWOT",
+    swotHint: "強み・弱み・機会・脅威",
+    swotBody: "# ひな形\n\n- 強み\n- 弱み\n- 機会\n- 脅威\n",
+    minutes: "議事録",
+    minutesHint: "決まったこと・宿題・論点",
+    minutesBody: "# ひな形\n\n- 決まったこと\n- 宿題\n- 論点\n- 次回\n",
+    weekly: "週次振返り",
+    weeklyHint: "やったこと・気づき・次の一手",
+    weeklyBody: "# ひな形\n\n- やったこと\n- 気づき\n- うまくいかなかったこと\n- 次の一手\n",
+  },
+
+  scope: {
+    untitled: "無題",
+    untitledBranch: "無題の枝",
+    whole: "全体",
+    copied: (what: string) => `${what}を Markdown でコピーしました`,
+  },
+
   banner: {
     guest: "ゲストモード。まだどこにも保存されていません。",
     chooseStorage: "保存先を選ぶ",

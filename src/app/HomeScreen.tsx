@@ -96,7 +96,7 @@ function CreateForm({
               className="home-template"
               onClick={() => onTemplateChange(template.id)}
             >
-              <span className="home-template-name">{template.name}</span>
+              <span className="home-template-name">{template.name(s)}</span>
             </button>
           ))}
         </div>

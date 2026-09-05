@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { EN } from "../../state/strings/en.js";
 import { JA } from "../../state/strings/ja.js";
 
 import type { MapMeta } from "../../core/types.js";
@@ -128,20 +129,24 @@ describe("下敷き（2-10）", () => {
   });
 
   it("下敷きの Markdown は H1 と枝だけを持つ", () => {
-    for (const template of TEMPLATES) {
-      if (template.markdown === null) continue;
-      expect(template.markdown.startsWith("# ")).toBe(true);
-      expect(template.markdown).not.toContain("---");
+    // **両方の言語で確かめる。** 中身も訳すので、片方だけ形が崩れうる
+    for (const table of [JA, EN]) {
+      for (const template of TEMPLATES) {
+        if (template.markdown === null) continue;
+        expect(template.markdown(table).startsWith("# ")).toBe(true);
+        expect(template.markdown(table)).not.toContain("---");
+      }
     }
   });
 
   it("id から下敷きを引ける", () => {
-    expect(templateMarkdown("swot")).toContain("- 強み");
+    expect(templateMarkdown("swot", JA)).toContain("- 強み");
+    expect(templateMarkdown("swot", EN)).toContain("- Strengths");
   });
 
   it("空のマップと知らない id はどちらも「下敷き無し」になる", () => {
     // createMap は undefined を受けたときに初期内容を作る。null と分けても意味が無い
-    expect(templateMarkdown("blank")).toBeUndefined();
-    expect(templateMarkdown("存在しない")).toBeUndefined();
+    expect(templateMarkdown("blank", JA)).toBeUndefined();
+    expect(templateMarkdown("存在しない", JA)).toBeUndefined();
   });
 });

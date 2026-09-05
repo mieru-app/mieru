@@ -56,13 +56,13 @@ export function buildPaletteItems(
     terms.length === 0
       ? []
       : TEMPLATES.filter((template) =>
-          terms.every((term) => `${template.name} ${template.description}`.includes(term)),
+          terms.every((term) => `${template.name(s)} ${template.description(s)}`.includes(term)),
         ).map((template) => ({
           kind: "template",
           key: `template:${template.id}`,
           group: s.keys.paletteGroupTemplate,
-          title: template.name,
-          hint: template.description,
+          title: template.name(s),
+          hint: template.description(s),
           id: template.id,
         }));
 

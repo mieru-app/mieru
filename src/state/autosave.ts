@@ -4,6 +4,7 @@ import { serializeMarkdown } from "../core/serialize.js";
 import type { HistoryStore, MapStore } from "../store/types.js";
 import { ConflictError, MapNotFoundError, SaveFailedError } from "../store/types.js";
 import type { EditorState } from "./editor.js";
+import { useLanguage } from "./i18n.js";
 
 /**
  * 自動保存。
@@ -192,7 +193,7 @@ export class AutoSave {
       editor.setVersion("");
       editor.setStatus({
         kind: "failed",
-        reason: "保存先のファイルが外部で削除されました。編集を続けると作り直します。",
+        reason: useLanguage.getState().s.error.fileRemoved,
       });
       return;
     }

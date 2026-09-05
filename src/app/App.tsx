@@ -511,7 +511,7 @@ export function App(): React.JSX.Element {
               onCancelCreating={() => setCreating(false)}
               onCreate={(title) => {
                 setCreating(false);
-                void useWorkspace.getState().createMap(title, templateMarkdown(templateId));
+                void useWorkspace.getState().createMap(title, templateMarkdown(templateId, s));
               }}
               onCopyImportPrompt={copyImportPrompt}
             />

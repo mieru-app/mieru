@@ -13,6 +13,8 @@ import {
   saveDirectoryHandle,
 } from "../store/directory-handle.js";
 import { fileNameFor } from "../store/file-name.js";
+import { useLanguage } from "./i18n.js";
+import type { Strings } from "./strings/ja.js";
 import { copyAllMaps } from "../store/copy-maps.js";
 import { MemoryStore } from "../store/MemoryStore.js";
 import type { FsaPermissionState } from "../store/fsa.js";
@@ -161,6 +163,14 @@ export interface WorkspaceState {
 }
 
 /** 現在の保存先。UI からは触らせない（設計原則3） */
+/**
+ * いまの言語の文言。**呼ぶ側は React ではないのでフックが使えない。**
+ * 出す瞬間に引くので、言語を切り替えた後のエラーも切り替わる
+ */
+function texts(): Strings {
+  return useLanguage.getState().s;
+}
+
 let store: MapStore | null = null;
 let autoSave: AutoSave | null = null;
 /**
@@ -276,7 +286,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     } catch (error) {
       // **引き取りに失敗しても保存先の切り替えは成立している。**
       // ここで投げると、切り替わった後の画面が出ない
-      set({ error: `ゲストの内容を引き継げませんでした: ${messageOf(error)}` });
+      set({ error: texts().error.guestAdopt(messageOf(error)) });
     }
   }
 
@@ -406,7 +416,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     async useGitHub() {
       const credential = await loadCredential();
       if (credential === null) {
-        set({ error: "GitHub の接続情報がありません。" });
+        set({ error: texts().error.noGitHub });
         return;
       }
       await get().saveNow();
@@ -432,7 +442,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
 
       if ((await ensurePermission(handle, true)) !== "granted") {
-        set({ error: "フォルダへのアクセスが許可されませんでした。" });
+        set({ error: texts().error.folderDenied });
         return;
       }
 
@@ -451,7 +461,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         await searchIndex?.refresh(maps);
         set({ indexes: searchIndex?.all() ?? [] });
       } catch (error) {
-        set({ error: `マップ一覧を読めませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.listMaps(messageOf(error)) });
       }
     },
 
@@ -466,7 +476,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         useEditor.getState().open({ id, meta: doc.meta, colors: doc.view.colors, version }, doc);
         set({ externallyChanged: false, error: null });
       } catch (error) {
-        set({ error: `マップを開けませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.openMap(messageOf(error)) });
       }
     },
 
@@ -487,7 +497,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         await get().refresh();
         await get().openMap(id);
       } catch (error) {
-        set({ error: `マップを作成できませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.createMap(messageOf(error)) });
       }
     },
 
@@ -525,7 +535,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         await get().refresh();
         if (wasOpen) await get().openMap(newId);
       } catch (error) {
-        set({ error: `マップの名前を変えられませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.renameMap(messageOf(error)) });
       }
     },
 
@@ -556,7 +566,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         await history?.forget?.(id);
         await get().refresh();
       } catch (error) {
-        set({ error: `マップを削除できませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.deleteMap(messageOf(error)) });
       }
     },
 
@@ -612,7 +622,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         return await history.list(open.id);
       } catch (error) {
         // 控えが読めないことでマップの編集を止めない（原則1: `.md` が正）
-        set({ error: `履歴を読み込めませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.loadHistory(messageOf(error)) });
         return [];
       }
     },
@@ -623,7 +633,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       try {
         return await history.read(open.id, entryId);
       } catch (error) {
-        set({ error: `この版を読み込めませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.loadVersion(messageOf(error)) });
         return null;
       }
     },
@@ -636,7 +646,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       try {
         md = await history.read(open.id, entryId);
       } catch (error) {
-        set({ error: `この版を読み込めませんでした: ${messageOf(error)}` });
+        set({ error: texts().error.loadVersion(messageOf(error)) });
         return;
       }
 

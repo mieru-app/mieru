@@ -288,6 +288,41 @@ export const EN: Strings = {
     empty: "Nothing matches.",
   },
 
+  error: {
+    guestAdopt: (why: string) => `Could not bring the guest maps over: ${why}`,
+    noGitHub: "No GitHub connection is set up.",
+    folderDenied: "Access to the folder was not granted.",
+    listMaps: (why: string) => `Could not read the list of maps: ${why}`,
+    openMap: (why: string) => `Could not open the map: ${why}`,
+    createMap: (why: string) => `Could not create the map: ${why}`,
+    renameMap: (why: string) => `Could not rename the map: ${why}`,
+    deleteMap: (why: string) => `Could not delete the map: ${why}`,
+    loadHistory: (why: string) => `Could not load the history: ${why}`,
+    loadVersion: (why: string) => `Could not load that version: ${why}`,
+    fileRemoved: "The file was deleted outside Mieru. Editing will create it again.",
+  },
+
+  template: {
+    blank: "Default",
+    blankHint: "Just the centre",
+    swot: "SWOT",
+    swotHint: "Strengths, weaknesses, opportunities, threats",
+    swotBody: "# Template\n\n- Strengths\n- Weaknesses\n- Opportunities\n- Threats\n",
+    minutes: "Meeting notes",
+    minutesHint: "Decisions, actions, open questions",
+    minutesBody: "# Template\n\n- Decided\n- Actions\n- Open questions\n- Next time\n",
+    weekly: "Weekly review",
+    weeklyHint: "What happened, what you noticed, what is next",
+    weeklyBody: "# Template\n\n- What I did\n- What I noticed\n- What did not work\n- Next move\n",
+  },
+
+  scope: {
+    untitled: "Untitled",
+    untitledBranch: "Untitled branch",
+    whole: "Whole map",
+    copied: (what: string) => `Copied ${what} as Markdown`,
+  },
+
   banner: {
     guest: "Guest mode. Nothing is saved anywhere yet.",
     chooseStorage: "Choose where to save",
