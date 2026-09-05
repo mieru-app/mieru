@@ -79,17 +79,17 @@ README・`CLAUDE.md`・設計書には現在地を書かない。書くと必ず
 - **Pull Request での CI（`verify`）と `main` の保護**（2026-09-05）
 - **DCO（署名）の導入**（2026-09-05。
   [検討の記録](../ideas/2026-09-05-license-options.md) 7章）
+- **`SECURITY.md` と、GitHub の非公開の脆弱性報告**（2026-09-05）
 
 ### 残っているもの
 
 | # | やること | なぜ |
 |---|---|---|
-| 1 | `SECURITY.md` と、GitHub の非公開の脆弱性報告を有効にする | 他人のトークンを扱う以上、報告先が要る。**README と CONTRIBUTING には連絡先を書いた** |
-| 2 | **往復が分かる 30 秒の動画か GIF** | 「`.md` が保存形式」は文章では伝わらない。**マップを編集 → `.md` が変わる → エディタで開く**を1本で見せる |
-| 3 | 行動規範、Issue テンプレート | 参加の入口 |
-| 4 | リポジトリの topics と Discussions | 見つけてもらう。候補は `markdown` `mindmap` `pwa` `ai` `obsidian` `note-taking` |
-| 5 | 告知（Obsidian フォーラム、Show HN、Zenn） | 狙う層に届く場所は限られている。[計画](../ideas/2026-09-05-stp-and-marketing.md) |
-| 6 | **カバレッジの閾値を要件に合わせる** | 下記 |
+| 1 | **往復が分かる 30 秒の動画か GIF** | 「`.md` が保存形式」は文章では伝わらない。**マップを編集 → `.md` が変わる → エディタで開く**を1本で見せる |
+| 2 | 行動規範、Issue テンプレート | 参加の入口 |
+| 3 | リポジトリの topics と Discussions | 見つけてもらう。候補は `markdown` `mindmap` `pwa` `ai` `obsidian` `note-taking` |
+| 4 | 告知（Obsidian フォーラム、Show HN、Zenn） | 狙う層に届く場所は限られている。[計画](../ideas/2026-09-05-stp-and-marketing.md) |
+| 5 | **カバレッジの閾値を要件に合わせる** | 下記 |
 
 **カバレッジの門は保留にした（2026-09-05）。** `npm run test:coverage` は
 分岐 89.5% で閾値 90% に届かず、いま落ちる。**欠けているのは

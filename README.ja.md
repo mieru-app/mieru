@@ -215,5 +215,5 @@ GitHub を保存先にするならブラウザは問いません。
 不具合と提案は [Issue](https://github.com/mieru-app/mieru/issues) へお願いします。
 
 **脆弱性は公開の Issue に書かないでください。**
-このリポジトリの Security タブから非公開で報告するか、
-krikri1008@gmail.com へ直接お知らせください。
+報告の仕方、対象の範囲、既知として受け入れている事項は
+[SECURITY.md](./SECURITY.md) にあります（英語。日本語での報告も歓迎します）。
