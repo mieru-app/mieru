@@ -16,25 +16,22 @@ import type { ExportScope } from "../../state/commands.js";
 interface Choice<T> {
   value: T;
   label: string;
-  description: string;
 }
 
 const FORMATS: Choice<ExportFormat>[] = [
   {
     value: "heading",
     label: "見出し",
-    description: "第1〜3階層を見出しにする。文書として読ませたいとき",
   },
   {
     value: "bullet",
     label: "箇条書き",
-    description: "保存されている形のまま。構造を短く伝えたいとき",
   },
 ];
 
 const SCOPES: Choice<ExportScope>[] = [
-  { value: "whole", label: "全体", description: "マップ全部" },
-  { value: "selection", label: "選択部分", description: "選んでいる枝から下だけ" },
+  { value: "whole", label: "全体" },
+  { value: "selection", label: "選択部分" },
 ];
 
 interface AxisProps<T extends string> {
@@ -64,7 +61,6 @@ function Axis<T extends string>({
             onClick={() => onChange(choice.value)}
           >
             <span className="export-mode-label">{choice.label}</span>
-            <span className="export-mode-desc">{choice.description}</span>
           </button>
         ))}
       </div>

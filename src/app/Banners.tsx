@@ -1,3 +1,4 @@
+import { useLanguage } from "../state/i18n.js";
 import type { QuarantinedEntry } from "../store/quarantine.js";
 import type { SaveStatus } from "../state/types.js";
 
@@ -10,6 +11,9 @@ import type { SaveStatus } from "../state/types.js";
  */
 
 interface Props {
+  /** ゲストモードか。**保存されていないことを出し続ける** */
+  guest: boolean;
+  onChooseStorage: () => void;
   status: SaveStatus;
   externallyChanged: boolean;
   workspaceError: string | null;
@@ -21,6 +25,8 @@ interface Props {
 }
 
 export function Banners({
+  guest,
+  onChooseStorage,
   status,
   externallyChanged,
   workspaceError,
@@ -30,7 +36,25 @@ export function Banners({
   onRestore,
   onDiscard,
 }: Props): React.JSX.Element | null {
+  const s = useLanguage((state) => state.s);
   const banners: React.JSX.Element[] = [];
+
+  /*
+   * **ゲストの帯は消せない**（2.12）。中身はメモリにしか無く、
+   * タブを閉じれば消える。**「保存していない」と言い続けることが、
+   * 保存先を先に聞かない代わりに引き受けた義務である。**
+   * 先頭に置くのは、他の帯より先に目に入れるため
+   */
+  if (guest) {
+    banners.push(
+      <div className="banner banner-guest" key="guest" role="status">
+        <span>{s.banner.guest}</span>
+        <button type="button" onClick={onChooseStorage}>
+          {s.banner.chooseStorage}
+        </button>
+      </div>,
+    );
+  }
 
   if (workspaceError !== null) {
     banners.push(
@@ -43,23 +67,21 @@ export function Banners({
   if (status.kind === "conflict") {
     banners.push(
       <div className="banner banner-warn" key="conflict" role="alert">
-        <span>
-          このマップは他のアプリからも更新されています。自動保存は止めています（入力は保持しています）。
-        </span>
+        <span>{s.banner.conflict}</span>
         <button type="button" onClick={onReload}>
-          外部の内容を読み込む
+          {s.banner.loadExternal}
         </button>
         <button type="button" onClick={onKeepMine}>
-          こちらの内容で上書きする
+          {s.banner.keepMine}
         </button>
       </div>,
     );
   } else if (externallyChanged) {
     banners.push(
       <div className="banner" key="external" role="status">
-        <span>ファイルが外部で更新されました。</span>
+        <span>{s.banner.externallyChanged}</span>
         <button type="button" onClick={onReload}>
-          読み込み直す
+          {s.banner.reload}
         </button>
       </div>,
     );
@@ -76,15 +98,12 @@ export function Banners({
   for (const entry of quarantined) {
     banners.push(
       <div className="banner" key={`quarantine-${entry.key}`} role="status">
-        <span>
-          保存できずに退避した内容があります（{entry.id} /{" "}
-          {new Date(entry.at).toLocaleString("ja-JP")}）。
-        </span>
+        <span>{s.banner.quarantined(entry.id, new Date(entry.at).toLocaleString(s.locale))}</span>
         <button type="button" onClick={() => onRestore(entry)}>
-          復元する
+          {s.banner.restore}
         </button>
         <button type="button" onClick={() => onDiscard(entry)}>
-          破棄する
+          {s.banner.discard}
         </button>
       </div>,
     );

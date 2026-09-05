@@ -1,8 +1,11 @@
 import { useState } from "react";
 
 import { GITHUB_DISCONNECT_NOTE } from "../state/github-guide.js";
+import { LANGUAGE_LABELS, useLanguage } from "../state/i18n.js";
+import type { Language } from "../state/i18n.js";
+import type { Strings } from "../state/strings/ja.js";
 import type { Theme } from "../state/theme.js";
-import { THEME_LABELS } from "../state/theme.js";
+import { THEMES } from "../state/theme.js";
 import type { BackendState, GitHubConnectResult } from "../state/workspace.js";
 import { GitHubConnect } from "./GitHubConnect.js";
 
@@ -13,6 +16,13 @@ import { GitHubConnect } from "./GitHubConnect.js";
  * 設定項目を増やすほど、既定値のまま使えるという性質が失われる（原則4）。
  */
 
+/** 配色の字。順序は `theme.ts`、言葉は文言表が持つ */
+const THEME_LABEL: Record<Theme, (s: Strings) => string> = {
+  system: (s) => s.settings.themeSystem,
+  light: (s) => s.settings.themeLight,
+  dark: (s) => s.settings.themeDark,
+};
+
 interface Props {
   backend: Extract<BackendState, { kind: "ready" }>;
   /** 接続済みの GitHub の表示名。未接続なら null */
@@ -20,6 +30,8 @@ interface Props {
   localAvailable: boolean;
   theme: Theme;
   onChangeTheme: (theme: Theme) => void;
+  language: Language;
+  onChangeLanguage: (language: Language) => void;
   onChooseFolder: () => void;
   onUseLocalFolder: () => void;
   onUseGitHub: () => void;
@@ -28,7 +40,8 @@ interface Props {
     input: { token: string; repo: string; branch: string; directory: string },
     remember: boolean,
   ) => Promise<GitHubConnectResult>;
-  onShowShortcuts: () => void;
+  /** 1ペインしか置けない画面か。出力を出すかどうかの判断に使う */
+  narrow: boolean;
   /**
    * テキスト出力を開く。狭い画面ではツールバーから外れるため、
    * ここが唯一の行き先になる（`Toolbar.tsx`）
@@ -50,68 +63,67 @@ export function SettingsSheet({
   localAvailable,
   theme,
   onChangeTheme,
+  language,
+  onChangeLanguage,
   onChooseFolder,
   onUseLocalFolder,
   onUseGitHub,
   onDisconnectGitHub,
   onConnect,
-  onShowShortcuts,
+  narrow,
   onShowExport,
   onShowHistory,
   canExport,
   onClose,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const [connecting, setConnecting] = useState(false);
   const usingGitHub = backend.backend === "github";
 
   return (
-    <aside className="sheet" aria-label="設定">
+    <aside className="sheet" aria-label={s.settings.title}>
       <div className="sheet-head">
-        <strong>設定</strong>
-        <button type="button" aria-label="閉じる" onClick={onClose}>
+        <strong>{s.settings.title}</strong>
+        <button type="button" aria-label={s.settings.close} onClick={onClose}>
           ✕
         </button>
       </div>
 
       <div className="sheet-body">
-        <p className="sheet-group">保存先</p>
+        <p className="sheet-group">{s.settings.storage}</p>
         <p className="settings-value">
-          {usingGitHub ? "GitHub" : "フォルダ"} — {backend.label}
+          {usingGitHub ? s.settings.storageGitHub : s.settings.storageFolder} — {backend.label}
         </p>
 
         {usingGitHub ? (
           <>
             <button type="button" onClick={() => setConnecting(true)}>
-              接続先を変更…
+              {s.settings.changeConnection}
             </button>
             {localAvailable && (
               <button type="button" onClick={onUseLocalFolder}>
-                このパソコンのフォルダに戻す
+                {s.settings.backToLocal}
               </button>
             )}
             <button type="button" onClick={onDisconnectGitHub}>
-              接続を解除する
+              {s.settings.disconnect}
             </button>
             <p className="sheet-note">{GITHUB_DISCONNECT_NOTE}</p>
           </>
         ) : (
           <>
             <button type="button" onClick={onChooseFolder}>
-              フォルダを変更…
+              {s.settings.changeFolder}
             </button>
             {github === null ? (
               <button type="button" onClick={() => setConnecting(true)}>
-                GitHub に接続する…
+                {s.settings.connectGitHub}
               </button>
             ) : (
               <button type="button" onClick={onUseGitHub}>
-                GitHub に切り替える（{github}）
+                {s.settings.switchToGitHub(github)}
               </button>
             )}
-            <p className="sheet-note">
-              このフォルダ直下の <code>.md</code> がマップです。Obsidian や VS Code
-              でも同じファイルを開けます。
-            </p>
           </>
         )}
 
@@ -126,33 +138,55 @@ export function SettingsSheet({
           />
         )}
 
-        <p className="sheet-group">配色</p>
-        <div className="segmented" role="group" aria-label="配色">
-          {THEME_LABELS.map((choice) => (
+        {/*
+         * **言語を先頭に置く。** englishの画面に迷い込んだ人が最初に探すのはこれで、
+         * 下の方にあると設定を開いても戻れない
+         */}
+        <p className="sheet-group">{s.settings.language}</p>
+        <div className="segmented" role="group" aria-label={s.settings.language}>
+          {LANGUAGE_LABELS.map((choice) => (
             <button
               type="button"
-              key={choice.theme}
-              aria-pressed={theme === choice.theme}
-              onClick={() => onChangeTheme(choice.theme)}
+              key={choice.language}
+              aria-pressed={language === choice.language}
+              onClick={() => onChangeLanguage(choice.language)}
             >
               {choice.label}
             </button>
           ))}
         </div>
 
-        <p className="sheet-group">テキスト出力</p>
-        <button type="button" onClick={onShowExport} disabled={!canExport}>
-          出力を開く（Ctrl+Shift+C）
-        </button>
+        <p className="sheet-group">{s.settings.theme}</p>
+        <div className="segmented" role="group" aria-label={s.settings.theme}>
+          {THEMES.map((choice) => (
+            <button
+              type="button"
+              key={choice}
+              aria-pressed={theme === choice}
+              onClick={() => onChangeTheme(choice)}
+            >
+              {THEME_LABEL[choice](s)}
+            </button>
+          ))}
+        </div>
 
-        <p className="sheet-group">履歴</p>
+        {/*
+         * **出力は狭い画面でだけ出す**（2.12）。広い画面ではツールバーに
+         * 同じものがあり、重ねる意味が無い。狭い画面ではツールバーから外れるため、
+         * ここを消すと `Ctrl+Shift+C` しか道が残らず、**指しか無い端末で出力できなくなる**
+         */}
+        {narrow && (
+          <>
+            <p className="sheet-group">{s.settings.export}</p>
+            <button type="button" onClick={onShowExport} disabled={!canExport}>
+              {s.settings.openExport}
+            </button>
+          </>
+        )}
+
+        <p className="sheet-group">{s.settings.history}</p>
         <button type="button" onClick={onShowHistory} disabled={!canExport}>
-          過去の版を開く
-        </button>
-
-        <p className="sheet-group">キー操作</p>
-        <button type="button" onClick={onShowShortcuts}>
-          一覧を開く（?）
+          {s.settings.openHistory}
         </button>
       </div>
     </aside>

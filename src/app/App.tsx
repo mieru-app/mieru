@@ -12,6 +12,8 @@ import type { Pane } from "../state/pane-size.js";
 import { PANE_KEYS, readPaneWidth } from "../state/pane-size.js";
 import { collectTags, queryIndex } from "../state/search.js";
 import { TEMPLATES, templateMarkdown } from "../state/templates.js";
+import { applyLanguage, LANGUAGE_KEY, readLanguage, useLanguage } from "../state/i18n.js";
+import type { Language } from "../state/i18n.js";
 import type { Theme } from "../state/theme.js";
 import { readTheme, THEME_KEY } from "../state/theme.js";
 import { flatten } from "../state/tree.js";
@@ -92,6 +94,7 @@ export function App(): React.JSX.Element {
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [theme, setTheme] = useState<Theme>("system");
+  const language = useLanguage((state) => state.language);
   /** 一覧と欄の幅（rem）。端末ごとの好みなので localStorage に置く（`pane-size.ts`） */
   const [paneWidth, setPaneWidth] = useState<Record<Pane, number>>(() => ({
     sidebar: readPaneWidth("sidebar", null),
@@ -134,6 +137,16 @@ export function App(): React.JSX.Element {
     setTheme(readTheme(localStorage.getItem(THEME_KEY)));
   }, []);
 
+  /*
+   * 表示言語を決める（2.12）。設定が無ければブラウザの言語を見る。
+   * **`<html lang>` にも入れる。** 読み上げと自動翻訳がこれを見る
+   */
+  useEffect(() => {
+    const language = readLanguage(localStorage.getItem(LANGUAGE_KEY), navigator.languages);
+    useLanguage.getState().setLanguage(language);
+    applyLanguage(language);
+  }, []);
+
   // 保存済みの幅を読む。こちらも壊れた値は既定へ倒れる（`readPaneWidth`）
   useEffect(() => {
     setPaneWidth({
@@ -168,6 +181,12 @@ export function App(): React.JSX.Element {
     localStorage.setItem(THEME_KEY, next);
   }, []);
 
+  const changeLanguage = useCallback((next: Language) => {
+    useLanguage.getState().setLanguage(next);
+    applyLanguage(next);
+    localStorage.setItem(LANGUAGE_KEY, next);
+  }, []);
+
   const notify = useCallback((message: string) => {
     setToast(message);
   }, []);
@@ -187,6 +206,10 @@ export function App(): React.JSX.Element {
   const toggleExport = useCallback(() => toggleSheet("export"), [toggleSheet]);
   const toggleSettings = useCallback(() => toggleSheet("settings"), [toggleSheet]);
   const toggleHistory = useCallback(() => toggleSheet("history"), [toggleSheet]);
+  /** ゲストの帯から呼ぶ。**開くだけで、開いていたら閉じない** */
+  const openSettings = useCallback(() => {
+    setSheet("settings");
+  }, []);
 
   const restoreVersion = useCallback(
     (entryId: string) => {
@@ -335,6 +358,12 @@ export function App(): React.JSX.Element {
   const openMap = useCallback(
     (id: string) => {
       if (!keepSidebarAfterOpen(narrow)) setSidebarOpen(false);
+      /*
+       * **一覧から選んだら作成をやめる**（2.12）。
+       * 新規作成の欄に「やめる」を置かない代わりの逃げ道であり、
+       * これが無いと欄を開いたまま一覧を押しても何も起きない
+       */
+      setCreating(false);
       void useWorkspace.getState().openMap(id);
     },
     [narrow],
@@ -370,6 +399,7 @@ export function App(): React.JSX.Element {
       <StartScreen
         backend={backend}
         onChoose={() => void useWorkspace.getState().chooseFolder()}
+        onStartGuest={() => void useWorkspace.getState().startGuest()}
         onGrant={() => void useWorkspace.getState().grantPermission()}
         onConnect={(input, remember) => useWorkspace.getState().connectGitHub(input, remember)}
       />
@@ -388,7 +418,7 @@ export function App(): React.JSX.Element {
   return (
     <div className={`app${layout.sidebar ? "" : " is-sidebar-closed"}`}>
       <Toolbar
-        title={map?.meta.title ?? "マップを開いてください"}
+        title={map?.meta.title ?? ""}
         onHome={goHome}
         mode={mode}
         canEdit={root !== null}
@@ -398,8 +428,6 @@ export function App(): React.JSX.Element {
         onChangeMode={(next) => useEditor.getState().setMode(next)}
         onToggleExport={toggleExport}
         exportOpen={showExport}
-        onToggleHistory={toggleHistory}
-        historyOpen={layout.panel === "history"}
         onNewMap={() => startCreating("blank")}
         onToggleHelp={toggleHelp}
         helpOpen={layout.panel === "help"}
@@ -408,6 +436,8 @@ export function App(): React.JSX.Element {
       />
 
       <Banners
+        guest={backend.kind === "ready" && backend.backend === "guest"}
+        onChooseStorage={openSettings}
         status={status}
         externallyChanged={externallyChanged}
         workspaceError={workspaceError}
@@ -473,7 +503,6 @@ export function App(): React.JSX.Element {
           {root === null || creating ? (
             <HomeScreen
               creating={creating}
-              hasMaps={maps.length > 0}
               templates={TEMPLATES}
               templateId={templateId}
               onTemplateChange={setTemplateId}
@@ -525,12 +554,14 @@ export function App(): React.JSX.Element {
             localAvailable={localAvailable}
             theme={theme}
             onChangeTheme={changeTheme}
+            language={language}
+            onChangeLanguage={changeLanguage}
             onChooseFolder={() => void useWorkspace.getState().chooseFolder()}
             onUseLocalFolder={() => void useWorkspace.getState().useLocalFolder()}
             onUseGitHub={() => void useWorkspace.getState().useGitHub()}
             onDisconnectGitHub={() => void useWorkspace.getState().disconnectGitHub()}
             onConnect={(input, remember) => useWorkspace.getState().connectGitHub(input, remember)}
-            onShowShortcuts={toggleHelp}
+            narrow={narrow}
             onShowExport={toggleExport}
             onShowHistory={toggleHistory}
             canExport={root !== null}

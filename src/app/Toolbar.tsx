@@ -1,5 +1,7 @@
+import { useLanguage } from "../state/i18n.js";
 import type { ViewMode } from "../state/types.js";
-import { VIEW_MODE_LABELS, VIEW_MODE_SHORT_LABELS, VIEW_MODES } from "../state/view-mode.js";
+import type { Strings } from "../state/strings/ja.js";
+import { VIEW_MODES } from "../state/view-mode.js";
 import { Wordmark } from "./Wordmark.js";
 
 /**
@@ -14,13 +16,22 @@ import { Wordmark } from "./Wordmark.js";
  *
  * | 外すもの | 行き先 |
  * |---|---|
- * | テキスト出力 | 設定シート（`Ctrl+Shift+C` は狭い画面では押せない） |
- * | 履歴 | 設定シート（キー割り当てを持たない。2.8-4） |
+ * | 出力 | 設定シート（`Ctrl+Shift+C` は狭い画面では押せない） |
  * | 新規作成 | サイドバーとホーム画面に元からある |
- * | キー操作 | 設定シート。物理キーボードが無ければそもそも要らない |
+ * | ヘルプ | 出さない。物理キーボードが無ければキーの一覧は要らない |
+ *
+ * **履歴はツールバーから外した**（2.12）。設定シートが唯一の行き先である。
+ * 押す頻度が低く、常時1枠を占めるだけの価値が無かった。
  *
  * マップ名も外す。切り替えの左右に挟まれて、数文字で切れて意味をなさない。
  */
+
+/** 狭い画面用の短い字。`viewMode` の鍵は平らなので、ここで対応づける */
+const SHORT: Record<ViewMode, (s: Strings) => string> = {
+  canvas: (s) => s.viewMode.canvasShort,
+  outline: (s) => s.viewMode.outlineShort,
+  source: (s) => s.viewMode.sourceShort,
+};
 
 interface Props {
   title: string;
@@ -29,14 +40,12 @@ interface Props {
   mode: ViewMode;
   onChangeMode: (mode: ViewMode) => void;
   onToggleExport: () => void;
-  onToggleHistory: () => void;
   onNewMap: () => void;
   onToggleHelp: () => void;
   onToggleSidebar: () => void;
   onToggleSettings: () => void;
   helpOpen: boolean;
   exportOpen: boolean;
-  historyOpen: boolean;
   settingsOpen: boolean;
   sidebarOpen: boolean;
   canEdit: boolean;
@@ -50,26 +59,25 @@ export function Toolbar({
   mode,
   onChangeMode,
   onToggleExport,
-  onToggleHistory,
   onNewMap,
   onToggleHelp,
   onToggleSidebar,
   onToggleSettings,
   helpOpen,
   exportOpen,
-  historyOpen,
   settingsOpen,
   sidebarOpen,
   canEdit,
   narrow,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   return (
     <header className="toolbar">
       <button
         type="button"
         className="toolbar-icon"
         aria-pressed={sidebarOpen}
-        aria-label="サイドバーの開閉"
+        aria-label={s.toolbar.sidebar}
         title="Ctrl+B"
         onClick={onToggleSidebar}
       >
@@ -79,8 +87,8 @@ export function Toolbar({
       <button
         type="button"
         className="toolbar-home"
-        aria-label="ホームへ戻る"
-        title="ホームへ戻る"
+        aria-label={s.toolbar.home}
+        title={s.toolbar.home}
         onClick={onHome}
       >
         <Wordmark label="" />
@@ -88,19 +96,19 @@ export function Toolbar({
       {!narrow && <span className="toolbar-title">{title}</span>}
 
       <div className="toolbar-actions">
-        <div className="segmented" role="group" aria-label="表示の切り替え">
+        <div className="segmented" role="group" aria-label={s.toolbar.viewSwitch}>
           {VIEW_MODES.map((each) => (
             <button
               key={each}
               type="button"
               aria-pressed={mode === each}
               // 狭い画面では字を縮めるが、名前は読み上げに残す（`view-mode.ts`）
-              aria-label={VIEW_MODE_LABELS[each]}
-              title={VIEW_MODE_LABELS[each]}
+              aria-label={s.viewMode[each]}
+              title={s.viewMode[each]}
               onClick={() => onChangeMode(each)}
               disabled={!canEdit}
             >
-              {narrow ? VIEW_MODE_SHORT_LABELS[each] : VIEW_MODE_LABELS[each]}
+              {narrow ? SHORT[each](s) : s.viewMode[each]}
             </button>
           ))}
         </div>
@@ -112,34 +120,25 @@ export function Toolbar({
               onClick={onToggleExport}
               aria-pressed={exportOpen}
               disabled={!canEdit}
-              title="Ctrl+Shift+C ですぐコピーもできます"
+              title={s.toolbar.exportHint}
             >
-              テキスト出力
-            </button>
-            <button
-              type="button"
-              onClick={onToggleHistory}
-              aria-pressed={historyOpen}
-              disabled={!canEdit}
-              title="過去の版を見て戻す"
-            >
-              履歴
+              {s.toolbar.export}
             </button>
             <button type="button" onClick={onNewMap}>
-              新規作成
+              {s.toolbar.newMap}
             </button>
             <button type="button" onClick={onToggleHelp} aria-pressed={helpOpen} title="?">
-              キー操作
+              {s.toolbar.shortcuts}
             </button>
           </>
         )}
         <button
           type="button"
-          className="toolbar-icon"
+          className="toolbar-icon toolbar-settings"
           onClick={onToggleSettings}
           aria-pressed={settingsOpen}
-          aria-label="設定"
-          title="設定"
+          aria-label={s.toolbar.settings}
+          title={s.toolbar.settings}
         >
           ⚙
         </button>

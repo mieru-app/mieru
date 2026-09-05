@@ -41,15 +41,11 @@ export function Source(): React.JSX.Element {
 
   return (
     <div className="source">
-      <p className="source-caption">
-        保存される全文です。<strong>読むだけで、ここからは書き換えられません。</strong>
-        frontmatter の <code>updated</code> だけは、保存した瞬間の時刻に差し替わります。
-      </p>
       <pre className="source-body" tabIndex={0} aria-label="保存される Markdown">
         {md}
       </pre>
       <p className="source-size">
-        {lineCount(md)} 行 / {byteLength(md)} バイト
+        {lineCount(md)} 行 / {byteLength(md)} byte
       </p>
     </div>
   );

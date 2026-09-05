@@ -150,6 +150,23 @@ button.primary {
   color: var(--fg);
 }
 
+/*
+ * **設定だけは目立たせる**（2.12）。ここが表示言語の切り替え口であり、
+ * 読めない言語の画面に迷い込んだ人が最初に探す場所になる。
+ * 他の押しボタンと同じ薄さだと見つけられない
+ */
+.toolbar-settings {
+  color: var(--fg);
+  font-size: 1.15em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.toolbar-settings:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ロゴはホームへの帰り道。ボタンの装飾は消し、focus の輪郭だけ残す */
 .toolbar-home {
   display: flex;
@@ -799,6 +816,14 @@ button.primary {
   border-bottom: 1px solid var(--border);
 }
 
+/*
+ * ゲストの帯（2.12）。**消せない。** 中身はメモリにしか無く、
+ * タブを閉じれば消えることを、使っているあいだ言い続ける
+ */
+.banner-guest {
+  border-left: 3px solid var(--accent);
+}
+
 .banner-warn {
   background: var(--warn-bg);
   color: var(--warn-fg);
@@ -1016,12 +1041,24 @@ kbd {
   border-radius: 6px;
 }
 
+/* 拡張子は付け外しできない。欄の外に添えて、既成事実として見せる */
+.home-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.home-input-suffix {
+  color: var(--fg-muted);
+  font-size: 0.95em;
+}
+
 .home-input:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
 
-/* 下敷きは並べて見比べる。名前だけでは何が入るか分からない */
+/* テンプレートは名前だけを並べる。説明は画面から外した（2.12） */
 .home-templates {
   display: flex;
   flex-wrap: wrap;
@@ -1044,11 +1081,6 @@ kbd {
 
 .home-template-name {
   font-weight: 600;
-}
-
-.home-template-desc {
-  color: var(--fg-muted);
-  font-size: 0.85em;
 }
 
 .guide {
@@ -1231,11 +1263,6 @@ kbd {
 
 .export-mode-label {
   font-weight: 600;
-}
-
-.export-mode-desc {
-  color: var(--fg-muted);
-  font-size: 0.85em;
 }
 
 .export-scope {
@@ -1466,6 +1493,40 @@ kbd {
 }
 
 /* ── 保存先の選択と GitHub 接続（2.6-4） ─────────────────── */
+
+/* ロゴを見出しに使う。字で名乗るより、アイコンと同じ骨格を最初に見せる */
+.startscreen-title {
+  margin: 0;
+  line-height: 1;
+}
+
+.startscreen-title svg {
+  height: 2.4rem;
+  width: auto;
+}
+
+.startscreen-tagline {
+  margin: 0.6rem 0 0;
+  font-size: 1.05em;
+}
+
+/* アクセスの範囲（2.12）。**押す前に読ませたいので、ボタンの直前に置く** */
+/* 保存先を決めずに入る道。**選択肢より先に、上に置く** */
+.startscreen-guest {
+  margin: 0 0 1.2rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.startscreen-guest .startscreen-note {
+  margin: 0.4rem 0 0;
+}
+
+.startscreen-scope {
+  margin: 0 0 0.5rem;
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
 
 .startscreen-lead {
   margin-top: 0.75rem;

@@ -16,7 +16,6 @@ interface Props {
   /** 作成の入力を出しているか */
   creating: boolean;
   /** 既にマップを持っているか。初回かどうかで言うことが変わる */
-  hasMaps: boolean;
   templates: Template[];
   templateId: string;
   onTemplateChange: (id: string) => void;
@@ -26,7 +25,7 @@ interface Props {
   onCopyImportPrompt: () => void;
 }
 
-const DEFAULT_TITLE = "新しいマップ";
+const DEFAULT_TITLE = "New Document";
 
 /** 表題と下敷きを決める。ここだけで作成が完結する */
 function CreateForm({
@@ -67,20 +66,24 @@ function CreateForm({
         if (event.key === "Escape") onCancelCreating();
       }}
     >
-      <h2>新しいマップを作る</h2>
+      <h2>新規作成</h2>
 
       <label className="home-field">
-        <span className="home-field-label">中心テーマ</span>
-        <input
-          ref={ref}
-          className="home-input"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-        />
+        <span className="home-field-label">ファイル名</span>
+        {/* 拡張子は付け外しできないので、入力欄の外に添えて既成事実として見せる */}
+        <span className="home-input-row">
+          <input
+            ref={ref}
+            className="home-input"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+          <span className="home-input-suffix">.md</span>
+        </span>
       </label>
 
-      <div className="home-field" role="radiogroup" aria-label="下敷き">
-        <span className="home-field-label">下敷き</span>
+      <div className="home-field" role="radiogroup" aria-label="テンプレート">
+        <span className="home-field-label">テンプレート</span>
         <div className="home-templates">
           {templates.map((template) => (
             <button
@@ -92,38 +95,30 @@ function CreateForm({
               onClick={() => onTemplateChange(template.id)}
             >
               <span className="home-template-name">{template.name}</span>
-              <span className="home-template-desc">{template.description}</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="home-actions">
+        {/*
+         * **「やめる」を置かない**（2.12）。Esc で閉じられ、
+         * 一覧から別のマップを選んでも抜けられる（`App.tsx`）
+         */}
         <button type="submit" className="primary">
-          作成する
-        </button>
-        <button type="button" onClick={onCancelCreating}>
-          やめる
+          作成
         </button>
       </div>
 
-      <p className="home-note">
-        表題はファイル名になります。<kbd>Enter</kbd> で作成、<kbd>Esc</kbd> でやめます。
-      </p>
-
       {/*
        * 別の AI で整理してから持ち込む道もここで示す。
-       * 「何を書けばいいか分からない」状態で開くのがこの画面だからである
+       * 「何を書けばいいか分からない」状態で開くのがこの画面だからである。
+       * **説明文は置かない。** 何が起きるかはボタンの字で言い切れる
        */}
       <div className="home-aside">
-        <span className="home-field-label">AI で整理したものを取り込むなら</span>
-        <p className="home-note">
-          Mieru が読める Markdown を書かせる指示文をコピーします。 AI の返事をそのまま .md
-          として置けば、このアプリで開けます。
-        </p>
         <div className="home-actions">
           <button type="button" onClick={onCopyImportPrompt}>
-            取り込み指示をコピー
+            既存の AI セッションの取り込みフォーマット
           </button>
         </div>
       </div>
@@ -133,7 +128,6 @@ function CreateForm({
 
 export function HomeScreen({
   creating,
-  hasMaps,
   templates,
   templateId,
   onTemplateChange,
@@ -164,51 +158,24 @@ export function HomeScreen({
           {/* 見出しの中身がロゴなので、読み上げ名はロゴ側が持つ */}
           <Wordmark />
         </h1>
-        <p className="home-lead">考えを整理し、そのまま AI に渡せるマインドマップ。</p>
       </div>
 
       <div className="home-actions">
         <button type="button" className="primary" onClick={onStartCreating}>
           新規作成
         </button>
-        {hasMaps && <span className="home-note">左の一覧からも開けます。</span>}
       </div>
 
-      <section className="home-section">
-        <h2>使い方</h2>
-        <dl className="home-steps">
-          <div>
-            <dt>枝を伸ばす</dt>
-            <dd>
-              <kbd>Tab</kbd> で子、<kbd>Enter</kbd> で兄弟。<kbd>?</kbd> で一覧が出ます。
-            </dd>
-          </div>
-          <div>
-            <dt>保存する</dt>
-            <dd>保存ボタンはありません。入力が止まって 0.8 秒で .md に書き込みます。</dd>
-          </div>
-          <div>
-            <dt>AI へ渡す</dt>
-            <dd>
-              ツールバーの「テキスト出力」、または <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>{" "}
-              でコピーします。
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="home-section">
-        <h2>AI で整理したものを取り込む</h2>
-        <p className="home-note">
-          Mieru が読める Markdown を書かせるための指示文をコピーします。 AI の返事をそのまま .md
-          として置けば、このアプリで開けます。
-        </p>
-        <div className="home-actions">
-          <button type="button" onClick={onCopyImportPrompt}>
-            取り込み指示をコピー
-          </button>
-        </div>
-      </section>
+      {/*
+       * **説明の節を置かない**（2.12）。ここは毎回戻ってくる場所であり、
+       * 初回しか読まれない文が居座ると、押すもの（新規作成と一覧）が埋もれる。
+       * キー操作の正本は `?` の一覧で、写しを置くと二重管理になる（原則3）
+       */}
+      <div className="home-actions">
+        <button type="button" onClick={onCopyImportPrompt}>
+          既存の AI セッションの取り込みフォーマット
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { useLanguage } from "../state/i18n.js";
+import type { Strings } from "../state/strings/ja.js";
 import type { SaveStatus } from "../state/types.js";
 
 /**
@@ -6,34 +8,34 @@ import type { SaveStatus } from "../state/types.js";
  * 保存できていない状況では、内容が失われていないことも併せて伝える（原則4）。
  */
 
-function timeOf(at: number): string {
-  return new Date(at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+function timeOf(at: number, locale: string): string {
+  return new Date(at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 
-function describe(status: SaveStatus): { tone: string; text: string } {
+function describe(status: SaveStatus, s: Strings): { tone: string; text: string } {
   switch (status.kind) {
     case "empty":
-      return { tone: "muted", text: "マップを開いていません" };
+      return { tone: "muted", text: s.status.empty };
     case "saved":
-      return { tone: "ok", text: `保存済み ${timeOf(status.at)}` };
+      return { tone: "ok", text: s.status.saved(timeOf(status.at, s.locale)) };
     case "dirty":
-      return { tone: "muted", text: "未保存の変更があります" };
+      return { tone: "muted", text: s.status.dirty };
     case "saving":
-      return { tone: "muted", text: "保存中…" };
+      return { tone: "muted", text: s.status.saving };
     case "conflict":
-      return { tone: "warn", text: "外部で更新されています（未保存の変更は保持しています）" };
+      return { tone: "warn", text: s.status.conflict };
     case "failed":
-      return { tone: "warn", text: `保存できません: ${status.reason}` };
+      return { tone: "warn", text: s.status.failed(status.reason) };
   }
 }
 
 /** 状況に応じて出す案内。今この場で次に押すキーを示す */
 export type StatusHint = "newMap" | "firstBranch" | "help";
 
-const HINTS: Record<StatusHint, string> = {
-  newMap: "「新規作成」からマップを作れます",
-  firstBranch: "Tab で最初の枝を追加",
-  help: "? でキー操作の一覧",
+const HINTS: Record<StatusHint, (s: Strings) => string> = {
+  newMap: (s) => s.status.hintNewMap,
+  firstBranch: (s) => s.status.hintFirstBranch,
+  help: (s) => s.status.hintHelp,
 };
 
 interface Props {
@@ -45,13 +47,14 @@ interface Props {
 }
 
 export function StatusBar({ status, nodeCount, label, hint }: Props): React.JSX.Element {
-  const { tone, text } = describe(status);
+  const s = useLanguage((state) => state.s);
+  const { tone, text } = describe(status, s);
   return (
     <footer className="statusbar">
       <span className={`status status-${tone}`}>{text}</span>
       {label !== null && <span className="statusbar-item">{label}</span>}
-      {nodeCount > 0 && <span className="statusbar-item">{nodeCount} ノード</span>}
-      <span className="statusbar-hint">{HINTS[hint]}</span>
+      {nodeCount > 0 && <span className="statusbar-item">{s.status.nodes(nodeCount)}</span>}
+      <span className="statusbar-hint">{HINTS[hint](s)}</span>
     </footer>
   );
 }

@@ -74,7 +74,7 @@ export function NotePanel({
           disabled={draft === ""}
           onClick={() => setReading((on) => !on)}
         >
-          {reading ? "書く" : "読む"}
+          {reading ? "書く" : "Preview"}
         </button>
         <button
           type="button"
