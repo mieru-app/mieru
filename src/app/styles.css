@@ -452,8 +452,41 @@ button.primary {
   padding: 2rem;
 }
 
+/*
+ * **格子にして、中の入れ物へ確定した大きさを渡す（2.11-2、2026-09-05 に実測して確定）。**
+ *
+ * `mind-elixir` の `.map-container` は `height: 100%` を持つが、**それが解決せず
+ * 内容なりの高さへ落ちていた。** 実測した数値がこれである。
+ *
+ * | | canvas | map-container |
+ * |---|---|---|
+ * | 畳んだ状態 | 835 | **1472** |
+ * | 展開した状態 | 835 | **3794** |
+ *
+ * **この1つの食い違いが、症状3つすべての原因だった。**
+ *
+ * - 中央に来ない: `centerMap()` は `mind.container` を物差しにする。
+ *   3794 の箱の中心へ正しく置いた結果、中心テーマが画面の 1480px 下に沈んでいた。
+ *   **式は合っていて、物差しが違った**（実測では container の中心と
+ *   root の中心が 1945 でぴったり一致していた）
+ * - ⛶ で縦に縮まない: `scaleFit()` の縦比は `nodes / container` であり、
+ *   入れ物が内容なりだと比が常に約1になる
+ * - 下に「地図の外」が残る: `overflow: hidden` が見えている端で切れない
+ *
+ * **`position: absolute; inset: 0` では直らない（実測で高さが 0 になった）。**
+ * 中身を流れから外した瞬間に `.canvas` の高さが消えるため、
+ * **この要素の高さは中身に依存していた。** 格子の行で外から与える必要がある。
+ *
+ * 列も明示する。`me-nodes` は `width: max-content` なので、
+ * 暗黙の `auto` 列だと**横に広い地図で入れ物ごと伸びる。**
+ *
+ * `.canvas-zoom` は絶対配置で流れの外にあるため、格子の要素にはならない。
+ */
 .canvas {
   position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   height: 100%;
   min-height: 0;
