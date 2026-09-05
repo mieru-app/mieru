@@ -88,6 +88,9 @@
 ## Git
 
 - ブランチは `main`。改行は LF（`.gitattributes` で強制済み）
+- **`main` は保護されている。** 直接 push できない。ブランチを切って Pull Request を出す
+- **`git commit -s` で署名する（DCO）。** 署名の無いコミットは CI が弾く。
+  理由は `CONTRIBUTING.md`、全文は直下の `DCO`
 - コミットメッセージは `docs:` `feat:` `fix:` `test:` `chore:` のいずれかを接頭辞にし、要約は日本語
 - コミット前に `npm run lint` と `npm test` を通す
 - **指示がない限り push しない**

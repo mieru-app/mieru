@@ -7,6 +7,8 @@
 **MIT を採用した。** 著作権表示は `Copyright (c) 2026 Kyri and contributors`、
 問い合わせ先は krikri1008@gmail.com。
 
+**あわせて DCO（Developer Certificate of Origin）を導入した**（同日。下の7章）。
+
 `LICENSE` を置き、`package.json` から `"private": true` を外して
 `license` `author` `homepage` `repository` `bugs` `keywords` を足した。
 README の記述もそれに合わせた。
@@ -177,3 +179,74 @@ Mieru には特許になるような発明が無く、いま企業導入の見�
 - 依存のライセンスは `node_modules` の各 `package.json` を推移的に集計（48 パッケージ）
 - [Joplin の LICENSE](https://github.com/laurent22/joplin/blob/dev/LICENSE)（AGPL-3.0-or-later）
 - Logseq が AGPL-3.0 であること（[Logseq フォーラム](https://discuss.logseq.com/t/will-logseq-remain-fully-open-source-in-the-future-and-will-the-synchronization-feature-be-self-hostable/11951)）
+
+---
+
+## 7. 団体への寄贈を考えたときの再検討（2026-09-05）
+
+「将来 CNCF などへ寄贈するとき、MIT は最適か」という問いを受けて調べた。
+
+### 分かったこと
+
+| # | 事実 | 出典 |
+|---|---|---|
+| 1 | **CNCF の既定は Apache-2.0。** それ以外は Governing Board の承認が要る | CNCF の方針 |
+| 2 | 例外は実際に出ている（OpenTofu が MPL-2.0 で承認） | 同上 |
+| 3 | **Dapr は CNCF へ出すために MIT から Apache-2.0 へ変更した** | dapr/dapr#3911 |
+| 4 | GitLab も CNCF と協力して Apache-2.0 へ変えた | CNCF ブログ |
+| 5 | 理由は**特許許諾**。Apache-2.0 にはあり、MIT には無い | 同上 |
+| 6 | **CNCF は CLA より DCO を勧めており、強制用の GitHub App を配っている** | cncf/dco2 |
+
+### それでも MIT を維持した理由
+
+**CNCF は Mieru の行き先ではない。** CNCF が扱うのはクラウドネイティブの基盤技術
+（コンテナ基盤、オーケストレーション、可観測性）であり、**ブラウザで動く個人向けの
+マインドマップは対象範囲に入らない。** Apache-2.0 にしても受け入れられない。
+
+この種のツールに現実的な受け皿は Software Freedom Conservancy、Commons Conservancy、
+NLnet などであり、**どれも Apache-2.0 を必須にしていない。**
+
+**「要るかもしれない」で複雑さを先に払わない。** これは設計原則と同じ判断である。
+
+### 代わりに DCO を入れた
+
+**ライセンスを変えられるかどうかは、著作権者の数と、その連絡が付くかで決まる。**
+いまは1人なので、Apache-2.0 への変更はその気になれば即日できる。
+貢献者が 20 人に増えてからだと、全員の同意を取る作業になる。
+**Dapr や GitLab が苦労したのはそこである。**
+
+**最も取り返しがつかないのは、DCO が無いまま貢献者が増えることである。**
+ライセンスは変えられるが、連絡の付かない貢献者の同意は取れない。
+
+| 入れたもの | 場所 |
+|---|---|
+| DCO 1.1 の全文 | リポジトリ直下の `DCO` |
+| 署名の求め方 | `CONTRIBUTING.md` |
+| 機械的な強制 | `scripts/check-dco.mjs` を `verify`（CI）から呼ぶ |
+
+**bot は対象外にした。** DCO は人が「自分に権利がある」と述べる仕組みであり、
+依存を上げるだけの自動コミットに求めても意味が無い。
+**ここを空けておかないと Dependabot の Pull Request が毎週落ち、
+門そのものが無視されるようになる。**
+
+**既存の 16 コミットには遡って署名していない。** `main` は保護されており、
+履歴の書き換えには force push が要る。**著作権者が1人である現時点では、
+遡っても得るものが無い。** DCO はここから先に効く。
+
+### CNCF の GitHub App を使わなかった理由
+
+`cncf/dco2` は素直な選択だが、**アプリを1つ入れるとリポジトリへの権限を渡すことになる。**
+NF-43 で第三者のリソースを読み込まない方針を採っている以上、
+40 行の自前スクリプトで済むならその方が筋が通る。
+**必要な検査は「作者本人の署名があるか」の1点しかない。**
+
+### 出典（2026-09-05 に確認）
+
+- [Why CNCF recommends Apache-2.0](https://www.cncf.io/blog/2017/02/01/cncf-recommends-aslv2/)
+- [Update the License from MIT to Apache 2.0 as required by CNCF submission（dapr/dapr#3911）](https://github.com/dapr/dapr/issues/3911)
+- [CNCF Allowed Third Party License Policy](https://github.com/cncf/foundation/blob/main/policies-guidance/allowed-third-party-license-policy.md)
+- [cncf/dco2（DCO 強制用の GitHub App）](https://github.com/cncf/dco2)
+- [Developer Certificate of Origin](https://developercertificate.org/)
+- DCO 1.1 の本文は3つのリポジトリ（prometheus-operator / statsd / networkupstools）から
+  取得し、**住所行を除く本文が完全に一致することを確かめて**採用した
+
