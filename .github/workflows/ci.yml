@@ -1,0 +1,78 @@
+# Pull Request の検査
+#
+# **これが無いと、検査は main へ入った後にしか走らない。**
+# `deploy.yml` は main への push を契機に lint とテストを通すが、
+# そこで落ちたときには既に main が壊れている。
+#
+# **`pull_request` を使い、`pull_request_target` は使わない。**
+# 前者はフォーク元のコードを読み取り専用の権限で動かし、シークレットを渡さない。
+# 後者は main 側の設定でフォークのコードを動かすため、
+# 他人の Pull Request が書き込み権限を得る経路になる。
+#
+# **リポジトリ側で1度だけ必要な設定:**
+#   Settings → Rules → Rulesets で main を保護し、
+#   このワークフローの `verify` を必須の検査に指定する。
+#   ワークフローを置くだけでは、落ちても merge を止められない。
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  # 手で流せるようにしておく。設定を直した直後に確認したいことがある
+  workflow_dispatch:
+
+# 同じ Pull Request で押し直したら、古い方は打ち切る。
+# 配信（`deploy.yml`）と違い、途中で止めても失うものが無い
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# 読むだけでよい。**足すときは、本当に要るかを先に問うこと**
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # 型 → 整形 → lint → テスト → ビルドの順に並べる。
+      # **速く落ちるものを先に置く。** 30 秒で分かる誤りのために
+      # テストの完走を待たせない
+      - name: 型検査
+        run: npm run typecheck
+
+      - name: 整形
+        run: npm run format:check
+
+      # `npm run lint` は ESLint に加えて scripts/check-docs.mjs を通す。
+      # 壊れた相対リンクと、ロードマップ以外での Phase の完了宣言を弾く
+      - name: Lint とドキュメントの検査
+        run: npm run lint
+
+      # **カバレッジ（`npm run test:coverage`）は門にしていない。**
+      # 2026-09-05 に測ったところ、分岐が 89.5% で閾値 90% に届かない。
+      # 欠けているのは `noUncheckedIndexedAccess` が生む `?? 0` `?? ""` の
+      # **到達不能な防御分岐**であり、テストを足しても通せない。
+      #
+      # なお NF-50 が 90% を求めているのは変換層（`src/core/`）であり、
+      # そこは 92.3% で満たしている。閾値を全層へ一律に掛けている
+      # `vite.config.ts` の設定が、要件より厳しくなっている。
+      # **門にするかどうかは、その設定を直してから決める**
+      - name: テスト
+        run: npm test
+
+      # 配信と同じ条件でビルドが通ることまで見る。
+      # 型検査を通ってもバンドルで落ちることがある
+      - name: ビルド
+        env:
+          BASE_PATH: /mieru/
+        run: npm run build
