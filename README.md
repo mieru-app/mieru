@@ -205,6 +205,7 @@ No, and that is deliberate. For a group, each person uses their own repository.
 
 Bug reports, ideas and code are all welcome.
 Setup, project layout and how to send a change are in **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
+Participation is covered by the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 For the thinking behind the design, see the
 [architecture notes](./docs/human-review/architecture.md) and the

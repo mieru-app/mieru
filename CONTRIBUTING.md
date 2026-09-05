@@ -6,6 +6,8 @@ Mieru への貢献を歓迎します。不具合の報告、使ってみた感�
 [README（英語）](./README.md) と [README（日本語）](./README.ja.md) にあります。
 英語での Issue と Pull Request も歓迎します。
 
+参加にあたっては [行動規範](./CODE_OF_CONDUCT.md) に従ってください。
+
 ---
 
 ## まず読むもの

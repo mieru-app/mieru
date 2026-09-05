@@ -1,0 +1,9 @@
+# 空の Issue を作らせない。**種類が分かれば返せる速さが変わる**
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/mieru-app/mieru/security/advisories/new
+    about: Report privately. Never in a public issue. See SECURITY.md for scope.
+  - name: Question about how to use Mieru
+    url: https://github.com/mieru-app/mieru/blob/main/README.md
+    about: The README covers storage, keys, offline use and what Mieru will not do.
