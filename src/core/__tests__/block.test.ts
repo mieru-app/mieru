@@ -80,12 +80,61 @@ describe("段落として読む", () => {
   });
 });
 
+/**
+ * 引用とコードは 2026-09-05 まで破棄されていた。保存できるようにした以上、
+ * **画面にも出さなければ直したことにならない。**
+ */
+describe("引用とコードとして読む", () => {
+  const TICK = String.fromCharCode(96).repeat(3);
+
+  it("引用は記号を外して中身を返す", () => {
+    expect(parseBlocks("> 一行目\n> 二行目")).toEqual([
+      { kind: "quote", lines: ["一行目", "二行目"] },
+    ]);
+  });
+
+  it("記号だけの引用も空行として残す", () => {
+    expect(parseBlocks(">")).toEqual([{ kind: "quote", lines: [""] }]);
+  });
+
+  it("柵付きコードは言語と中身に分ける", () => {
+    expect(parseBlocks(TICK + "js\nconst a = 1;\n" + TICK)).toEqual([
+      { kind: "code", lang: "js", text: "const a = 1;" },
+    ]);
+  });
+
+  it("言語が無ければ lang を付けない", () => {
+    expect(parseBlocks(TICK + "\na\n" + TICK)).toEqual([{ kind: "code", text: "a" }]);
+  });
+
+  it("インデントコードは半角4つを外す", () => {
+    expect(parseBlocks("    a\n      b")).toEqual([{ kind: "code", text: "a\n  b" }]);
+  });
+
+  it("対になっていない柵は段落のまま残す", () => {
+    // **逐語で出せない形は保存側もエスケープする。** 表示だけコードにすると食い違う
+    expect(parseBlocks(TICK + "js\na")).toEqual([{ kind: "paragraph", lines: [TICK + "js", "a"] }]);
+  });
+
+  it("段落・引用・コードが混ざっても順序を保つ", () => {
+    const note = "説明。\n\n> 引用\n\n" + TICK + "\nコード\n" + TICK + "\n\nあとがき。";
+    expect(parseBlocks(note).map((block) => block.kind)).toEqual([
+      "paragraph",
+      "quote",
+      "code",
+      "paragraph",
+    ]);
+  });
+});
+
 describe("性質", () => {
   /** ブロックに現れる全ての文字列を集める */
   function textsIn(note: string): string[] {
-    return parseBlocks(note).flatMap((block) =>
-      block.kind === "paragraph" ? block.lines : [...block.header, ...block.rows.flat()],
-    );
+    return parseBlocks(note).flatMap((block) => {
+      if (block.kind === "paragraph" || block.kind === "quote") return block.lines;
+      if (block.kind === "code") return block.text.split("\n");
+      return [...block.header, ...block.rows.flat()];
+    });
   }
 
   it("どんなノートでも、中身のある行は必ずどこかへ現れる", () => {
@@ -104,19 +153,26 @@ describe("性質", () => {
          * 実装を写さずに見分けられる形にしてある
          */
         const isRule = (line: string): boolean => /^[|\-:\s]*$/.test(line);
+        /*
+         * 引用の `>` と柵の ``` も**構文であって内容ではない**（2026-09-05）。
+         * 中身は残さなければならないが、記号そのものは残らなくてよい
+         */
+        const marker = (text: string): string =>
+          text.replace(/^>[ \t]?/, "").replace(/^(`{3,}|~{3,}).*$/, "");
         for (const line of lines) {
-          if (bare(line) !== "" && !isRule(line)) expect(seen).toContain(bare(line));
+          const content = bare(marker(line));
+          if (content !== "" && !isRule(line)) expect(seen).toContain(content);
         }
       }),
       { numRuns: 5000 },
     );
   });
 
-  it("段落と表以外の種類を返さない", () => {
+  it("決めた4種類以外を返さない", () => {
     fc.assert(
       fc.property(fc.string(), (note) => {
         for (const block of parseBlocks(note)) {
-          expect(["paragraph", "table"]).toContain(block.kind);
+          expect(["paragraph", "table", "quote", "code"]).toContain(block.kind);
         }
       }),
       { numRuns: 5000 },

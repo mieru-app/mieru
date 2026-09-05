@@ -83,11 +83,24 @@ describe("指示文", () => {
  * 変換規則を変えた日から静かに嘘になる。
  */
 describe("使うなと書いた要素が、実際にどうなるか", () => {
-  it("引用とコードブロックは破棄される", () => {
-    for (const source of ["# R\n\n- 枝\n\n> 引用\n", "# R\n\n- 枝\n\n```\nコード\n```\n"]) {
-      const { warnings } = parseMarkdown(source);
-      expect(warnings.map((warning) => warning.kind)).toContain("unsupported-element");
+  it("引用とコードブロックは失われず、枝には分かれず説明文になる", () => {
+    for (const [source, kept] of [
+      ["# R\n\n- 枝\n  > 引用\n", "> 引用"],
+      ["# R\n\n- 枝\n\n  ```\n  コード\n  ```\n", "コード"],
+    ] as const) {
+      const { doc, warnings } = parseMarkdown(source);
+      expect(warnings).toEqual([]);
+      const branch = doc.root.children[0];
+      // 枝は1本のまま。引用もコードも子ノードにはならない
+      expect(doc.root.children.length).toBe(1);
+      expect(branch?.children).toEqual([]);
+      expect(branch?.note).toContain(kept);
     }
+  });
+
+  it("水平線は破棄される", () => {
+    const { warnings } = parseMarkdown("# R\n\n- 枝\n\n---\n\n- 次\n");
+    expect(warnings.map((warning) => warning.kind)).toContain("unsupported-element");
   });
 
   it("表は失われないが、枝には分かれず説明文の塊になる", () => {

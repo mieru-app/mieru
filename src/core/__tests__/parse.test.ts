@@ -168,15 +168,25 @@ describe("警告", () => {
   });
 
   it("変換できない要素は破棄して警告する", () => {
-    const { warnings } = parseMarkdown("# R\n\n```js\ncode\n```\n\n> 引用\n");
+    const { warnings } = parseMarkdown("# R\n\n---\n\n<div>a</div>\n");
     const kinds = warnings.filter((w) => w.kind === "unsupported-element");
     expect(kinds.length).toBeGreaterThanOrEqual(2);
     expect(kinds[0]?.line).toBeGreaterThan(0);
   });
 
   it("箇条書き内の変換できない要素も警告する", () => {
-    const { warnings } = parseMarkdown("# R\n\n- A\n\n  > 引用\n");
+    const { warnings } = parseMarkdown("# R\n\n- A\n\n  <div>a</div>\n");
     expect(warnings.some((w) => w.message.includes("箇条書き内の"))).toBe(true);
+  });
+
+  /**
+   * **引用とコードは破棄しない**（2026-09-05）。`.md` が正本である以上、
+   * 開いて保存しただけで他人の書いたものが消えてはいけない。
+   */
+  it("引用とコードはノートとして保つ", () => {
+    const { doc, warnings } = parseMarkdown("# R\n\n```js\ncode\n```\n\n> 引用\n");
+    expect(warnings).toEqual([]);
+    expect(doc.root.note).toBe("```js\ncode\n```\n\n> 引用");
   });
 
   it("frontmatter が YAML として壊れていれば invalid-frontmatter", () => {
@@ -191,12 +201,12 @@ describe("警告", () => {
   });
 
   it("警告の行番号は元ファイル基準になる（frontmatter の行数を含む）", () => {
-    // 1:"# R" 2:"" 3:"> 引用"
-    const withoutFm = parseMarkdown("# R\n\n> 引用\n");
+    // 1:"# R" 2:"" 3:"<div>a</div>"
+    const withoutFm = parseMarkdown("# R\n\n<div>a</div>\n");
     expect(withoutFm.warnings.find((w) => w.kind === "unsupported-element")?.line).toBe(3);
 
-    // 1:"---" 2:"title: T" 3:"---" 4:"" 5:"# R" 6:"" 7:"> 引用"
-    const withFm = parseMarkdown("---\ntitle: T\n---\n\n# R\n\n> 引用\n");
+    // 1:"---" 2:"title: T" 3:"---" 4:"" 5:"# R" 6:"" 7:"<div>a</div>"
+    const withFm = parseMarkdown("---\ntitle: T\n---\n\n# R\n\n<div>a</div>\n");
     expect(withFm.warnings.find((w) => w.kind === "unsupported-element")?.line).toBe(7);
   });
 });
