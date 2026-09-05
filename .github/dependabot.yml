@@ -1,11 +1,42 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# 依存の更新を Dependabot に見張らせる
+#
+# **他人のトークンを預かる以上、依存の脆弱性は自分の問題になる**（NF-43）。
+# 手で `npm audit` を回す運用（ロードマップ8章）は忘れるので、機械に任せる。
+#
+# 画面から作った雛形は `package-ecosystem: ""` のままで、そのままでは動かない。
+# ここで実際の生態系を指定している。
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # --- npm --------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+    # 1件ずつ Pull Request が立つと、レビューより通知の方が多くなる。
+    # 開発用の依存はまとめて1本にする
+    groups:
+      dev-dependencies:
+        dependency-type: development
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+    ignore:
+      # **`mind-elixir` は 5.15.1 に固定する**（CLAUDE.md）。
+      # npm の `latest` タグが prerelease（6.0.0-next）を指しているため、
+      # Dependabot の提案に乗ると prerelease へ上がる。
+      # 6.0 の安定版が出たら、この行を外して計画的に移行する
+      - dependency-name: mind-elixir
+
+  # --- GitHub Actions ---------------------------------------------------
+  # ワークフローが使う action も供給経路である。
+  # **`actions/checkout` などが古いまま放置されるのを防ぐ**
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: chore
