@@ -36,11 +36,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # **DCO の検査に、この Pull Request のコミットが全部要る。**
+          # 既定の浅い取得だと base..head が辿れない
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
+
+      # 依存を入れる前に置く。**署名の不足は 5 秒で分かる**ので、
+      # そのために `npm ci` の完了を待たせない
+      - name: Signed-off-by の確認
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-dco.mjs "$BASE" "$HEAD"
 
       - run: npm ci
 

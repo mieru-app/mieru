@@ -83,12 +83,38 @@ docs/        設計・解説・記録
 1. **Issue で先に相談してください。** とくに機能追加は、
    [対象外リスト](./docs/human-review/architecture.md)に入っていないかを先に確認します
 2. `main` からブランチを切ります
-3. `npm run lint` と `npm test` を通します。**出力の末尾だけを見ないでください**
-4. 設計に影響する変更なら、同じコミットで `docs/design/` も直します
-5. Pull Request を出します
+3. **`git commit -s` で署名します**（下記）
+4. `npm run lint` と `npm test` を通します。**出力の末尾だけを見ないでください**
+5. 設計に影響する変更なら、同じコミットで `docs/design/` も直します
+6. Pull Request を出します
 
 **コミットメッセージは `docs:` `feat:` `fix:` `test:` `chore:` のいずれかを接頭辞にし、
 要約は日本語で書きます。** コメントとドキュメントも日本語、識別子とファイル名は英語です。
+
+### 署名（DCO）が要ります
+
+**すべてのコミットに `Signed-off-by:` の行が要ります。** `git commit -s` を付けるだけです。
+
+```bash
+git commit -s -m "fix: ..."          # これから書くとき
+git commit --amend -s --no-edit      # 直前の1件を直す
+git rebase --signoff main            # ブランチ全体を直す
+```
+
+これは [Developer Certificate of Origin](https://developercertificate.org/) という
+軽い仕組みで、**「自分にこのコードを出す権利がある」と述べるもの**です。
+全文はリポジトリ直下の [DCO](./DCO) にあります。署名は `git config user.name` と
+`user.email` から作られるので、**本名や普段お使いの名前を設定しておいてください。**
+
+CI（`verify`）が Pull Request の全コミットを検査し、
+**欠けていると merge できません。** 直し方はエラーに出ます。
+
+**なぜ求めるのか。** 貢献してくださる方が増えたあとで
+「誰がどの部分の著作権を持つか」を辿れないと、ライセンスに関わる判断が
+一切できなくなります。**記録は後から作れません。**
+背景は [ライセンスの検討](./docs/ideas/2026-09-05-license-options.md) にあります。
+
+なお **bot（Dependabot など）には求めません。** 権利を述べるのは人だからです。
 
 ### 変えてはいけないもの
 
