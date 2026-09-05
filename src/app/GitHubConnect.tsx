@@ -103,7 +103,7 @@ export function GitHubConnect({ onConnect, onCancel }: Props): React.JSX.Element
       )}
 
       <details className="ghconnect-advanced">
-        <summary>置き場所を指定する（省略可）</summary>
+        <summary>置き場所を指定（省略可）</summary>
         <label htmlFor="gh-directory">リポジトリ内のフォルダ</label>
         <input
           id="gh-directory"

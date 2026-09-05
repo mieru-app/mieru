@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ViewMode } from "../view-mode.js";
-import {
-  isEditableMode,
-  nextViewMode,
-  VIEW_MODE_LABELS,
-  VIEW_MODE_SHORT_LABELS,
-  VIEW_MODES,
-} from "../view-mode.js";
+import { isEditableMode, nextViewMode, VIEW_MODES } from "../view-mode.js";
 
 describe("VIEW_MODES", () => {
   it("キャンバスが先頭にある", () => {
@@ -19,20 +13,7 @@ describe("VIEW_MODES", () => {
     expect(new Set(VIEW_MODES).size).toBe(VIEW_MODES.length);
   });
 
-  it("すべてに正式な名前と短い字がある", () => {
-    // 欠けると押しボタンの字が空になり、押す前に何の画面か分からなくなる
-    for (const mode of VIEW_MODES) {
-      expect(VIEW_MODE_LABELS[mode]).not.toBe("");
-      expect(VIEW_MODE_SHORT_LABELS[mode]).not.toBe("");
-    }
-  });
-
-  it("短い字は3文字以内で、互いに紛れない", () => {
-    // 360px の画面に3つ並ぶ上限（`view-mode.ts` の見積り）
-    const short = VIEW_MODES.map((mode) => VIEW_MODE_SHORT_LABELS[mode]);
-    for (const label of short) expect(label.length).toBeLessThanOrEqual(3);
-    expect(new Set(short).size).toBe(short.length);
-  });
+  // 押しボタンの字は言語ごとに変わるため、確かめるのは `i18n.test.ts`
 });
 
 describe("nextViewMode", () => {

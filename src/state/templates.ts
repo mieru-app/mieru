@@ -21,7 +21,7 @@ export interface Template {
 export const TEMPLATES: Template[] = [
   {
     id: "blank",
-    name: "空のマップ",
+    name: "デフォルト",
     description: "中心テーマだけ",
     markdown: null,
   },

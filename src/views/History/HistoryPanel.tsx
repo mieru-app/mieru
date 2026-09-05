@@ -115,10 +115,10 @@ export function HistoryPanel({
                      */}
                     <span className="history-note">
                       {index === 0
-                        ? "最新の控え"
+                        ? "latest"
                         : entry.size === undefined
                           ? ""
-                          : `${String(entry.size)} バイト`}
+                          : `${String(entry.size)} byte`}
                     </span>
                   </button>
                 </li>
@@ -126,7 +126,7 @@ export function HistoryPanel({
             </ul>
 
             {selected === null ? (
-              <p className="sheet-note">版を選ぶと、今の内容との違いが出ます。</p>
+              <p className="sheet-note" />
             ) : body === null ? (
               <p className="sheet-note">読み込んでいます…</p>
             ) : (
@@ -165,7 +165,7 @@ export function HistoryPanel({
             if (selected !== null) onRestore(selected);
           }}
         >
-          この版に戻す
+          復元
         </button>
       </div>
     </aside>

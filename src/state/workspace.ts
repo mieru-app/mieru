@@ -13,6 +13,8 @@ import {
   saveDirectoryHandle,
 } from "../store/directory-handle.js";
 import { fileNameFor } from "../store/file-name.js";
+import { copyAllMaps } from "../store/copy-maps.js";
+import { MemoryStore } from "../store/MemoryStore.js";
 import type { FsaPermissionState } from "../store/fsa.js";
 import type { CredentialInput } from "../store/github-auth.js";
 import {
@@ -50,6 +52,14 @@ import { SearchIndex } from "./search.js";
  * GitHub を選べるようになったため、File System Access API が使えないことは
  * もはや「使えない」を意味しない（設計書 8.7）。
  */
+/**
+ * いま動いている保存先。
+ *
+ * **`BackendKind`（記憶する種類）とは別にする。** ゲストは決して記憶してはならず、
+ * 永続化の型に混ぜると `saveBackend("guest")` が書けてしまう。
+ */
+export type ActiveBackend = BackendKind | "guest";
+
 export type BackendState =
   /** 起動直後。保存先を調べている最中 */
   | { kind: "loading" }
@@ -62,7 +72,7 @@ export type BackendState =
   /** 前回のフォルダはあるが、再許可が要る */
   | { kind: "needsPermission"; folderName: string }
   /** 使える状態。`label` は保存先の表示名 */
-  | { kind: "ready"; backend: BackendKind; label: string };
+  | { kind: "ready"; backend: ActiveBackend; label: string };
 
 /** 接続を試みた結果。失敗はどの欄の問題かまで返す */
 export type GitHubConnectResult =
@@ -96,6 +106,11 @@ export interface WorkspaceState {
   init(): Promise<void>;
   /** 利用者の操作でフォルダを選ぶ */
   chooseFolder(): Promise<void>;
+  /**
+   * 保存先を決めずに使い始める（ゲストモード）。
+   * **書いたものはメモリにしか無い。** 保存先を選んだ時点で引き取られる
+   */
+  startGuest(): Promise<void>;
   /**
    * GitHub へ接続する。
    * @param remember false なら記憶せず、この画面を閉じた時点で消える（共用端末向け）
@@ -202,9 +217,9 @@ export function retitle(md: string, id: string, title: string, at: string): stri
 export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** 保存先が決まった後の共通処理。監視と自動保存を開始する */
   async function attach(
-    backend: BackendKind,
+    backend: ActiveBackend,
     label: string,
-    historyStore: HistoryStore = new IdbHistoryStore(),
+    historyStore: HistoryStore | null = new IdbHistoryStore(),
   ): Promise<void> {
     const current = store;
     if (current === null) return;
@@ -236,6 +251,33 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     });
     await get().refresh();
     set({ quarantined: await listQuarantined() });
+  }
+
+  /**
+   * ゲストで書いたものを、これから使う保存先へ引き取る（2.12）。
+   *
+   * **保存先を差し替える前に写し元を掴んでおく。** ゲストの中身はメモリにしか無く、
+   * `teardown()` を通した後では読めない。
+   *
+   * 写す判断そのものは `copyAllMaps` にある。**この層は自動テストを持たない**ため、
+   * 引き取りのように失敗が即データ消失になる処理は外へ出してある。
+   */
+  function guestStoreIfAny(): MapStore | null {
+    const state = get().backend;
+    return state.kind === "ready" && state.backend === "guest" ? store : null;
+  }
+
+  async function adoptGuestMaps(from: MapStore | null): Promise<void> {
+    const target = store;
+    if (from === null || target === null) return;
+    try {
+      await copyAllMaps(from, target);
+      await get().refresh();
+    } catch (error) {
+      // **引き取りに失敗しても保存先の切り替えは成立している。**
+      // ここで投げると、切り替わった後の画面が出ない
+      set({ error: `ゲストの内容を引き継げませんでした: ${messageOf(error)}` });
+    }
   }
 
   /** GitHub のストアを組み立てて使い始める */
@@ -298,12 +340,32 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const handle = await pickDirectory();
       if (handle === null) return;
 
+      // **差し替える前に掴む。** ゲストの中身はメモリにしか無い
+      const guest = guestStoreIfAny();
       await saveDirectoryHandle(handle);
       await saveBackend("local");
       useEditor.getState().close();
       teardown();
       store = new LocalFolderStore(handle);
       await attach("local", handle.name);
+      await adoptGuestMaps(guest);
+    },
+
+    /**
+     * 保存先を決めずに使い始める（2.12）。
+     *
+     * **初めての人にいきなりフォルダの許可を求めない。** 何も見ないうちに
+     * 決めさせるのが不信の元であり、触ってから決められるようにする
+     * （NN/g のアクセス許可の指針）。
+     *
+     * **履歴を持たせない。** ゲストの控えを IndexedDB に積むと、
+     * 「保存していない」と言いながらブラウザに残ることになる。
+     */
+    async startGuest() {
+      useEditor.getState().close();
+      teardown();
+      store = new MemoryStore();
+      await attach("guest", "ゲストモード", null);
     },
 
     async connectGitHub(input, remember) {
@@ -325,8 +387,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
 
       useEditor.getState().close();
+      const guest = guestStoreIfAny();
       set({ github: describeCredential(parsed.credential) });
       await attachGitHub(parsed.credential);
+      await adoptGuestMaps(guest);
       return { ok: true };
     },
 
