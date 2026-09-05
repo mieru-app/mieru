@@ -1,3 +1,4 @@
+import { useLanguage } from "../../state/i18n.js";
 import { useEffect, useState } from "react";
 
 import { countChanges, diffLines } from "../../state/diff.js";
@@ -52,6 +53,7 @@ export function HistoryPanel({
   onRestore,
   onClose,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const [selected, setSelected] = useState<string | null>(null);
   const [body, setBody] = useState<string | null>(null);
 
@@ -78,26 +80,26 @@ export function HistoryPanel({
   const changes = lines === null ? null : countChanges(lines);
 
   return (
-    <aside className="sheet" aria-label="履歴">
+    <aside className="sheet" aria-label={s.history.title}>
       <div className="sheet-head">
-        <strong>履歴</strong>
-        <button type="button" aria-label="閉じる" onClick={onClose}>
+        <strong>{s.history.title}</strong>
+        <button type="button" aria-label={s.history.close} onClick={onClose}>
           ✕
         </button>
       </div>
 
       <div className="sheet-body">
         {!available ? (
-          <p className="sheet-note">保存先を選ぶと、過去の版がここに残ります。</p>
+          <p className="sheet-note">{s.history.unavailable}</p>
         ) : loading ? (
-          <p className="sheet-note">読み込んでいます…</p>
+          <p className="sheet-note">{s.history.loading}</p>
         ) : entries.length === 0 ? (
           /*
            * **版の作られ方は保存先で違う**（設計書 8.8）。ローカルフォルダは
            * 5分に1版、GitHub は保存1回がコミット1つである。ここで片方の
            * 刻み方を名指しすると、もう片方の利用者には合わない案内になる
            */
-          <p className="sheet-note">まだ版がありません。編集して保存されると、ここに残ります。</p>
+          <p className="sheet-note">{s.history.empty}</p>
         ) : (
           <>
             <ul className="history-list">
@@ -115,10 +117,10 @@ export function HistoryPanel({
                      */}
                     <span className="history-note">
                       {index === 0
-                        ? "latest"
+                        ? s.history.latest
                         : entry.size === undefined
                           ? ""
-                          : `${String(entry.size)} byte`}
+                          : s.history.bytes(entry.size)}
                     </span>
                   </button>
                 </li>
@@ -128,15 +130,13 @@ export function HistoryPanel({
             {selected === null ? (
               <p className="sheet-note" />
             ) : body === null ? (
-              <p className="sheet-note">読み込んでいます…</p>
+              <p className="sheet-note">{s.history.loading}</p>
             ) : (
               <>
                 <p className="history-summary">
-                  この版から今までに{" "}
-                  <strong className="is-added">+{String(changes?.added ?? 0)}</strong>{" "}
-                  <strong className="is-removed">-{String(changes?.removed ?? 0)}</strong> 行
+                  {s.history.summary(changes?.added ?? 0, changes?.removed ?? 0)}
                 </p>
-                <div className="history-diff" aria-label="この版と今の内容の違い">
+                <div className="history-diff" aria-label={s.history.diff}>
                   {(lines ?? []).map((line, at) => (
                     <div key={`${String(at)}:${line.kind}`} className={`is-${line.kind}`}>
                       <span className="history-mark" aria-hidden="true">
@@ -165,7 +165,7 @@ export function HistoryPanel({
             if (selected !== null) onRestore(selected);
           }}
         >
-          復元
+          {s.history.restore}
         </button>
       </div>
     </aside>

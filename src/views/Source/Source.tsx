@@ -1,3 +1,4 @@
+import { useLanguage } from "../../state/i18n.js";
 import { serializeMarkdown } from "../../core/serialize.js";
 import { useEditor } from "../../state/editor.js";
 
@@ -29,6 +30,7 @@ function lineCount(md: string): number {
 }
 
 export function Source(): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   /*
    * 保存されるのと同じ手順で毎回作り直す。木が変わるたびに走るが、
    * これは自動保存が走るたびにしている計算と同じ規模である。
@@ -41,12 +43,10 @@ export function Source(): React.JSX.Element {
 
   return (
     <div className="source">
-      <pre className="source-body" tabIndex={0} aria-label="保存される Markdown">
+      <pre className="source-body" tabIndex={0} aria-label={s.source.body}>
         {md}
       </pre>
-      <p className="source-size">
-        {lineCount(md)} 行 / {byteLength(md)} byte
-      </p>
+      <p className="source-size">{s.source.size(lineCount(md), byteLength(md))}</p>
     </div>
   );
 }

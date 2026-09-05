@@ -1,3 +1,5 @@
+import { useLanguage } from "../state/i18n.js";
+
 /**
  * 何をすればよいかを、その場に出す。
  *
@@ -9,31 +11,32 @@
 
 /** マップは開いたが、まだ枝が1本も無いとき */
 export function FirstBranchGuide(): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   return (
     <div className="guide guide-overlay">
-      <h2>中心テーマから枝を伸ばします</h2>
+      <h2>{s.guide.title}</h2>
       <dl className="guide-keys">
         <div>
           <dt>
             <kbd>Tab</kbd>
           </dt>
-          <dd>子を追加する</dd>
+          <dd>{s.guide.addChild}</dd>
         </div>
         <div>
           <dt>
             <kbd>Enter</kbd>
           </dt>
-          <dd>兄弟を追加する</dd>
+          <dd>{s.guide.addSibling}</dd>
         </div>
         <div>
           <dt>
             <kbd>Space</kbd>
           </dt>
-          <dd>選択中のノードを書き換える</dd>
+          <dd>{s.guide.rename}</dd>
         </div>
       </dl>
       <p className="guide-note">
-        <kbd>?</kbd> でキー操作の一覧を開けます。
+        <kbd>?</kbd> {s.guide.more}
       </p>
     </div>
   );

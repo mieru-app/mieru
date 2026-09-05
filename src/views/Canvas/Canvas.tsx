@@ -1,3 +1,4 @@
+import { useLanguage } from "../../state/i18n.js";
 import MindElixir from "mind-elixir";
 import type { MindElixirInstance, NodeObj, Topic } from "mind-elixir";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -86,6 +87,7 @@ function topicElement(mind: MindElixirInstance, uid: string): Topic | null {
 }
 
 export function Canvas(): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   const container = useRef<HTMLDivElement>(null);
   const instance = useRef<MindElixirInstance | null>(null);
   /** 自分が書き戻した内容を、利用者の編集として取り込み直さないための印 */
@@ -309,10 +311,10 @@ export function Canvas(): React.JSX.Element {
        * 向こうの .map-container が持っている（mind-elixir/style）
        */}
       <div ref={container} />
-      <div className="canvas-zoom" role="group" aria-label="拡大縮小">
+      <div className="canvas-zoom" role="group" aria-label={s.canvas.zoom}>
         <button
           type="button"
-          aria-label="拡大"
+          aria-label={s.canvas.zoomIn}
           onClick={() => zoom(SCALE_STEP)}
           disabled={scale >= SCALE_MAX}
         >
@@ -320,13 +322,13 @@ export function Canvas(): React.JSX.Element {
         </button>
         <button
           type="button"
-          aria-label="縮小"
+          aria-label={s.canvas.zoomOut}
           onClick={() => zoom(-SCALE_STEP)}
           disabled={scale <= SCALE_MIN}
         >
           －
         </button>
-        <button type="button" aria-label="全体を表示" onClick={fit}>
+        <button type="button" aria-label={s.canvas.fit} onClick={fit}>
           ⛶
         </button>
       </div>

@@ -81,6 +81,158 @@ export const JA = {
     openShortcuts: "一覧を開く（?）",
   },
 
+  sidebar: {
+    maps: "マップ",
+    search: "全マップを検索",
+    filterByTag: "タグで絞り込む",
+    noMaps: "まだマップがありません。",
+    noHits: "条件に合うマップはありません。",
+    newTitle: "新しい表題",
+    rename: "名前を変える",
+    renameOf: (title: string) => `${title} の名前を変える`,
+    remove: "削除する",
+    removeOf: (title: string) => `${title} を削除する`,
+    hitTitle: "表題",
+    hitLabel: "ノード",
+    hitNote: "ノート",
+    newMap: "＋ 新規作成",
+  },
+
+  note: {
+    untitled: "（無題のノード）",
+    read: "Preview",
+    write: "書く",
+    pickEmoji: "絵文字を選ぶ",
+    clearEmoji: "絵文字を外す",
+    close: "ノートを閉じる",
+    body: "ノード説明",
+    links: "横断リンク",
+    unresolved: "宛先なし",
+    pickLink: "つなぐノードを選ぶ…",
+  },
+
+  history: {
+    title: "履歴",
+    close: "閉じる",
+    unavailable: "保存先を選ぶと、過去の版がここに残ります。",
+    loading: "読み込んでいます…",
+    empty: "まだ版がありません。編集して保存されると、ここに残ります。",
+    latest: "latest",
+    bytes: (size: number) => `${String(size)} byte`,
+    summary: (added: number, removed: number) =>
+      `この版から今までに +${String(added)} -${String(removed)} 行`,
+    diff: "この版と今の内容の違い",
+    restore: "復元",
+  },
+
+  export: {
+    title: "テキスト出力",
+    close: "閉じる",
+    format: "形式",
+    scope: "範囲",
+    heading: "見出し",
+    bullet: "箇条書き",
+    whole: "全体",
+    selection: "選択部分",
+    placeholder: "マップを開くと、ここに出力結果が出ます。",
+    target: "対象",
+    copy: "コピー",
+    download: ".md で保存",
+  },
+
+  source: {
+    body: "保存される Markdown",
+    size: (lines: number, bytes: number) => `${String(lines)} 行 / ${String(bytes)} byte`,
+  },
+
+  outline: {
+    title: "アウトライン",
+    drag: "掴んで階層を変える",
+    expand: "展開",
+    collapse: "折り畳み",
+    emptyLabel: "（空）",
+    hasNote: "ノートあり",
+  },
+
+  canvas: {
+    zoom: "拡大縮小",
+    zoomIn: "拡大",
+    zoomOut: "縮小",
+    fit: "全体を表示",
+  },
+
+  start: {
+    loading: "読み込み中…",
+    permissionTitle: "フォルダへのアクセスを許可してください",
+    permissionBody: (folder: string) =>
+      `「${folder}」を開くには、ブラウザの制約でもう一度だけ許可が要ります。`,
+    grant: "アクセスを許可する",
+    pickAnother: "別のフォルダを選ぶ",
+    connectTitle: "GitHub に接続",
+    connectBody: "あなたのリポジトリの Markdown として保存されます。",
+    tagline: "マインドマップで広げた考えが、そのまま Markdown。",
+    guest: "ゲストモードで試す",
+    guestNote: "保存されません。あとから保存先を選べます。",
+    storage: "保存先",
+    localFolder: "ローカルフォルダ",
+    localScope: "選んだフォルダの直下にある .md だけを読み書きします",
+    pickFolder: "フォルダを選ぶ",
+    localUnsupported: "デスクトップ版の Chrome か Edge が要ります。",
+    githubRepo: "GitHub リポジトリ",
+    githubNeedsToken: "トークンが必要です",
+    connect: "接続する",
+  },
+
+  home: {
+    create: "新規作成",
+    fileName: "ファイル名",
+    template: "テンプレート",
+    submit: "作成",
+    importPrompt: "既存の AI セッションの取り込みフォーマット",
+  },
+
+  crash: {
+    safe: "保存済みの内容は失われていません。",
+    reload: "読み込み直す",
+    title: "画面の描画が止まりました",
+    lost: "書きかけを取り出すことはできませんでした。",
+    recoverable: "下の「書きかけを写す」で、いま開いているマップを取り出せます。",
+    copied: "写しました",
+    copyDraft: "書きかけを写す",
+    copyError: "エラーを写す",
+    noStack: "(スタックなし)",
+  },
+
+  editBar: {
+    addChild: "＋子",
+    addChildTitle: "子を追加する",
+    addSibling: "＋兄弟",
+    addSiblingTitle: "兄弟を追加する",
+    rename: "名前",
+    renameTitle: "選択中のノードを書き換える",
+    remove: "削除",
+    removeTitle: "部分木ごと削除する",
+    undoTitle: "元に戻す",
+  },
+
+  guide: {
+    title: "中心テーマから枝を伸ばします",
+    addChild: "子を追加する",
+    addSibling: "兄弟を追加する",
+    rename: "選択中のノードを書き換える",
+    more: "でキー操作の一覧を開けます。",
+  },
+
+  toast: {
+    restored: "この版に戻しました。Ctrl+Z で取り消せます",
+    promptCopied: "取り込み指示をコピーしました",
+    markdownCopied: "Markdown をコピーしました",
+    copyFailed: "クリップボードへコピーできませんでした",
+    confirmDelete: (title: string) => `「${title}」を削除します。元に戻せません。`,
+    sidebarWidth: "一覧の幅",
+    panelWidth: "欄の幅",
+  },
+
   banner: {
     guest: "ゲストモード。まだどこにも保存されていません。",
     chooseStorage: "保存先を選ぶ",

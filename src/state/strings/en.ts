@@ -74,6 +74,158 @@ export const EN: Strings = {
     openShortcuts: "Open the list (?)",
   },
 
+  sidebar: {
+    maps: "Maps",
+    search: "Search every map",
+    filterByTag: "Filter by tag",
+    noMaps: "No maps yet.",
+    noHits: "Nothing matches.",
+    newTitle: "New title",
+    rename: "Rename",
+    renameOf: (title: string) => `Rename ${title}`,
+    remove: "Delete",
+    removeOf: (title: string) => `Delete ${title}`,
+    hitTitle: "Title",
+    hitLabel: "Node",
+    hitNote: "Note",
+    newMap: "＋ New map",
+  },
+
+  note: {
+    untitled: "(untitled node)",
+    read: "Preview",
+    write: "Edit",
+    pickEmoji: "Pick an emoji",
+    clearEmoji: "Remove the emoji",
+    close: "Close the note",
+    body: "Note",
+    links: "Links",
+    unresolved: "no target",
+    pickLink: "Pick a node to link…",
+  },
+
+  history: {
+    title: "History",
+    close: "Close",
+    unavailable: "Pick where maps are saved and earlier versions will show up here.",
+    loading: "Loading…",
+    empty: "No versions yet. They appear once you edit and it saves.",
+    latest: "latest",
+    bytes: (size: number) => `${String(size)} byte`,
+    summary: (added: number, removed: number) =>
+      `+${String(added)} -${String(removed)} lines since this version`,
+    diff: "What changed between this version and now",
+    restore: "Restore",
+  },
+
+  export: {
+    title: "Export",
+    close: "Close",
+    format: "Format",
+    scope: "Scope",
+    heading: "Headings",
+    bullet: "Bullets",
+    whole: "Whole map",
+    selection: "Selected branch",
+    placeholder: "Open a map and the result shows up here.",
+    target: "Scope",
+    copy: "Copy",
+    download: "Save as .md",
+  },
+
+  source: {
+    body: "The Markdown that gets saved",
+    size: (lines: number, bytes: number) => `${String(lines)} lines / ${String(bytes)} byte`,
+  },
+
+  outline: {
+    title: "Outline",
+    drag: "Drag to move it in the tree",
+    expand: "Expand",
+    collapse: "Collapse",
+    emptyLabel: "(empty)",
+    hasNote: "Has a note",
+  },
+
+  canvas: {
+    zoom: "Zoom",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    fit: "Fit the whole map",
+  },
+
+  start: {
+    loading: "Loading…",
+    permissionTitle: "Let Mieru into the folder again",
+    permissionBody: (folder: string) =>
+      `Your browser needs you to confirm access to “${folder}” one more time.`,
+    grant: "Allow access",
+    pickAnother: "Pick a different folder",
+    connectTitle: "Connect to GitHub",
+    connectBody: "Maps are saved as Markdown in your own repository.",
+    tagline: "A mind map that is already Markdown.",
+    guest: "Try guest mode",
+    guestNote: "Nothing is saved. You can pick a place later.",
+    storage: "Where maps are saved",
+    localFolder: "A local folder",
+    localScope: "Only the .md files directly inside the folder you pick",
+    pickFolder: "Pick a folder",
+    localUnsupported: "Needs desktop Chrome or Edge.",
+    githubRepo: "A GitHub repository",
+    githubNeedsToken: "Needs a token",
+    connect: "Connect",
+  },
+
+  home: {
+    create: "New map",
+    fileName: "File name",
+    template: "Template",
+    submit: "Create",
+    importPrompt: "Prompt for bringing in an AI session",
+  },
+
+  crash: {
+    safe: "Everything already saved is untouched.",
+    reload: "Reload",
+    title: "The screen stopped drawing",
+    lost: "Your work in progress could not be recovered.",
+    recoverable: "Use “Copy the draft” below to get the open map out.",
+    copied: "Copied",
+    copyDraft: "Copy the draft",
+    copyError: "Copy the error",
+    noStack: "(no stack)",
+  },
+
+  editBar: {
+    addChild: "＋Child",
+    addChildTitle: "Add a child",
+    addSibling: "＋Sibling",
+    addSiblingTitle: "Add a sibling",
+    rename: "Rename",
+    renameTitle: "Rename the selected node",
+    remove: "Delete",
+    removeTitle: "Delete it and everything under it",
+    undoTitle: "Undo",
+  },
+
+  guide: {
+    title: "Grow branches from the centre",
+    addChild: "adds a child",
+    addSibling: "adds a sibling",
+    rename: "renames the selected node",
+    more: "opens the full list of keys.",
+  },
+
+  toast: {
+    restored: "Restored that version. Ctrl+Z undoes it",
+    promptCopied: "Prompt copied",
+    markdownCopied: "Markdown copied",
+    copyFailed: "Could not copy to the clipboard",
+    confirmDelete: (title: string) => `Delete “${title}”? This cannot be undone.`,
+    sidebarWidth: "Sidebar width",
+    panelWidth: "Panel width",
+  },
+
   banner: {
     guest: "Guest mode. Nothing is saved anywhere yet.",
     chooseStorage: "Choose where to save",

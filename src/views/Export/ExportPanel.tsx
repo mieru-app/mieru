@@ -1,3 +1,5 @@
+import { useLanguage } from "../../state/i18n.js";
+import type { Strings } from "../../state/strings/ja.js";
 import type { ExportFormat } from "../../core/export.js";
 import type { ExportScope } from "../../state/commands.js";
 
@@ -15,23 +17,18 @@ import type { ExportScope } from "../../state/commands.js";
 
 interface Choice<T> {
   value: T;
-  label: string;
+  /** 言語で変わるので、字そのものではなく引き方を持つ */
+  label: (s: Strings) => string;
 }
 
 const FORMATS: Choice<ExportFormat>[] = [
-  {
-    value: "heading",
-    label: "見出し",
-  },
-  {
-    value: "bullet",
-    label: "箇条書き",
-  },
+  { value: "heading", label: (s) => s.export.heading },
+  { value: "bullet", label: (s) => s.export.bullet },
 ];
 
 const SCOPES: Choice<ExportScope>[] = [
-  { value: "whole", label: "全体" },
-  { value: "selection", label: "選択部分" },
+  { value: "whole", label: (s) => s.export.whole },
+  { value: "selection", label: (s) => s.export.selection },
 ];
 
 interface AxisProps<T extends string> {
@@ -47,6 +44,7 @@ function Axis<T extends string>({
   current,
   onChange,
 }: AxisProps<T>): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   return (
     <div className="export-axis" role="radiogroup" aria-label={title}>
       <span className="export-axis-label">{title}</span>
@@ -60,7 +58,7 @@ function Axis<T extends string>({
             className="export-mode"
             onClick={() => onChange(choice.value)}
           >
-            <span className="export-mode-label">{choice.label}</span>
+            <span className="export-mode-label">{choice.label(s)}</span>
           </button>
         ))}
       </div>
@@ -90,26 +88,32 @@ export function ExportPanel({
   onDownload,
   onClose,
 }: Props): React.JSX.Element {
+  const s = useLanguage((state) => state.s);
   return (
-    <aside className="sheet" aria-label="テキスト出力">
+    <aside className="sheet" aria-label={s.export.title}>
       <div className="sheet-head">
-        <strong>テキスト出力</strong>
-        <button type="button" aria-label="閉じる" onClick={onClose}>
+        <strong>{s.export.title}</strong>
+        <button type="button" aria-label={s.export.close} onClick={onClose}>
           ✕
         </button>
       </div>
 
       <div className="sheet-body">
-        <Axis title="形式" choices={FORMATS} current={format} onChange={onChangeFormat} />
-        <Axis title="範囲" choices={SCOPES} current={scope} onChange={onChangeScope} />
+        <Axis
+          title={s.export.format}
+          choices={FORMATS}
+          current={format}
+          onChange={onChangeFormat}
+        />
+        <Axis title={s.export.scope} choices={SCOPES} current={scope} onChange={onChangeScope} />
 
         {result === null ? (
-          <p className="sheet-note">マップを開くと、ここに出力結果が出ます。</p>
+          <p className="sheet-note">{s.export.placeholder}</p>
         ) : (
           <>
             {/* 中心テーマを選んでいると選択部分でも全体が出る。対象を常に名乗らせる */}
             <p className="export-scope">
-              対象: <strong>{result.scope}</strong>
+              {s.export.target}: <strong>{result.scope}</strong>
             </p>
             <pre className="export-preview">{result.md}</pre>
           </>
@@ -118,10 +122,10 @@ export function ExportPanel({
 
       <div className="sheet-foot">
         <button type="button" className="primary" disabled={result === null} onClick={onCopy}>
-          コピー
+          {s.export.copy}
         </button>
         <button type="button" disabled={result === null} onClick={onDownload}>
-          .md で保存
+          {s.export.download}
         </button>
       </div>
     </aside>
