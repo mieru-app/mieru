@@ -63,22 +63,30 @@ README・`CLAUDE.md`・設計書には現在地を書かない。書くと必ず
 **2026-09-03 に OSS 配信を決定した。** アプリとしては使える状態にあり、
 残っているのは「他人が安心して使い、参加できる状態」を整えることである。
 
+**狙う相手と位置づけは [STP と競合調査](../ideas/2026-09-05-stp-and-marketing.md) にある。**
+要点は「マインドマップツールとして売らない」こと。名乗るのは
+**「AI に渡す下書きを `.md` のまま組み立てる場所」**である。
+
 ### 済んだもの
 
 - 専用 Organization への移管（`mieru-app/mieru`、2026-09-03）
 - GitHub の防御3つ（Secret scanning・Push protection・Dependabot、2026-09-05）
 - ドキュメントの刷新（本文書を含む、2026-09-05）
+- STP と競合調査、マーケティング計画（2026-09-05）
+- **MIT ライセンスの採用**と `package.json` の整備（2026-09-05。
+  [検討の記録](../ideas/2026-09-05-license-options.md)）
+- **英語 README を正本にし、日本語版を `README.ja.md` へ**（2026-09-05）
 
 ### 残っているもの
 
 | # | やること | なぜ |
 |---|---|---|
-| 1 | `LICENSE`（MIT）と `package.json` の `license` / `private` を直す | **ライセンスの無いリポジトリは法的に「使ってはいけない」** |
-| 2 | `SECURITY.md` と、GitHub の非公開の脆弱性報告 | 他人のトークンを扱う以上、報告先が要る |
-| 3 | Pull Request での CI と、`main` の保護 | いま `main` への push でしか検査が走らない |
-| 4 | 英語の README と、往復が分かる短い動画 | 使う前に何ができるか分かるようにする |
-| 5 | `CONTRIBUTING.md` の充実、行動規範、Issue テンプレート | 参加の入口 |
-| 6 | リポジトリの topics と Discussions | 見つけてもらう |
+| 1 | `SECURITY.md` と、GitHub の非公開の脆弱性報告を有効にする | 他人のトークンを扱う以上、報告先が要る。**README と CONTRIBUTING には連絡先を書いた** |
+| 2 | Pull Request での CI と、`main` の保護 | いま `main` への push でしか検査が走らない |
+| 3 | **往復が分かる 30 秒の動画か GIF** | 「`.md` が保存形式」は文章では伝わらない。**マップを編集 → `.md` が変わる → エディタで開く**を1本で見せる |
+| 4 | 行動規範、Issue テンプレート | 参加の入口 |
+| 5 | リポジトリの topics と Discussions | 見つけてもらう。候補は `markdown` `mindmap` `pwa` `ai` `obsidian` `note-taking` |
+| 6 | 告知（Obsidian フォーラム、Show HN、Zenn） | 狙う層に届く場所は限られている。[計画](../ideas/2026-09-05-stp-and-marketing.md) |
 
 ---
 
