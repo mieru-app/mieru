@@ -1820,6 +1820,38 @@ kbd {
   font-weight: 600;
 }
 
+/* 引用とコード（2026-09-05）。破棄をやめたので画面にも出す */
+.notepanel-read .note-quote {
+  margin: 0 0 0.7em;
+  padding-left: 0.7rem;
+  border-left: 3px solid color-mix(in srgb, currentColor 30%, transparent);
+  opacity: 0.85;
+}
+
+/*
+ * **コードだけを横に送れるようにする。** 長い行で欄ごと横に伸びると、
+ * 主表示まで押し出される（規約 `.claude/rules/ui.md`）
+ */
+.notepanel-read .note-code {
+  margin: 0 0 0.7em;
+  padding: 0.4rem 0.6rem;
+  overflow-x: auto;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  font-size: 0.9em;
+  /* 書いた空白と改行をそのまま出す。**折り返さない** */
+  white-space: pre;
+}
+
+.notepanel-read .note-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.notepanel-read .note-quote:last-child,
+.notepanel-read .note-code:last-child {
+  margin-bottom: 0;
+}
+
 .notepanel-read-toggle {
   font-size: 0.85em;
   padding: 0.1rem 0.5rem;

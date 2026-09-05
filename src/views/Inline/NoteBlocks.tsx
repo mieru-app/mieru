@@ -9,17 +9,43 @@ import { InlineText } from "./InlineText.js";
  * 桁の中身にもインライン記法が来るので `InlineText` を通す。
  */
 
+function drawLines(lines: readonly string[]): React.JSX.Element[] {
+  // 空行を挟まない改行は書いたとおりに折り返す
+  return lines.map((line, at) => (
+    <span key={String(at)} className="note-line">
+      <InlineText text={line} />
+    </span>
+  ));
+}
+
 function drawBlock(block: NoteBlock, key: string): React.JSX.Element {
   if (block.kind === "paragraph") {
     return (
       <p key={key} className="note-paragraph">
-        {block.lines.map((line, at) => (
-          // 空行を挟まない改行は書いたとおりに折り返す
-          <span key={String(at)} className="note-line">
-            <InlineText text={line} />
-          </span>
-        ))}
+        {drawLines(block.lines)}
       </p>
+    );
+  }
+
+  if (block.kind === "quote") {
+    return (
+      <blockquote key={key} className="note-quote">
+        {drawLines(block.lines)}
+      </blockquote>
+    );
+  }
+
+  if (block.kind === "code") {
+    return (
+      // **コードは記法として解釈しない。** `<pre>` にそのまま流す。
+      // 長い行は欄からはみ出すので、コードだけを横に送れるようにする（規約 UI）
+      <pre
+        key={key}
+        className="note-code"
+        {...(block.lang === undefined ? {} : { "data-lang": block.lang })}
+      >
+        <code>{block.text}</code>
+      </pre>
     );
   }
 
