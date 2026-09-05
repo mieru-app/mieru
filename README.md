@@ -104,7 +104,7 @@ and you pick it up on your computer later.
 | **Real-time collaboration** | Out of scope. Several people means several repositories, one each |
 | **Presenting and print layout** | The goal is thinking, not producing a deliverable |
 | **AI that draws the map for you** | Left out on purpose. Doing the thinking is the point |
-| **Blockquotes and fenced code blocks** | **They are dropped on save today.** Known issue |
+| **Horizontal rules and raw HTML** | `---` and `<div>` are dropped on save. You get a warning, but the line is gone. [Known issue](./docs/ideas/2026-09-05-blockquote-code.md) |
 | **Nested empty bullets** | A line whose only content is another bullet marker loses one level of nesting on first save. [Known issue](./docs/ideas/2026-09-05-empty-label-nesting.md) |
 
 ### It can
@@ -115,7 +115,7 @@ and you pick it up on your computer later.
 | **Read the exact `.md` that gets saved** | A third view, read-only, byte-for-byte what is written |
 | Work entirely from the keyboard | `?` shows the list |
 | Go back to an earlier version | Every 5 minutes locally; every commit on GitHub |
-| Render tables, bold, code and links | Inside notes |
+| Render tables, blockquotes, code blocks, bold and links | Inside notes. Blockquotes and code blocks are kept byte-for-byte |
 | Full-text search and tag filters | `Ctrl+F` |
 | Work offline | Installable as a PWA |
 | Edit from a phone | When GitHub is the storage |

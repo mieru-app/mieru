@@ -89,6 +89,63 @@ describe("他人が書いた .md を開いて保存する", () => {
   });
 });
 
+/**
+ * 引用とコードブロックの逐語保持（2026-09-05）。
+ *
+ * **2026-09-04 まで、この2つは警告を積んで丸ごと破棄されていた。**
+ * `.md` が正本である以上、開いて保存しただけで他人の書いたものが
+ * 消えてはいけない。エスケープの取りこぼしと同じ入口の、同じ種類の損失である。
+ */
+describe("引用とコードブロックが失われない", () => {
+  const F = String.fromCharCode(96).repeat(3);
+
+  /** 入力そのままで往復すること（1周目から動かない） */
+  const KEPT: [string, string][] = [
+    ["箇条書きの引用", "# 根\n\n- 枝\n  > 引用文\n  > 2行目\n"],
+    ["柵付きコード", "# 根\n\n- 枝\n  " + F + "js\n  const a = 1;\n\n  b\n  " + F + "\n"],
+    ["インデントコード", "# 根\n\n- 枝\n\n      a\n      b\n"],
+    ["中心テーマ直下の引用", "# 根\n\n> 引用文\n"],
+    ["中心テーマ直下のコード", "# 根\n\n" + F + "js\nconst a = 1;\n" + F + "\n"],
+    ["引用の次に子ノード", "# 根\n\n- 枝\n  > q\n  - 子\n"],
+    ["文字としての引用記号", "# 根\n\n- 枝\n  " + B + "> not quote\n"],
+    ["コードの中の行末空白", "# 根\n\n- 枝\n  " + F + "\n  a  \n  " + F + "\n"],
+    ["コードの中の箇条書き", "# 根\n\n- 枝\n  " + F + "\n  - これは枝ではない\n  " + F + "\n"],
+  ];
+
+  for (const [name, md] of KEPT) {
+    it(`${name}: 本文が1バイトも変わらない`, () => {
+      const saved = openAndSave(md);
+      expect(saved).toContain(md.replace(/^# 根\n\n/, ""));
+      expect(openAndSave(saved)).toBe(saved);
+    });
+  }
+
+  it("破棄の警告が出ない", () => {
+    for (const [, md] of KEPT) {
+      const kinds = parseMarkdown(md).warnings.map((warning) => warning.kind);
+      expect(kinds).not.toContain("unsupported-element");
+    }
+  });
+
+  it("コードの中の箇条書きは子ノードにならない", () => {
+    // **枝が勝手に増えるのは、消えるのと同じくらい困る**
+    const { doc } = parseMarkdown("# 根\n\n- 枝\n  " + F + "\n  - a\n  - b\n  " + F + "\n");
+    expect(doc.root.children.length).toBe(1);
+    expect(doc.root.children[0]?.children).toEqual([]);
+  });
+
+  /**
+   * **閉じない柵は後続の行を飲み込む。**
+   * 逐語で出すと `- 子` がコードの中身になって枝が1本消えるため、
+   * 対の無い柵はエスケープして文字にする（2026-09-05 に実測して決めた）。
+   */
+  it("閉じない柵を逐語で出さない", () => {
+    const saved = openAndSave("# 根\n\n- 枝\n\n  " + F + "js\n  a\n\n  - 子\n");
+    expect(saved).toContain(B + F + "js");
+    expect(openAndSave(saved)).toBe(saved);
+  });
+});
+
 describe("性質", () => {
   /**
    * **どんな行を1本の枝として書いても、開いて保存すれば不動点に達する。**
@@ -113,6 +170,36 @@ describe("性質", () => {
          */
         if (/^-$/m.test(first)) return;
         expect(openAndSave(first)).toBe(first);
+      }),
+      { numRuns: 20_000 },
+    );
+  }, 120_000);
+
+  /**
+   * **どんなノートを書いても、枝の本数が変わらない。**
+   *
+   * 引用とコードを逐語で出すようにした以上、出した記号が構造として
+   * 読み戻される危険が生まれた。閉じない柵は後続の行を——子ノードまで——
+   * 飲み込み、**枝が黙って消える**（2026-09-05 に実測）。
+   * ここが最も怖いので、本数そのものを性質として固定する。
+   */
+  it("ノートに何を書いても枝の本数が変わらない", () => {
+    const count = (node: { children: { children: unknown[] }[] }): number =>
+      node.children.length + node.children.reduce((sum, child) => sum + count(child as never), 0);
+
+    fc.assert(
+      fc.property(fc.array(fc.string({ maxLength: 12 }), { maxLength: 6 }), (raw) => {
+        const note = raw.map((line) => line.replace(/[\r\n]/g, " ")).join("\n");
+        const md = "# 根\n\n- 枝1\n- 枝2\n";
+        const parsed = parseMarkdown(md).doc;
+        const branch = parsed.root.children[0];
+        if (branch === undefined) return;
+        branch.note = note;
+
+        const saved = serializeMarkdown(parsed);
+        expect(count(parseMarkdown(saved).doc.root)).toBe(2);
+        // 2周目で形が動かないことも同時に見る
+        expect(openAndSave(saved)).toBe(saved);
       }),
       { numRuns: 20_000 },
     );

@@ -19,8 +19,12 @@
  *
  * 取りこぼすと構造が壊れるので、判定は広めに取っている。
  * 過剰に足しても、`unescapeLineStart()` が必ず元へ戻す。
+ *
+ * `keepQuote` はノート用。**ノートの中の `>` は引用として逐語で出す**ため、
+ * 引用の規則だけを外す（`note.ts`）。ラベルは1行に収める必要があり、
+ * `- > q` はラベルが空の項目として解析されてしまうので外せない。
  */
-function escapeLineStart(line: string): string {
+function escapeLineStart(line: string, keepQuote = false): string {
   /*
    * **`\` で始まる行には何も足さない。**
    * その行は Markdown 上ですでにエスケープされており、ブロック要素として
@@ -36,8 +40,9 @@ function escapeLineStart(line: string): string {
   // 箇条書き
   if (/^[-*+]([ \t]|$)/.test(line)) return `\\${line}`;
   // 引用
-  if (line.startsWith(">")) return `\\${line}`;
-  // コードフェンス
+  if (!keepQuote && line.startsWith(">")) return `\\${line}`;
+  // コードフェンス。**対になっている柵はここへ来ない**（`note.ts` が逐語で出す）。
+  // 来るのは対の無い柵だけであり、逐語で出すと後続の行を飲み込む
   if (/^(`{3,}|~{3,})/.test(line)) return `\\${line}`;
   // 水平線（3文字以上だが判定は緩めに取る）と setext 見出しの下線。
   // `=` は1文字でも直前の段落を見出しに変えてしまうため 1 個から対象にする
@@ -46,6 +51,13 @@ function escapeLineStart(line: string): string {
   if (/^<[!/?a-zA-Z]/.test(line)) return `\\${line}`;
   // リンク参照定義 `[foo]: /url`。`[[横断リンク]]` は該当しないので余計な記号は付かない
   if (/^\[[^\]\n]*\]:/.test(line)) return `\\${line}`;
+  /*
+   * **定義の見出しは行をまたげる。** `[` で開いて閉じないまま行が終わると、
+   * 次の行の `]:` と繋がって定義になり、**枝が丸ごと消える**
+   * （ラベル `[` ＋ノート `!]:` で再現。2026-09-05、25万件で発見）。
+   * 閉じ括弧が同じ行にあれば定義にならないので、無いときだけ足す
+   */
+  if (/^\[[^\]]*$/.test(line)) return `\\${line}`;
   // 番号付き箇条書き
   const ordered = /^(\d{1,9})[.)]([ \t]|$)/.exec(line);
   if (ordered?.[1] !== undefined) {
@@ -64,16 +76,16 @@ function escapeLineStart(line: string): string {
  * 行の途中の `\*` には触れないので、**利用者が書いた「文字としての星」は
  * そのまま残る。** これが 2026-09-05 に直した本体である。
  */
-function unescapeLineStart(line: string): string {
+function unescapeLineStart(line: string, keepQuote = false): string {
   // 番号付き箇条書き。`1\. foo` の `\` は数字の後ろにある
   const ordered = /^(\d{1,9})\\[.)]/.exec(line);
   if (ordered?.[1] !== undefined) {
     const bare = ordered[1] + line.slice(ordered[1].length + 1);
-    if (escapeLineStart(bare) === line) return bare;
+    if (escapeLineStart(bare, keepQuote) === line) return bare;
   }
   if (line.startsWith("\\")) {
     const bare = line.slice(1);
-    if (escapeLineStart(bare) === line) return bare;
+    if (escapeLineStart(bare, keepQuote) === line) return bare;
   }
   return line;
 }
@@ -90,6 +102,23 @@ export function escapeInlineText(text: string): string {
 /** `escapeInlineText()` の逆。解析側で使う */
 export function unescapeInlineText(text: string): string {
   return unescapeLineStart(text);
+}
+
+/**
+ * ノートの本文行を安全に出力できる形にする。
+ *
+ * **引用の規則を持たない。** ノートの `>` は引用として逐語で出すため
+ * （`note.ts`）、ここで `\` を足すと二重になる。
+ * **呼び出しは `note.ts` の `escapeNote()` を通すこと。**
+ * 逐語行に掛けてはいけない。
+ */
+export function escapeNoteLine(text: string): string {
+  return escapeLineStart(text, true);
+}
+
+/** `escapeNoteLine()` の逆。`note.ts` の `unescapeNote()` から呼ぶ */
+export function unescapeNoteLine(text: string): string {
+  return unescapeLineStart(text, true);
 }
 
 /**

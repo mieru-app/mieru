@@ -5,6 +5,7 @@ import { unified } from "unified";
 import { unescapeInlineText, unguardHeadingClose } from "./escape.js";
 import { parseFrontmatter, splitFrontmatter } from "./frontmatter.js";
 import { normalizeNoteText, splitEmoji } from "./normalize.js";
+import { normalizeQuote, unescapeNote } from "./note.js";
 import type { MapDoc, MapNode, ParseResult, ParseWarning } from "./types.js";
 
 /**
@@ -111,39 +112,63 @@ function unsupported(node: RootContent | Node, what: string): ParseWarning {
 /**
  * 元ソースのノート断片をモデル上のノートへ変換する。
  *
- * **正規化してから行ごとにアンエスケープする。** 出力側は正規化済みの各行へ
- * `escapeInlineText()` を掛けるため（`serialize.ts` の `pushNoteLines`）、
+ * **正規化してからアンエスケープする。** 出力側は正規化済みのノートへ
+ * `escapeNote()` を掛けるため（`serialize.ts` の `pushNoteLines`）、
  * 逆順にすると対にならない。行頭の空白が残ったままでは足した `\` を見つけられない。
  */
 function toNote(raw: string): string | undefined {
   const normalized = normalizeNoteText(raw);
   if (normalized === undefined) return undefined;
-  return normalized.split("\n").map(unescapeInlineText).join("\n");
+  return unescapeNote(normalized.split("\n")).join("\n");
+}
+
+/**
+ * ノートへ入れられるブロックの元ソースを取り出す。入れられないものは undefined。
+ *
+ * **引用とコードは破棄しない。** `.md` が正本である以上、開いて保存しただけで
+ * 他人の書いたものが消えてはいけない（2026-09-05 に追加）。
+ * 引用は全行を `>` 始まりに揃える（`note.ts` の `normalizeQuote`）。
+ */
+function noteSource(body: string, node: Node & { type: string }): string | undefined {
+  const raw = rawBlockText(body, node);
+  if (node.type === "paragraph" || node.type === "code") return raw;
+  if (node.type === "blockquote") return normalizeQuote(raw);
+  return undefined;
 }
 
 /** 箇条書き項目1つをノードへ変換する */
 function buildFromListItem(body: string, item: ListItem, warnings: ParseWarning[]): MapNode {
-  const paragraphs: string[] = [];
+  const blocks: string[] = [];
   const childLists: List[] = [];
+  // ラベルになるのは最初の「段落」であって、最初のブロックではない。
+  // `- > q` のように引用で始まる項目はラベルを持たない
+  let labelSource: string | undefined;
 
   for (const child of item.children) {
-    if (child.type === "paragraph") {
-      paragraphs.push(rawBlockText(body, child));
-    } else if (child.type === "list") {
+    if (child.type === "list") {
       childLists.push(child);
-    } else {
-      warnings.push(unsupported(child, `箇条書き内の ${child.type}`));
+      continue;
     }
+    const source = noteSource(body, child);
+    if (source === undefined) {
+      warnings.push(unsupported(child, `箇条書き内の ${child.type}`));
+      continue;
+    }
+    if (labelSource === undefined && blocks.length === 0 && child.type === "paragraph") {
+      labelSource = source;
+      continue;
+    }
+    blocks.push(source);
   }
 
   // 最初の段落の1行目がラベル、2行目以降はノートの一部になる。
   // 遅延継続行（親箇条書きの内容列に揃えた行）は同じ段落として解析されるため。
-  const first = paragraphs.shift() ?? "";
+  const first = labelSource ?? "";
   const newlineAt = first.indexOf("\n");
   const rawLabel = newlineAt === -1 ? first : first.slice(0, newlineAt);
   const restOfFirst = newlineAt === -1 ? "" : first.slice(newlineAt + 1);
 
-  const noteParts = [restOfFirst, ...paragraphs].filter((p) => p.trim() !== "");
+  const noteParts = [restOfFirst, ...blocks].filter((p) => p.trim() !== "");
   const node = createNode(rawLabel, toNote(noteParts.join("\n\n")));
 
   for (const list of childLists) {
@@ -237,14 +262,13 @@ export function parseMarkdown(source: string, ctx: ParseContext = {}): ParseResu
         break;
       }
 
-      case "paragraph": {
-        // 見出し直下の地の文はノートとして保持する。破棄すると内容が失われるため。
-        appendNote(currentNode(), rawBlockText(body, child));
-        break;
+      default: {
+        // 見出し直下の地の文・引用・コードはノートとして保持する。
+        // 破棄すると内容が失われるため
+        const source = noteSource(body, child);
+        if (source === undefined) warnings.push(unsupported(child, child.type));
+        else appendNote(currentNode(), source);
       }
-
-      default:
-        warnings.push(unsupported(child, child.type));
     }
   }
 
