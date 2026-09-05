@@ -6,9 +6,12 @@ import { ConflictError, MapNotFoundError } from "./types.js";
 /**
  * メモリ上の MapStore 実装。
  *
- * テスト用であり、アプリからは使わない。
- * MapStore の契約（楽観ロック・エラー種別）の基準実装でもあるため、
+ * MapStore の契約（楽観ロック・エラー種別）の基準実装である。
  * 他の実装を追加する際はこのクラスと同じ契約テストを通すこと。
+ *
+ * **アプリでも使う（2.12 のゲストモード）。** 保存先を決めずに触れる状態を
+ * これで作る。**中身はメモリにしか残らない**ので、保存先が選ばれた時点で
+ * `copyAllMaps` が引き取る。使っているあいだは帯が出続ける（`Banners.tsx`）。
  */
 export class MemoryStore implements MapStore {
   readonly #entries = new Map<string, { md: string; version: string }>();
