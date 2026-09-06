@@ -9,10 +9,11 @@
 **➜ [https://mieru-app.github.io/mieru/](https://mieru-app.github.io/mieru/)**
 （インストール不要。ブラウザで開けばすぐ使えます）
 
-https://github.com/user-attachments/assets/bb92dee9-08e8-4d18-8c9b-8695f3bf38ac
+![枝を掴んで動かすと、ファイルの行順もそのまま動く](assets/demo/demo-loop.gif)
 
-*枝を掴んで動かすと、ファイルの行順もそのまま動きます。同じ `.md` を
-別のエディタで開いて1行足し、戻ってくるまでの21秒です。*
+**往復まで含めた21秒** — 同じ `.md` を別のエディタで開いて1行足し、戻ってきます。
+
+https://github.com/user-attachments/assets/bb92dee9-08e8-4d18-8c9b-8695f3bf38ac
 
 ---
 

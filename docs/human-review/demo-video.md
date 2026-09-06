@@ -46,7 +46,46 @@ AAC が無音を符号化しているだけ）。0.5 MB あるので、
 （[PR #13](https://github.com/mieru-app/mieru/pull/13) へのドロップで作った）。
 
 **再生されるのは github.com だけである。** npm・IDE のプレビュー・ミラーでは
-リンクにしか見えないので、README では**下に1行の説明を添えてある。**
+リンクにしか見えない。**だから README の先頭には GIF を置いてある**（次節）。
+
+## README に置く GIF
+
+**本編は MP4、掴みの8秒だけ GIF にしてある。**
+MP4 はクリックしないと再生されず、github.com の外ではリンクにしか見えない。
+**スクロールした人の目に勝手に入るのは GIF だけである。**
+
+| ファイル | |
+|---|---|
+| [`assets/demo/demo-loop-source.mp4`](../../assets/demo/demo-loop-source.mp4) | GIF の元。**ズームを掛けずに撮った8秒** |
+| [`assets/demo/demo-loop.gif`](../../assets/demo/demo-loop.gif) | 1280×720・12fps・8.1秒・322 KB |
+
+**IMPORTANT: ズームやパンの入った映像から GIF を作らない。**
+GIF はフレーム間の差分で持つため、**画面全体が動く区間があると一気に膨らむ。**
+実測では、ズームのある本編から切り出すと 716 KB、ズームの無い専用素材だと 322 KB。
+**解像度は後者の方が高いのに、半分以下である。**
+
+**パレットは2回に分けて作る。** 1回で変換すると全体共通の256色になり、暗い UI が特に汚れる。
+
+```bash
+ffmpeg -i assets/demo/demo-loop-source.mp4 \
+  -vf "fps=12,scale=1280:-1:flags=lanczos,palettegen=stats_mode=diff" -y palette.png
+
+ffmpeg -i assets/demo/demo-loop-source.mp4 -i palette.png \
+  -lavfi "fps=12,scale=1280:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" \
+  -y assets/demo/demo-loop.gif
+```
+
+| 指定 | 効き方 |
+|---|---|
+| `fps` | サイズに最も効く |
+| `scale` | 次に効く。実測で 1280 なら 322 KB、960 なら 202 KB |
+| `stats_mode=diff` | 動いている部分へ優先して色を割り当てる |
+| `dither=bayer` | 既定のディザは暗い面がざらつく。UI 画面にはこちら |
+
+**GIF は README から相対パスで貼れる。** MP4 と違って `user-attachments` は要らない。
+
+**1周が意味を成す長さで切る。** GIF は無限に繰り返すので、
+**掴んだまま巻き戻ると動作が完結しない。** 落とし終わった形まで入れる。
 
 ## 撮る前の準備
 
@@ -140,7 +179,8 @@ AAC が無音を符号化しているだけ）。0.5 MB あるので、
   実測で 21.6秒に 518KB を占めていた。**無音なので害は無いが、耳では気付けない。**
   外すなら `ffmpeg -i in.mp4 -c:v copy -an out.mp4`
 - 長さは30秒以内。**超えたら①を削る**（②③④が主張の本体）
-- 形式は GIF ではなく MP4。GIF は文字が潰れる。README には MP4 を貼る
+- **本編は MP4。** GIF で21秒を通すと文字が潰れ、サイズも桁が変わる。
+  **掴みの8秒だけを別に GIF にする**（上の「README に置く GIF」）
 - **貼る前に自分で1回通して見る。** 文字が読めるか、他人のファイル名が映っていないか
 
 ## 映してはいけないもの

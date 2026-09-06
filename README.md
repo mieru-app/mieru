@@ -9,10 +9,12 @@ There is no export step. **Markdown is the save format itself.**
 **➜ [https://mieru-app.github.io/mieru/](https://mieru-app.github.io/mieru/)**
 (Nothing to install. Open it in a browser and start.)
 
-https://github.com/user-attachments/assets/bb92dee9-08e8-4d18-8c9b-8695f3bf38ac
+![Drag a branch, and the line order in the file moves with it](assets/demo/demo-loop.gif)
 
-*Drag a branch and the file's line order moves with it. Then open the same `.md`
-in any editor, add a line, and come back. 21 seconds.*
+**The whole round trip, 21 seconds** — open the same `.md` in another editor,
+add a line, and come back:
+
+https://github.com/user-attachments/assets/bb92dee9-08e8-4d18-8c9b-8695f3bf38ac
 
 ---
 
