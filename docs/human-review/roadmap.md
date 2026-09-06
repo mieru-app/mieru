@@ -94,13 +94,14 @@ README・`CLAUDE.md`・設計書には現在地を書かない。書くと必ず
 - **往復が分かるデモ動画**（`assets/demo/demo-video.mp4`、21.6秒・1920×1080、
   2026-09-06。画面は英語、**字幕は日英を同時に焼き込み**。1本で3箇所に出せる。
   [台本](./demo-video.md)）
+- **README への埋め込み**（2026-09-06。英語版・日本語版の両方。
+  GitHub の `user-attachments` の URL を使う。理由は[台本](./demo-video.md)）
 
 ### 残っているもの
 
 | # | やること | なぜ |
 |---|---|---|
-| 1 | **README への動画の埋め込み** | **GitHub はリポジトリ内の `.mp4` を再生しない。** Issue か Pull Request へファイルをドロップして得た `user-attachments` の URL を貼る必要がある |
-| 2 | 告知（Obsidian フォーラム、Show HN、Zenn） | 狙う層に届く場所は限られている。[計画](../ideas/2026-09-05-stp-and-marketing.md) |
+| 1 | 告知（Obsidian フォーラム、Show HN、Zenn） | 狙う層に届く場所は限られている。[計画](../ideas/2026-09-05-stp-and-marketing.md) |
 
 **カバレッジは CI の門になった（2026-09-05）。**
 

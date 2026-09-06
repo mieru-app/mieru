@@ -40,6 +40,14 @@ AAC が無音を符号化しているだけ）。0.5 MB あるので、
 相対パスはただのリンクになる。**Issue か Pull Request のコメント欄へファイルを
 ドロップし**、得られた `https://github.com/user-attachments/assets/...` の URL を貼る。
 
+**貼る形は「行に URL だけ」にする。** 角括弧のリンク記法で包むと
+**ただのリンクへ落ちて、再生できなくなる。**
+いま README で使っているのは `bb92dee9-08e8-4d18-8c9b-8695f3bf38ac`
+（[PR #13](https://github.com/mieru-app/mieru/pull/13) へのドロップで作った）。
+
+**再生されるのは github.com だけである。** npm・IDE のプレビュー・ミラーでは
+リンクにしか見えないので、README では**下に1行の説明を添えてある。**
+
 ## 撮る前の準備
 
 **IMPORTANT: 保存先はローカルフォルダにする。** GitHub 接続では外部変更の監視が無く
