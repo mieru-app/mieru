@@ -72,6 +72,9 @@ export const EN: Strings = {
     openHistory: "Open earlier versions",
     shortcuts: "Keys",
     openShortcuts: "Open the list (?)",
+    source: "About this app",
+    openSource: "Read the source on GitHub",
+    sourceNote: "Everything running in front of you is in that repository.",
   },
 
   sidebar: {

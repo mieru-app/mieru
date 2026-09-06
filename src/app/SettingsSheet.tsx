@@ -3,6 +3,7 @@ import { useState } from "react";
 import { disconnectNote } from "../state/github-guide.js";
 import { LANGUAGE_LABELS, useLanguage } from "../state/i18n.js";
 import type { Language } from "../state/i18n.js";
+import { SOURCE_URL } from "../state/project.js";
 import type { Strings } from "../state/strings/ja.js";
 import type { Theme } from "../state/theme.js";
 import { THEMES } from "../state/theme.js";
@@ -188,6 +189,24 @@ export function SettingsSheet({
         <button type="button" onClick={onShowHistory} disabled={!canExport}>
           {s.settings.openHistory}
         </button>
+
+        {/*
+         * **設定ではないが、ここに置く。** 「疑うなら読める」がこのツールの
+         * 信用の説明であり（`SECURITY.md`）、README にしか置かなければ
+         * 画面から入った人には届かない。**設定は既に履歴と出力を抱えており、
+         * 「滅多に押さないが、要るときに探す場所」として一貫している。**
+         *
+         * URL は `src/state/project.ts` が持つ。ここに書かない。
+         *
+         * 押しボタンではなくリンクにしてあるのは、**新しいタブで開くことと、
+         * 右クリックで URL をそのまま取れること**に意味があるためである。
+         * `target="_blank"` に `rel` を伴わせるのは `GitHubConnect.tsx` と同じ。
+         */}
+        <p className="sheet-group">{s.settings.source}</p>
+        <a className="sheet-link" href={SOURCE_URL} target="_blank" rel="noreferrer noopener">
+          {s.settings.openSource}
+        </a>
+        <p className="sheet-note">{s.settings.sourceNote}</p>
       </div>
     </aside>
   );
