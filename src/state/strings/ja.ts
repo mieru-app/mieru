@@ -79,6 +79,9 @@ export const JA = {
     openHistory: "過去の版を開く",
     shortcuts: "キー操作",
     openShortcuts: "一覧を開く（?）",
+    source: "このアプリについて",
+    openSource: "ソースコードを見る（GitHub）",
+    sourceNote: "画面で動いているものは全てこのリポジトリにあります。",
   },
 
   sidebar: {

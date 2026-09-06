@@ -1485,6 +1485,26 @@ kbd {
   overflow-wrap: anywhere;
 }
 
+/*
+ * 設定から外部へ出る唯一のリンク（ソースコード）。
+ *
+ * **押しボタンと同じ形にする。** 設定の中の項目は全て押しボタンで、
+ * 素のリンクを1つだけ混ぜると、並んだときに押せるものに見えない。
+ * 中身をリンクのままにしているのは `SettingsSheet.tsx` に理由がある。
+ */
+.sheet-link {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.25rem 0.7rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sheet-link:hover {
+  background: var(--bg-sunken);
+}
+
 .sheet-body code {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   background: var(--bg-sunken);
