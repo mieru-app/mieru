@@ -191,6 +191,15 @@ export async function runCommand(command: Command, deps: CommandDeps): Promise<v
       deps.toggleExport?.();
       return;
 
+    case "toggleTemplate": {
+      const on = await useWorkspace.getState().toggleTemplate();
+      // 開いていない・競合中は何もしない。通知も出さない（何も変わっていない）
+      if (on === null) return;
+      const texts = useLanguage.getState().s;
+      deps.notify?.(on ? texts.toast.templateOn : texts.toast.templateOff);
+      return;
+    }
+
     case "openPalette":
       deps.openPalette?.();
       return;

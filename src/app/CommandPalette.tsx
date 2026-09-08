@@ -2,6 +2,7 @@ import { useLanguage } from "../state/i18n.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MapIndex } from "../state/search.js";
+import type { Template } from "../state/templates.js";
 import type { PaletteItem } from "./command-palette.js";
 import { buildPaletteItems } from "./command-palette.js";
 
@@ -16,17 +17,22 @@ import { buildPaletteItems } from "./command-palette.js";
 
 interface Props {
   indexes: MapIndex[];
+  /** 下敷きの一覧。利用者のテンプレートを含む（`allTemplates`） */
+  templates: readonly Template[];
   onClose: () => void;
   onPick: (item: PaletteItem) => void;
 }
 
-export function CommandPalette({ indexes, onClose, onPick }: Props): React.JSX.Element {
+export function CommandPalette({ indexes, templates, onClose, onPick }: Props): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
 
   const s = useLanguage((state) => state.s);
-  const items = useMemo(() => buildPaletteItems(query, indexes, s), [query, indexes, s]);
+  const items = useMemo(
+    () => buildPaletteItems(query, indexes, s, templates),
+    [query, indexes, s, templates],
+  );
 
   useEffect(() => {
     input.current?.focus();

@@ -150,6 +150,7 @@ const PALETTE_COMMANDS: { command: Command; title: (s: Strings) => string }[] = 
   { command: "copyForAi", title: (s) => s.keys.copyForAi },
   { command: "toggleExport", title: (s) => s.keys.toggleExport },
   { command: "toggleHistory", title: (s) => s.keys.toggleHistory },
+  { command: "toggleTemplate", title: (s) => s.keys.toggleTemplate },
   { command: "saveNow", title: (s) => s.keys.saveNow },
   { command: "toggleSidebar", title: (s) => s.keys.toggleSidebar },
   { command: "focusSearch", title: (s) => s.keys.focusSearch },
@@ -190,5 +191,23 @@ export function filterCommands(query: string, s: Strings): CommandItem[] {
   return items.filter((item) => {
     const haystack = normalizeForSearch(`${item.title} ${item.keys} ${item.command}`);
     return terms.every((term) => haystack.includes(term));
+  });
+}
+
+/**
+ * キー割り当てを持たず、コマンドパレット（`Ctrl+K`）からだけ呼ぶ操作。
+ *
+ * キー操作の一覧にも載せる。**載せないと「見つけられない機能」になる。**
+ * ここに並べた操作は `PALETTE_COMMANDS` にもあり、キーを持たないことを
+ * テストで確かめる（キーがあるのにここへ載せると、一覧が嘘をつく）。
+ */
+export const PALETTE_ONLY: readonly Command[] = ["toggleTemplate", "toggleExport", "toggleHistory"];
+
+/** キー操作の一覧に出す、パレット専用の操作。並びは `PALETTE_ONLY` のとおり */
+export function paletteOnlyItems(s: Strings): CommandItem[] {
+  const items = commandItems(s);
+  return PALETTE_ONLY.flatMap((command) => {
+    const item = items.find((candidate) => candidate.command === command);
+    return item === undefined ? [] : [item];
   });
 }

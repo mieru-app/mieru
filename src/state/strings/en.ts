@@ -228,6 +228,8 @@ export const EN: Strings = {
     confirmDelete: (title: string) => `Delete “${title}”? This cannot be undone.`,
     sidebarWidth: "Sidebar width",
     panelWidth: "Panel width",
+    templateOn: "Now a template. Pick it when you create a map",
+    templateOff: "No longer a template",
   },
 
   keys: {
@@ -236,6 +238,7 @@ export const EN: Strings = {
     groupUndo: "Undo and views",
     groupFind: "Find maps",
     groupShare: "Hand off and save",
+    groupPalette: "From the command palette",
 
     addChild: "Add a child",
     addSibling: "Add a sibling",
@@ -262,10 +265,14 @@ export const EN: Strings = {
     toggleHelp: "Open the list of keys",
     toggleExport: "Open the export (pick format and scope)",
     toggleHistory: "Open the history (look at earlier versions)",
+    toggleTemplate: "Make this map a template, or stop (templates show up when you create a map)",
 
     paletteGroupCommand: "Actions",
     paletteGroupMap: "Open a map",
     paletteGroupTemplate: "New map from this template",
+
+    autosaveNote:
+      "There is no save button. It saves 0.8 s after you stop typing; the bar at the bottom shows the state.",
   },
 
   github: {

@@ -85,6 +85,11 @@ export interface EditorActions {
   markSaved(version: string, at: number): void;
   /** 楽観ロックの基準版を差し替える。空文字列は「次は新規作成」を意味する */
   setVersion(version: string): void;
+  /**
+   * タグを差し替える（F-01 のテンプレートの印）。未保存にして自動保存に任せる。
+   * Undo には積まない。タグは枝ではなく、`Ctrl+Z` で黙って印が外れるのは困る
+   */
+  setTags(tags: string[]): void;
 
   /** 現在の状態を保存可能な形にまとめる */
   buildDoc(): MapDoc | null;
@@ -360,6 +365,11 @@ export const useEditor = create<EditorState>((set, get) => {
     setVersion(version) {
       const { map } = get();
       if (map !== null) set({ map: { ...map, version } });
+    },
+    setTags(tags) {
+      const { map } = get();
+      if (map === null) return;
+      set({ map: { ...map, meta: { ...map.meta, tags } }, status: { kind: "dirty" } });
     },
     markSaved(version, at) {
       const { map } = get();

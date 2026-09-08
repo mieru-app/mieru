@@ -40,7 +40,12 @@ export type Command =
    * `Ctrl+H` はブラウザの履歴に取られており、奪うと利用者の他の操作を壊す。
    * ツールバー・コマンドパレット・設定シートから呼ぶ
    */
-  | "toggleHistory";
+  | "toggleHistory"
+  /**
+   * 開いているマップをテンプレートにする・外す（F-01、2026-09-09）。
+   * キー割り当てを持たない。新規作成のたびに使う物ではないので、パレットからだけ呼ぶ
+   */
+  | "toggleTemplate";
 
 /** `KeyboardEvent` のうち割り当ての判定に使う部分 */
 export interface KeyStroke {
