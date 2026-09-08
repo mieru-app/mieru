@@ -5,7 +5,7 @@ import { JA } from "../../state/strings/ja.js";
 
 import type { MapMeta } from "../../core/types.js";
 import { buildMapIndex } from "../../state/search.js";
-import { TEMPLATES, templateMarkdown } from "../../state/templates.js";
+import { allTemplates, TEMPLATES, templateMarkdown, userTemplates } from "../../state/templates.js";
 import { buildPaletteItems } from "../command-palette.js";
 import { resolveShortcut } from "../keymap.js";
 import { commandItems, filterCommands, keysFor } from "../shortcuts.js";
@@ -119,6 +119,14 @@ describe("パレットの項目", () => {
 
   it("一致が無ければ空", () => {
     expect(buildPaletteItems("該当しない語", indexes, JA)).toEqual([]);
+  });
+
+  it("利用者のテンプレート（template タグ）も下敷きとして引ける", () => {
+    const mine = userTemplates([{ ...meta("議事録（自分用）.md"), tags: ["template"] }]);
+    const items = buildPaletteItems("自分用", indexes, JA, allTemplates(mine));
+    const found = items.find((item) => item.kind === "template");
+    expect(found?.id).toBe("議事録（自分用）.md");
+    expect(found?.title).toBe("議事録（自分用）");
   });
 });
 

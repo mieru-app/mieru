@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { JA } from "../../state/strings/ja.js";
 import type { Command, KeyStroke } from "../keymap.js";
 import { resolveShortcut } from "../keymap.js";
-import { SHORTCUT_GROUPS } from "../shortcuts.js";
+import { commandItems, paletteOnlyItems, SHORTCUT_GROUPS } from "../shortcuts.js";
 
 /**
  * 一覧表示と実際の割り当てが食い違っていないことの検証。
@@ -77,5 +78,18 @@ describe("キー操作一覧", () => {
 
   it("説明文が空でない", () => {
     for (const entry of entries) expect(entry.description.length).toBeGreaterThan(0);
+  });
+});
+
+describe("パレットからだけ呼ぶ操作", () => {
+  it("キーを持たず、パレットに載っている。一覧が嘘をつかないため", () => {
+    const palette = new Set(commandItems(JA).map((item) => item.command));
+    const items = paletteOnlyItems(JA);
+    expect(items.map((item) => item.command)).toContain("toggleTemplate");
+    for (const item of items) {
+      expect(item.keys).toBe("");
+      expect(palette.has(item.command)).toBe(true);
+      expect(item.title.length).toBeGreaterThan(0);
+    }
   });
 });

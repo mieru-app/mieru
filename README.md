@@ -126,6 +126,7 @@ and you pick it up on your computer later.
 | Work entirely from the keyboard | `?` shows the shortcuts |
 | Go back to an earlier version | Every 5 minutes locally; every commit on GitHub |
 | Full-text search and tag filters | `Ctrl+F` |
+| Make your own templates | Any map tagged `template` shows up as a template when you create a map. For the open map: `Ctrl+K` → "Make this map a template" |
 | Edit from a phone | When GitHub is the storage |
 
 ---

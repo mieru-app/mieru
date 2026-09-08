@@ -1,5 +1,5 @@
 import { useLanguage } from "../state/i18n.js";
-import { SHORTCUT_GROUPS } from "./shortcuts.js";
+import { paletteOnlyItems, SHORTCUT_GROUPS } from "./shortcuts.js";
 
 /**
  * キー操作の一覧。
@@ -45,9 +45,25 @@ export function ShortcutSheet({ onClose }: Props): React.JSX.Element {
           </section>
         ))}
 
-        <p className="sheet-note">
-          保存ボタンはありません。入力が止まって 0.8 秒で自動保存し、状態は下のバーに出ます。
-        </p>
+        {/*
+         * キーを持たない操作。**載せないと「見つけられない機能」になる。**
+         * 押すのは毎回 Ctrl+K なので、キーの欄はそれで揃う
+         */}
+        <section>
+          <h2 className="sheet-group">{s.keys.groupPalette}</h2>
+          <dl className="sheet-list">
+            {paletteOnlyItems(s).map((item) => (
+              <div className="sheet-item" key={item.command}>
+                <dt>
+                  <kbd>Ctrl + K</kbd>
+                </dt>
+                <dd>{item.title}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <p className="sheet-note">{s.keys.autosaveNote}</p>
       </div>
     </aside>
   );

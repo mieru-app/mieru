@@ -1,5 +1,6 @@
 import type { MapIndex } from "../state/search.js";
 import { queryIndex, splitTerms } from "../state/search.js";
+import type { Template } from "../state/templates.js";
 import { TEMPLATES } from "../state/templates.js";
 import type { Strings } from "../state/strings/ja.js";
 import type { Command } from "./keymap.js";
@@ -27,6 +28,8 @@ export function buildPaletteItems(
   query: string,
   indexes: readonly MapIndex[],
   s: Strings,
+  /** 並べる下敷き。利用者のテンプレートを含めた一覧を渡す（`allTemplates`） */
+  templates: readonly Template[] = TEMPLATES,
 ): PaletteItem[] {
   const terms = splitTerms(query);
 
@@ -52,19 +55,21 @@ export function buildPaletteItems(
 
   // 下敷きは入力が無いうちは出さない。新規作成のたびに使う物ではないため、
   // 開いた直後の一覧を占めると操作とマップが見えにくくなる
-  const templates: PaletteItem[] =
+  const templateItems: PaletteItem[] =
     terms.length === 0
       ? []
-      : TEMPLATES.filter((template) =>
-          terms.every((term) => `${template.name(s)} ${template.description(s)}`.includes(term)),
-        ).map((template) => ({
-          kind: "template",
-          key: `template:${template.id}`,
-          group: s.keys.paletteGroupTemplate,
-          title: template.name(s),
-          hint: template.description(s),
-          id: template.id,
-        }));
+      : templates
+          .filter((template) =>
+            terms.every((term) => `${template.name(s)} ${template.description(s)}`.includes(term)),
+          )
+          .map((template) => ({
+            kind: "template",
+            key: `template:${template.id}`,
+            group: s.keys.paletteGroupTemplate,
+            title: template.name(s),
+            hint: template.description(s),
+            id: template.id,
+          }));
 
-  return [...commands, ...maps, ...templates];
+  return [...commands, ...maps, ...templateItems];
 }

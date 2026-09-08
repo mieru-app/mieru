@@ -11,7 +11,7 @@ import { keepSidebarAfterOpen, resolveLayout } from "../state/layout.js";
 import type { Pane } from "../state/pane-size.js";
 import { PANE_KEYS, readPaneWidth } from "../state/pane-size.js";
 import { collectTags, queryIndex } from "../state/search.js";
-import { TEMPLATES, templateMarkdown } from "../state/templates.js";
+import { allTemplates, templateSource, userTemplates } from "../state/templates.js";
 import { applyLanguage, LANGUAGE_KEY, readLanguage, useLanguage } from "../state/i18n.js";
 import type { Language } from "../state/i18n.js";
 import type { Theme } from "../state/theme.js";
@@ -322,6 +322,12 @@ export function App(): React.JSX.Element {
     [indexes, query, activeTags],
   );
   const tags = useMemo(() => collectTags(indexes), [indexes]);
+  /** 新規作成に並べる下敷き。利用者のテンプレート（`template` タグ）を組み込みの前に置く */
+  const templates = useMemo(() => allTemplates(userTemplates(maps)), [maps]);
+  // 選んでいた下敷きが（別のエディタで）消えていたら「デフォルト」へ倒す
+  const activeTemplateId = templates.some((template) => template.id === templateId)
+    ? templateId
+    : "blank";
 
   // 木や選択が動けば出力も変わる。開いている間だけ作り直す。
   // exportAs はストアから直に読むため、root と selectedUid は再計算の契機として渡している
@@ -504,14 +510,16 @@ export function App(): React.JSX.Element {
           {root === null || creating ? (
             <HomeScreen
               creating={creating}
-              templates={TEMPLATES}
-              templateId={templateId}
+              templates={templates}
+              templateId={activeTemplateId}
               onTemplateChange={setTemplateId}
               onStartCreating={() => startCreating("blank")}
               onCancelCreating={() => setCreating(false)}
               onCreate={(title) => {
                 setCreating(false);
-                void useWorkspace.getState().createMap(title, templateMarkdown(templateId, s));
+                void useWorkspace
+                  .getState()
+                  .createMap(title, templateSource(activeTemplateId, templates, s));
               }}
               onCopyImportPrompt={copyImportPrompt}
             />
@@ -619,7 +627,12 @@ export function App(): React.JSX.Element {
       />
 
       {showPalette && (
-        <CommandPalette indexes={indexes} onClose={() => setShowPalette(false)} onPick={pick} />
+        <CommandPalette
+          indexes={indexes}
+          templates={templates}
+          onClose={() => setShowPalette(false)}
+          onPick={pick}
+        />
       )}
 
       {toast !== null && (

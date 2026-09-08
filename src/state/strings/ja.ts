@@ -235,6 +235,8 @@ export const JA = {
     confirmDelete: (title: string) => `「${title}」を削除します。元に戻せません。`,
     sidebarWidth: "一覧の幅",
     panelWidth: "欄の幅",
+    templateOn: "テンプレートにしました。新規作成で選べます",
+    templateOff: "テンプレートから外しました",
   },
 
   keys: {
@@ -243,6 +245,7 @@ export const JA = {
     groupUndo: "元に戻す・表示",
     groupFind: "マップを探す",
     groupShare: "AI へ渡す・保存",
+    groupPalette: "コマンドパレットから",
 
     addChild: "子を追加する",
     addSibling: "兄弟を追加する",
@@ -269,10 +272,14 @@ export const JA = {
     toggleHelp: "キー操作の一覧を開く",
     toggleExport: "テキスト出力を開く（形式と範囲を選ぶ）",
     toggleHistory: "履歴を開く（過去の版を見て戻す）",
+    toggleTemplate: "テンプレートにする / 外す（開いているマップを新規作成の下敷きに）",
 
     paletteGroupCommand: "操作",
     paletteGroupMap: "マップを開く",
     paletteGroupTemplate: "この下敷きで新規作成",
+
+    autosaveNote:
+      "保存ボタンはありません。入力が止まって 0.8 秒で自動保存し、状態は下のバーに出ます。",
   },
 
   github: {

@@ -209,6 +209,52 @@ describe("マップの作成と読み書き", () => {
     expect(content).not.toContain("ひな形");
   });
 
+  it("組み込みの下敷きから作っても created が入る（2026-09-09 まで欠けていた）", async () => {
+    const dir = reset();
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().createMap("振返り", "# ひな形\n\n- 枝\n");
+    expect(dir.entries.get("振返り.md")?.content).toContain("created:");
+  });
+
+  it("template タグのマップから作れる。印は写らず、枝と他のタグは写る", async () => {
+    const dir = reset();
+    dir.putRaw(
+      "ひな形.md",
+      "---\ntitle: ひな形\ntags: [template, meeting]\n---\n\n# ひな形\n\n- 決まったこと\n- 宿題\n",
+    );
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().createMap("9月の定例", { fromMap: "ひな形.md" });
+
+    const content = dir.entries.get("9月の定例.md")?.content ?? "";
+    expect(content).toContain("title: 9月の定例");
+    expect(content).toContain("tags: [meeting]");
+    expect(content).not.toContain("template");
+    expect(content).toContain("- 決まったこと");
+    expect(useEditor.getState().map?.id).toBe("9月の定例.md");
+  });
+
+  it("開いているマップをテンプレートにすると保存され、一覧の印が変わる。もう一度で外れる", async () => {
+    const dir = reset();
+    await useWorkspace.getState().chooseFolder();
+    await useWorkspace.getState().createMap("メモ");
+
+    await expect(useWorkspace.getState().toggleTemplate()).resolves.toBe(true);
+    expect(dir.entries.get("メモ.md")?.content).toContain("tags: [template]");
+    expect(useWorkspace.getState().maps.find((meta) => meta.id === "メモ.md")?.tags).toEqual([
+      "template",
+    ]);
+
+    await expect(useWorkspace.getState().toggleTemplate()).resolves.toBe(false);
+    expect(dir.entries.get("メモ.md")?.content).not.toContain("template");
+    expect(useWorkspace.getState().maps.find((meta) => meta.id === "メモ.md")?.tags).toEqual([]);
+  });
+
+  it("マップを開いていなければテンプレートの印は付けられない", async () => {
+    reset();
+    await useWorkspace.getState().chooseFolder();
+    await expect(useWorkspace.getState().toggleTemplate()).resolves.toBeNull();
+  });
+
   it("同じ表題でも上書きせず別ファイルにする", async () => {
     const dir = reset();
     await useWorkspace.getState().chooseFolder();

@@ -36,6 +36,8 @@ import { dropQuarantined, listQuarantined } from "../store/quarantine.js";
 import type { HistoryEntry, HistoryStore, MapStore } from "../store/types.js";
 import { AutoSave } from "./autosave.js";
 import { useEditor } from "./editor.js";
+import type { TemplateSource } from "./templates.js";
+import { instantiate, isTemplate, TEMPLATE_TAG } from "./templates.js";
 import { collapsedPathsToUids } from "./tree.js";
 import type { MapIndex } from "./search.js";
 import { SearchIndex } from "./search.js";
@@ -128,7 +130,18 @@ export interface WorkspaceState {
   grantPermission(): Promise<void>;
   refresh(): Promise<void>;
   openMap(id: string): Promise<void>;
-  createMap(title: string, markdown?: string): Promise<void>;
+  /**
+   * 新しいマップを作って開く。
+   * `source` は下敷き。文字列は組み込みの本文、`fromMap` は利用者のテンプレート。
+   * 省略すると空のマップ
+   */
+  createMap(title: string, source?: TemplateSource): Promise<void>;
+  /**
+   * 開いているマップをテンプレートにする・外す（F-01、2026-09-09）。
+   * 印は `template` タグで、保存してから一覧を読み直す。
+   * @returns 付けたなら true、外したなら false。開いていない・競合中なら null
+   */
+  toggleTemplate(): Promise<boolean | null>;
   /** 表題を変える。frontmatter の title と H1 とファイル名を同時に更新する（F-03） */
   renameMap(id: string, title: string): Promise<void>;
   /** マップを削除する。確認は呼び出し側で取る */
@@ -480,7 +493,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
     },
 
-    async createMap(title, markdown) {
+    async createMap(title, source) {
       if (store === null) return;
       await get().saveNow();
 
@@ -489,16 +502,37 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         title,
         get().maps.map((meta) => meta.id),
       );
-      // テンプレートから作る場合も、表題だけは利用者が入れたものに揃える
-      const md =
-        markdown === undefined ? initialMarkdown(title, at) : retitle(markdown, id, title, at);
       try {
+        // 利用者のテンプレートは本文をそのマップから読む。組み込みは文字列で来る
+        const base = typeof source === "object" ? (await store.read(source.fromMap)).md : source;
+        // 下敷きから作る場合も、表題は利用者が入れたものに揃え、日付は今にする
+        const md =
+          base === undefined ? initialMarkdown(title, at) : instantiate(base, id, title, at);
         await store.write(id, md, null);
         await get().refresh();
         await get().openMap(id);
       } catch (error) {
         set({ error: texts().error.createMap(messageOf(error)) });
       }
+    },
+
+    async toggleTemplate() {
+      if (store === null) return null;
+      // 書きかけを先に書き出す。保存中に印を変えると、その保存が印の無い内容で上書きする
+      await get().saveNow();
+      const editor = useEditor.getState();
+      const { map, status } = editor;
+      // 競合中は利用者の判断待ちであり、こちらから内容を変えない（設計書 8.5）
+      if (map === null || status.kind === "conflict") return null;
+
+      const on = !isTemplate(map.meta);
+      editor.setTags(
+        on ? [...map.meta.tags, TEMPLATE_TAG] : map.meta.tags.filter((tag) => tag !== TEMPLATE_TAG),
+      );
+      // 新規作成画面の一覧は `maps` から作る。保存して読み直さないと印が出ない
+      await get().saveNow();
+      await get().refresh();
+      return on;
     },
 
     async renameMap(id, title) {
